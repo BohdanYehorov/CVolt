@@ -1,0 +1,26 @@
+Assignment
+= += -= *= /=
+Logical OR
+||
+Logical AND
+&&
+Bitwise OR
+|
+Bitwise XOR
+^
+Bitwise AND
+&
+Equality
+== !=
+Relational
+< <= > >=
+Shift
+<< >>
+Additive
++ -
+Multiplicative
+* / %
+Unary
++ - ! ~
+Primary
+number identifier (expr) string

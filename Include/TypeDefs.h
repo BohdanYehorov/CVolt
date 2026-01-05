@@ -1,0 +1,23 @@
+//
+// Created by bohdan on 21.12.25.
+//
+
+#ifndef CVOLT_TYPEDEFS_H
+#define CVOLT_TYPEDEFS_H
+
+#include <cstddef>
+#include <cstdint>
+
+using PtrT = uintptr_t;
+
+using Int8 = int8_t;
+using Int16 = int16_t;
+using Int32 = int32_t;
+using Int64 = int64_t;
+
+using UInt8 = uint8_t;
+using UInt16 = uint16_t;
+using UInt32 = uint32_t;
+using UInt64 = uint64_t;
+
+#endif //CVOLT_TYPEDEFS_H
