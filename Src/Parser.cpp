@@ -206,7 +206,7 @@ bool Parser::Consume()
     return false;
 }
 
-void Parser::ConsumeSemicolons()
+void Parser::SkipSemicolons()
 {
     while (IsValidIndex())
     {
@@ -311,20 +311,6 @@ bool Parser::Expect(Token::TokenType Type)
     return true;
 }
 
-BinaryOpNode * Parser::CreateBinaryOpNode(Operator::Type Type, ASTNode *Left, ASTNode *Right)
-{
-    if (!Left || !Right)
-        return nullptr;
-    return NodesArena.Create<BinaryOpNode>(Type, Left, Right);
-}
-
-UnaryOpNode * Parser::CreateUnaryOpNode(Operator::Type Type, ASTNode *Operand)
-{
-    if (!Operand)
-        return nullptr;
-    return NodesArena.Create<UnaryOpNode>(Type, Operand);
-}
-
 ASTNode* Parser::ParseSequence()
 {
     auto Sequence = NodesArena.Create<SequenceNode>();
@@ -337,7 +323,7 @@ ASTNode* Parser::ParseSequence()
             if (LastNodeIsBlock)
             {
                 LastNodeIsBlock = false;
-                ConsumeSemicolons();
+                SkipSemicolons();
                 continue;
             }
         }
@@ -348,7 +334,7 @@ ASTNode* Parser::ParseSequence()
                 Consume();
         }
         else
-            ConsumeSemicolons();
+            SkipSemicolons();
     }
 
     return Sequence;
@@ -380,17 +366,18 @@ ASTNode* Parser::ParseBlock()
             if (LastNodeIsBlock)
             {
                 LastNodeIsBlock = false;
-                ConsumeSemicolons();
+                SkipSemicolons();
                 continue;
             }
         }
+
         if (!Expect(Token::OP_SEMICOLON))
         {
             while (IsValidIndex() && !ConsumeIf(Token::OP_SEMICOLON))
                 Consume();
         }
         else
-            ConsumeSemicolons();
+            SkipSemicolons();
     }
 
     Expect(Token::OP_RBRACE);
@@ -428,6 +415,11 @@ ASTNode* Parser::ParseDataType()
             Type = DataType::CHAR;
             Size = sizeof(char);
             Align = alignof(char);
+            break;
+        case Token::TYPE_VOID:
+            Type = DataType::VOID;
+            Size = 0;
+            Align = 0;
             break;
         default:
             return nullptr;
@@ -545,7 +537,12 @@ ASTNode* Parser::ParseIf()
     if (CurrentToken().Type == Token::OP_LBRACE)
         Branch = ParseBlock();
     else
+    {
         Branch = ParseStatement();
+        if (!LastNodeIsBlock)
+            Expect(Token::OP_SEMICOLON);
+        SkipSemicolons();
+    }
 
     if (!Branch)
         return nullptr;
@@ -558,7 +555,12 @@ ASTNode* Parser::ParseIf()
     if (CurrentToken().Type == Token::OP_LBRACE)
         ElseBranch = ParseBlock();
     else
+    {
         ElseBranch = ParseStatement();
+        if (!LastNodeIsBlock)
+            Expect(Token::OP_SEMICOLON);
+        SkipSemicolons();
+    }
 
     if (!ElseBranch)
         return nullptr;
@@ -584,12 +586,19 @@ ASTNode* Parser::ParseWhile()
         return nullptr;
 
     ASTNode* Branch = nullptr;
-    LoopsCount++;
+
+    bool OldInLoop = InLoop;
+    InLoop = true;
     if (CurrentToken().Type == Token::OP_LBRACE)
         Branch = ParseBlock();
     else
+    {
         Branch = ParseStatement();
-    LoopsCount--;
+        if (!LastNodeIsBlock)
+            Expect(Token::OP_SEMICOLON);
+        SkipSemicolons();
+    }
+    InLoop = OldInLoop;
 
     if (!Branch)
         return nullptr;
@@ -622,7 +631,12 @@ ASTNode* Parser::ParseFor()
     if (Peek(Token::OP_LBRACE))
         Body = ParseBlock();
     else
+    {
         Body = ParseStatement();
+        if (!LastNodeIsBlock)
+            Expect(Token::OP_SEMICOLON);
+        SkipSemicolons();
+    }
     LoopsCount--;
 
     if (!Body)
@@ -956,7 +970,14 @@ ASTNode* Parser::ParseUnary()
     if (OpType != Operator::UNKNOWN)
     {
         Consume();
-        return CreateUnaryOpNode(OpType, ParseUnary());
+        ASTNode* Operand = ParseUnary();
+        if (!Operand)
+            return nullptr;
+
+        if (OpType == Operator::INC || OpType == Operator::DEC)
+            return NodesArena.Create<PrefixOpNode>(OpType, Operand);
+
+        return NodesArena.Create<UnaryOpNode>(OpType, Operand);
     }
     return ParsePostfix();
 }
@@ -1010,7 +1031,12 @@ ASTNode* Parser::ParsePostfix()
                 if (OpType == Operator::UNKNOWN)
                     return Operand;
                 Consume();
-                Operand = CreateUnaryOpNode(OpType, Operand);
+
+                if (OpType == Operator::INC || OpType == Operator::DEC)
+                    Operand = NodesArena.Create<SuffixOpNode>(OpType, Operand);
+                else
+                    Operand = NodesArena.Create<UnaryOpNode>(OpType, Operand);
+
                 break;
             }
         }

@@ -24,6 +24,7 @@ private:
 
     bool LastNodeIsBlock = false;
     bool InFunction = false;
+    bool InLoop = false;
     size_t LoopsCount = 0;
 
 private:
@@ -41,7 +42,7 @@ private:
     [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.size(); }
     [[nodiscard]] const Token& CurrentToken() const { return Tokens[Index]; }
     bool Consume();
-    void ConsumeSemicolons();
+    void SkipSemicolons();
     void Synchronize();
     bool GetTokenIf(size_t Index, Token::TokenType Type, const Token*& TokPtr) const;
     bool GetNextTokenIf(Token::TokenType Type, const Token*& TokPtr, size_t NextIndexOffset = 1) const;
@@ -53,9 +54,6 @@ private:
     [[nodiscard]] BufferStringView GetTokenLexeme(const Token& Tok) const { return TokensArena.Read(Tok.Lexeme); }
 
 private:
-    BinaryOpNode* CreateBinaryOpNode(Operator::Type Type, ASTNode* Left, ASTNode* Right);
-    UnaryOpNode* CreateUnaryOpNode(Operator::Type Type, ASTNode* Operand);
-
     ASTNode* ParseSequence();
     ASTNode* ParseBlock();
 

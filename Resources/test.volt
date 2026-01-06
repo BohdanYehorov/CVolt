@@ -1,10 +1,12 @@
 int main()
 {
-    int a = 0;
-    while (a <= 20)
+    for (int i = 0; i < 3; i++)
     {
-        Out(a);
-        a = a + 1;
+        for (int j = 0; j < 3; j++)
+        {
+            Out(i);
+            Out(j);
+        }
     }
     return 0;
-}git
+}

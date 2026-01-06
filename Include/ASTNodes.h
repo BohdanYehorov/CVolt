@@ -99,12 +99,28 @@ public:
 
 class UnaryOpNode : public ASTNode
 {
-    GENERATED_BODY(UnaryOpNode, ASTNode);
+    GENERATED_BODY(UnaryOpNode, ASTNode)
 public:
     Operator::Type Type;
     ASTNode* Operand;
     UnaryOpNode(Operator::Type Type, ASTNode* Operand)
         : Type(Type), Operand(Operand) {}
+};
+
+class PrefixOpNode : public UnaryOpNode
+{
+    GENERATED_BODY(PreffixOpNode, UnaryOpNode)
+public:
+    PrefixOpNode(Operator::Type Type, ASTNode* Operand)
+        : UnaryOpNode(Type, Operand) {}
+};
+
+class SuffixOpNode : public UnaryOpNode
+{
+    GENERATED_BODY(SuffixOpNode, UnaryOpNode)
+public:
+    SuffixOpNode(Operator::Type Type, ASTNode* Operand)
+        : UnaryOpNode(Type, Operand) {}
 };
 
 class BinaryOpNode : public ASTNode

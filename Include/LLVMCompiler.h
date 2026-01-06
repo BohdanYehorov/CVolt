@@ -46,6 +46,9 @@ private:
     llvm::Value* CompileIdentifier(const IdentifierNode* Identifier);
     llvm::Value* CompileComparison(const ComparisonNode* Comparison);
     llvm::Value* CompileAssignment(const AssignmentNode* Assignment);
+    llvm::Value* CompilePrefix(const PrefixOpNode* Prefix);
+    llvm::Value* CompileSufix(const SuffixOpNode* Suffix);
+    llvm::Value* CompileUnary(const UnaryOpNode* Unary);
     llvm::Value* CompileBinaryOpNode(const BinaryOpNode* BinaryOp);
     llvm::Value* CompileCallNode(const CallNode* Call);
     llvm::Value* CompileVariable(const VariableNode* Var);
@@ -53,6 +56,7 @@ private:
     llvm::Value* CompileReturn(const ReturnNode* Return);
     llvm::Value* CompileIf(const IfNode *If);
     llvm::Value* CompileWhile(const WhileNode* While);
+    llvm::Value* CompileFor(const ForNode* For);
 
     llvm::Type* ToLLVMType(DataType Type);
     llvm::Value* CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
@@ -66,6 +70,8 @@ private:
 
     void EnterScope();
     void ExitScope();
+
+    llvm::AllocaInst* GetLValue(ASTNode* Node);
 };
 
 

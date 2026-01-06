@@ -116,6 +116,13 @@ struct Function
     std::vector<std::pair<std::string, UInt64>> Params;
 };
 
+struct CompilerError : std::exception
+{
+    std::string Str;
+    CompilerError(std::string&& Str) : Str(std::move(Str)) {}
+    [[nodiscard]] const char* what() const noexcept override { return Str.c_str(); }
+};
+
 template <typename T>
 class ScopeState
 {

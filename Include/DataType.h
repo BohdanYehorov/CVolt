@@ -11,7 +11,8 @@ enum class DataType : UInt8
     INT,
     FLOAT,
     BOOL,
-    CHAR
+    CHAR,
+    VOID
 };
 
 struct DataTypeInfo
