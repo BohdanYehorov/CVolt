@@ -2,7 +2,7 @@
 // Created by bohdan on 19.12.25.
 //
 
-#include "../Include/Compiler.h"
+#include "Compiler.h"
 #include <iostream>
 #include <algorithm>
 

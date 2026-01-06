@@ -1,15 +1,14 @@
 #include <iostream>
-#include "../Include/Object.h"
-#include "../Include/Parser.h"
-#include "../Include/Compiler.h"
+#include "Object.h"
+#include "Parser.h"
+#include "Compiler.h"
 #include <fstream>
 #include <sstream>
-#include "../Include/LLVMCompiler.h"
-#include "../Include/BufferView.h"
+#include "LLVMCompiler.h"
 
 int main()
 {
-    std::ifstream File("../test.volt");
+    std::ifstream File("../Resources/test.volt");
     if (!File.is_open())
         return -1;
 

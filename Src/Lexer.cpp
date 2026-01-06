@@ -2,7 +2,7 @@
 // Created by bohdan on 13.12.25.
 //
 
-#include "../Include/Lexer.h"
+#include "Lexer.h"
 #include <sstream>
 
 std::string Token::ToString(const ArenaStream &Stream) const

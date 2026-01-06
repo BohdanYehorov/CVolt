@@ -2,8 +2,8 @@
 // Created by bohdan on 03.01.26.
 //
 
-#include "../Include/LLVMCompiler.h"
-#include "../Include/DefaultFunction.h"
+#include "LLVMCompiler.h"
+#include "DefaultFunction.h"
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
@@ -92,6 +92,8 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
         return CompileBool(Bool);
     if (const auto Identifier = Cast<IdentifierNode>(Node))
         return CompileIdentifier(Identifier);
+    if (const auto Comparison = Cast<ComparisonNode>(Node))
+        return CompileComparison(Comparison);
     if (const auto AssignOp = Cast<AssignmentNode>(Node))
         return CompileAssignment(AssignOp);
     if (const auto BinaryOp = Cast<BinaryOpNode>(Node))
@@ -114,6 +116,8 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
 
 llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
 {
+    EnterScope();
+
     for (auto Stmt : Block->Statements)
     {
         CompileNode(Stmt);
@@ -121,6 +125,8 @@ llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
         if (Builder.GetInsertBlock()->getTerminator())
             break;
     }
+
+    ExitScope();
 
     return nullptr;
 }
@@ -153,6 +159,24 @@ llvm::Value * LLVMCompiler::CompileComparison(const ComparisonNode *Comparison)
     llvm::Value* Left = CompileNode(Comparison->Left);
     llvm::Value* Right = CompileNode(Comparison->Right);
 
+    CastToJointType(Left, Right);
+
+    llvm::Type* Type = Left->getType();
+
+    if (Type->isIntegerTy())
+    {
+        switch (Comparison->Type)
+        {
+            case Operator::EQ:  return Builder.CreateICmpEQ(Left, Right);
+            case Operator::NEQ: return Builder.CreateICmpNE(Left, Right);
+            case Operator::LT:  return Builder.CreateICmpSLT(Left, Right);
+            case Operator::LTE: return Builder.CreateICmpSLE(Left, Right);
+            case Operator::GT:  return Builder.CreateICmpSGT(Left, Right);
+            case Operator::GTE: return Builder.CreateICmpSGE(Left, Right);
+            default: return nullptr;
+        }
+    }
+
     return nullptr;
 }
 
@@ -181,12 +205,6 @@ llvm::Value* LLVMCompiler::CompileBinaryOpNode(const BinaryOpNode *BinaryOp)
         case Operator::ADD: return Builder.CreateAdd(Left, Right);
         case Operator::SUB: return Builder.CreateSub(Left, Right);
         case Operator::MUL: return Builder.CreateMul(Left, Right);
-        case Operator::EQ:  return Builder.CreateICmpEQ(Left, Right);
-        case Operator::NEQ: return Builder.CreateICmpNE(Left, Right);
-        case Operator::LT:  return Builder.CreateICmpSLT(Left, Right);
-        case Operator::LTE: return Builder.CreateICmpSLE(Left, Right);
-        case Operator::GT:  return Builder.CreateICmpSGT(Left, Right);
-        case Operator::GTE: return Builder.CreateICmpSGE(Left, Right);
         default: break;
     }
 
@@ -462,9 +480,40 @@ llvm::Value* LLVMCompiler::ImplicitCast(llvm::Value* Value, llvm::Type* Target, 
     return nullptr;
 }
 
+void LLVMCompiler::DeclareVariable(const std::string &Name, llvm::AllocaInst *AllocaInst)
+{
+    ScopeEntry Entry;
+    Entry.Name = Name;
+
+    if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
+    {
+        Entry.HadPrevious = true;
+        Entry.Previous = Iter->second;
+    }
+
+    ScopeStack.back().push_back(Entry);
+    SymbolTable[Name] = AllocaInst;
+}
+
 llvm::AllocaInst* LLVMCompiler::GetVariable(const std::string &Name)
 {
     if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
         return Iter->second;
     return nullptr;
+}
+
+void LLVMCompiler::EnterScope()
+{
+    ScopeStack.emplace_back();
+}
+
+void LLVMCompiler::ExitScope()
+{
+    for (const auto& Entry : ScopeStack.back())
+    {
+        if (Entry.HadPrevious)
+            SymbolTable[Entry.Name] = Entry.Previous;
+        else
+            SymbolTable.erase(Entry.Name);
+    }
 }

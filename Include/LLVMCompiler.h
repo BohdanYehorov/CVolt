@@ -24,6 +24,8 @@ private:
     std::unordered_map<std::string, llvm::Function*> Functions;
     std::unordered_map<std::string, llvm::AllocaInst*> SymbolTable;
 
+    std::vector<std::vector<ScopeEntry>> ScopeStack;
+
 public:
     LLVMCompiler(ASTNode* ASTTree)
         : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context), ASTTree(ASTTree) {}
@@ -59,7 +61,11 @@ private:
     static int GetTypeRank(llvm::Type* Type);
     llvm::Value* ImplicitCast(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
 
+    void DeclareVariable(const std::string& Name, llvm::AllocaInst* AllocaInst);
     llvm::AllocaInst* GetVariable(const std::string& Name);
+
+    void EnterScope();
+    void ExitScope();
 };
 
 

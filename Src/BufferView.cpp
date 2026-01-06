@@ -2,7 +2,7 @@
 // Created by bohdan on 22.12.25.
 //
 
-#include "../Include/BufferView.h"
+#include "BufferView.h"
 #include <cstring>
 
 bool BufferStringView::operator==(const BufferStringView &Other) const

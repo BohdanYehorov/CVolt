@@ -9,6 +9,7 @@
 #include <string>
 #include <limits>
 #include <vector>
+#include <llvm/IR/Instructions.h>
 
 constexpr UInt64 EndReg = std::numeric_limits<UInt64>::max();
 
@@ -106,7 +107,7 @@ struct ScopeEntry
 {
     std::string Name;
     bool HadPrevious;
-    LocalVariable Previous;
+    llvm::AllocaInst* Previous;
 };
 
 struct Function

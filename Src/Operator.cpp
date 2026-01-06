@@ -2,7 +2,7 @@
 // Created by bohdan on 15.12.25.
 //
 
-#include "../Include/Operator.h"
+#include "Operator.h"
 
 std::unordered_map<Operator::Type, std::string> Operator::OperatorStrings = {
     { UNKNOWN, "UNKNOWN" },

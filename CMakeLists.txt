@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(LLVM_DIR "/home/bohdan/llvm/lib/cmake/llvm")
 find_package(LLVM REQUIRED CONFIG)
 
+include_directories(${CMAKE_SOURCE_DIR}/Include)
+
 add_executable(CVolt Src/main.cpp
         Src/Lexer.cpp
         Include/Lexer.h
@@ -20,8 +22,8 @@ add_executable(CVolt Src/main.cpp
         Include/Operator.h
         Src/Errors.cpp
         Include/Errors.h
-        Src/Compiler.cpp
-        Include/Compiler.h
+        #Src/Compiler.cpp
+        #Include/Compiler.h
         Include/TypeDefs.h
         Include/BufferView.h
         Src/BufferView.cpp

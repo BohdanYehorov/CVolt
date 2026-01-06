@@ -2,7 +2,7 @@
 // Created by bohdan on 14.12.25.
 //
 
-#include "../Include/Parser.h"
+#include "Parser.h"
 
 #include <charconv>
 #include <iostream>

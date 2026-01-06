@@ -2,7 +2,7 @@
 // Created by bohdan on 14.12.25.
 //
 
-#include "../Include/Arena.h"
+#include "Arena.h"
 #include <cstring>
 #include <iostream>
 

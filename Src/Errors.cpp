@@ -2,7 +2,7 @@
 // Created by bohdan on 17.12.25.
 //
 
-#include "../Include/Errors.h"
+#include "Errors.h"
 
 
 std::string LexError::ToString() const
