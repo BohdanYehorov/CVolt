@@ -661,7 +661,7 @@ ASTNode* Parser::ParseReturn()
 
 ASTNode* Parser::ParseBreak()
 {
-    if (LoopsCount == 0)
+    if (!InLoop)
         return nullptr;
 
     if (!ConsumeIf(Token::KW_BREAK))
@@ -672,7 +672,7 @@ ASTNode* Parser::ParseBreak()
 
 ASTNode* Parser::ParseContinue()
 {
-    if (LoopsCount == 0)
+    if (!InLoop)
         return nullptr;
 
     if (!ConsumeIf(Token::KW_CONTINUE))

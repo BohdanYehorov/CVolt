@@ -1,12 +1,13 @@
 int main()
 {
-    for (int i = 0; i < 3; i++)
+    int a = 0;
+    while (a < 100)
     {
-        for (int j = 0; j < 3; j++)
-        {
-            Out(i);
-            Out(j);
-        }
+        a++;
+        if (a == 50)
+            continue;
+
+        Out(a);
     }
     return 0;
 }

@@ -11,6 +11,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include "ASTNodes.h"
 #include <unordered_map>
+#include <stack>
 
 class LLVMCompiler
 {
@@ -25,11 +26,12 @@ private:
     std::unordered_map<std::string, llvm::AllocaInst*> SymbolTable;
 
     std::vector<std::vector<ScopeEntry>> ScopeStack;
+    std::stack<llvm::BasicBlock*> LoopEndStack;
+    std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
 public:
     LLVMCompiler(ASTNode* ASTTree)
         : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context), ASTTree(ASTTree) {}
-    //~LLVMCompiler() { /*delete Module;*/ }
 
     void Compile();
     void Print() const { Module->print(llvm::outs(), nullptr); }
@@ -41,7 +43,7 @@ private:
 
     llvm::Value* CompileBlock(const BlockNode* Block);
 
-    llvm::Value* CompileIntNode(const IntNode* Int);
+    llvm::Value* CompileInt(const IntNode* Int);
     llvm::Value* CompileBool(const BoolNode* Bool);
     llvm::Value* CompileIdentifier(const IdentifierNode* Identifier);
     llvm::Value* CompileComparison(const ComparisonNode* Comparison);
@@ -49,18 +51,21 @@ private:
     llvm::Value* CompilePrefix(const PrefixOpNode* Prefix);
     llvm::Value* CompileSufix(const SuffixOpNode* Suffix);
     llvm::Value* CompileUnary(const UnaryOpNode* Unary);
-    llvm::Value* CompileBinaryOpNode(const BinaryOpNode* BinaryOp);
-    llvm::Value* CompileCallNode(const CallNode* Call);
+    llvm::Value* CompileBinary(const BinaryOpNode* BinaryOp);
+    llvm::Value* CompileCall(const CallNode* Call);
     llvm::Value* CompileVariable(const VariableNode* Var);
     llvm::Value* CompileFunction(const FunctionNode *Function);
     llvm::Value* CompileReturn(const ReturnNode* Return);
     llvm::Value* CompileIf(const IfNode *If);
     llvm::Value* CompileWhile(const WhileNode* While);
     llvm::Value* CompileFor(const ForNode* For);
+    llvm::Value* CompileBreak(const BreakNode* Break);
+    llvm::Value* CompileContinue(const ContinueNode* Continue);
 
     llvm::Type* ToLLVMType(DataType Type);
     llvm::Value* CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
-    void CastToJointType(llvm::Value *&Left, llvm::Value *&Right, bool Signed = true);
+    void CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool Signed = true);
+    llvm::Value* CastToBool(llvm::Value* Value);
 
     static int GetTypeRank(llvm::Type* Type);
     llvm::Value* ImplicitCast(llvm::Value* Value, llvm::Type* Target, bool Signed = true);

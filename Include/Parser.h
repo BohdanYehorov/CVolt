@@ -54,6 +54,7 @@ private:
     [[nodiscard]] BufferStringView GetTokenLexeme(const Token& Tok) const { return TokensArena.Read(Tok.Lexeme); }
 
 private:
+private:
     ASTNode* ParseSequence();
     ASTNode* ParseBlock();
 

@@ -83,7 +83,7 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
     if (const auto Block = Cast<BlockNode>(Node))
         return CompileBlock(Block);
     if (const auto Int = Cast<IntNode>(Node))
-        return CompileIntNode(Int);
+        return CompileInt(Int);
     if (const auto Bool = Cast<BoolNode>(Node))
         return CompileBool(Bool);
     if (const auto Identifier = Cast<IdentifierNode>(Node))
@@ -92,14 +92,16 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
         return CompilePrefix(Prefix);
     if (const auto Suffix = Cast<SuffixOpNode>(Node))
         return CompileSufix(Suffix);
+    if (const auto Unary = Cast<UnaryOpNode>(Node))
+        return CompileUnary(Unary);
     if (const auto Comparison = Cast<ComparisonNode>(Node))
         return CompileComparison(Comparison);
     if (const auto AssignOp = Cast<AssignmentNode>(Node))
         return CompileAssignment(AssignOp);
     if (const auto BinaryOp = Cast<BinaryOpNode>(Node))
-        return CompileBinaryOpNode(BinaryOp);
+        return CompileBinary(BinaryOp);
     if (const auto Call = Cast<CallNode>(Node))
-        return CompileCallNode(Call);
+        return CompileCall(Call);
     if (const auto Var = Cast<VariableNode>(Node))
         return CompileVariable(Var);
     if (const auto Function = Cast<FunctionNode>(Node))
@@ -112,9 +114,12 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
         return CompileWhile(While);
     if (const auto For = Cast<ForNode>(Node))
         return CompileFor(For);
+    if (const auto Break = Cast<BreakNode>(Node))
+        return CompileBreak(Break);
+    if (const auto Continue = Cast<ContinueNode>(Node))
+        return CompileContinue(Continue);
 
     ERROR("Cannot resolve node: '" + Node->GetName() + "'");
-    return nullptr;
 }
 
 llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
@@ -134,7 +139,7 @@ llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileIntNode(const IntNode *Int)
+llvm::Value* LLVMCompiler::CompileInt(const IntNode *Int)
 {
     return llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value);
 }
@@ -155,7 +160,6 @@ llvm::Value* LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
     }
 
     ERROR("Cannot resolve symbol: '" + Value + "'")
-    return nullptr;
 }
 
 llvm::Value* LLVMCompiler::CompileComparison(const ComparisonNode *Comparison)
@@ -177,8 +181,7 @@ llvm::Value* LLVMCompiler::CompileComparison(const ComparisonNode *Comparison)
             case Operator::LTE: return Builder.CreateICmpSLE(Left, Right);
             case Operator::GT:  return Builder.CreateICmpSGT(Left, Right);
             case Operator::GTE: return Builder.CreateICmpSGE(Left, Right);
-            default:
-                ERROR("Unknown comparison operator")
+            default: ERROR("Unknown comparison operator")
         }
     }
 
@@ -262,11 +265,20 @@ llvm::Value* LLVMCompiler::CompileSufix(const SuffixOpNode *Suffix)
     return Temp;
 }
 
-llvm::Value* LLVMCompiler::CompileUnary(const UnaryOpNode *Unary)
+llvm::Value* LLVMCompiler::CompileUnary(const UnaryOpNode* Unary)
 {
+    llvm::Value* Value = CompileNode(Unary->Operand);
+    switch (Unary->Type)
+    {
+        case Operator::ADD:         return Value;
+        case Operator::SUB:         return Builder.CreateNeg(Value);
+        case Operator::LOGICAL_NOT: return Builder.CreateNot(CastToBool(Value));
+        case Operator::BIT_NOT:     return Builder.CreateNot(Value);
+        default: ERROR("Unknown unary operator")
+    }
 }
 
-llvm::Value* LLVMCompiler::CompileBinaryOpNode(const BinaryOpNode *BinaryOp)
+llvm::Value* LLVMCompiler::CompileBinary(const BinaryOpNode *BinaryOp)
 {
     llvm::Value* Left = CompileNode(BinaryOp->Left);
     llvm::Value* Right = CompileNode(BinaryOp->Right);
@@ -278,14 +290,11 @@ llvm::Value* LLVMCompiler::CompileBinaryOpNode(const BinaryOpNode *BinaryOp)
         case Operator::ADD: return Builder.CreateAdd(Left, Right);
         case Operator::SUB: return Builder.CreateSub(Left, Right);
         case Operator::MUL: return Builder.CreateMul(Left, Right);
-        default:
-            ERROR("Unknown binary operator")
+        default: ERROR("Unknown binary operator")
     }
-
-    return nullptr;
 }
 
-llvm::Value * LLVMCompiler::CompileCallNode(const CallNode* Call)
+llvm::Value * LLVMCompiler::CompileCall(const CallNode* Call)
 {
     if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
     {
@@ -311,7 +320,6 @@ llvm::Value * LLVMCompiler::CompileCallNode(const CallNode* Call)
     }
 
     ERROR("Called object is not a function")
-    return nullptr;
 }
 
 llvm::Value* LLVMCompiler::CompileVariable(const VariableNode *Var)
@@ -377,32 +385,7 @@ llvm::Value* LLVMCompiler::CompileReturn(const ReturnNode *Return)
 llvm::Value* LLVMCompiler::CompileIf(const IfNode* If)
 {
     llvm::Value* Cond = CompileNode(If->Condition);
-
-    // if (Cond->getType()->isIntegerTy(1)) {
-    //     std::cout << "Bool\n";
-    // } else if (Cond->getType()->isIntegerTy()) {
-    //     // всі інші інт-типи
-    //     Cond = Builder.CreateICmpNE(
-    //         Cond,
-    //         llvm::ConstantInt::get(Cond->getType(), 0),
-    //         "ifcond"
-    //     );
-    // } else if (Cond->getType()->isPointerTy()) {
-    //     Cond = Builder.CreateICmpNE(
-    //         Cond,
-    //         llvm::ConstantPointerNull::get(
-    //             llvm::cast<llvm::PointerType>(Cond->getType())
-    //         ),
-    //         "ifcond"
-    //     );
-    // } else {
-    //     assert(false && "Unsupported type for if condition");
-    // }
-
-    Cond = CastInteger(Cond, llvm::Type::getInt1Ty(Context));
-
-    Cond = Builder.CreateICmpNE(
-        Cond, llvm::ConstantInt::get(Cond->getType(), 0), "ifcond");
+    Cond = CastToBool(Cond);
 
     llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -431,7 +414,7 @@ llvm::Value* LLVMCompiler::CompileIf(const IfNode* If)
     return nullptr;
 }
 
-llvm::Value * LLVMCompiler::CompileWhile(const WhileNode *While)
+llvm::Value* LLVMCompiler::CompileWhile(const WhileNode *While)
 {
     llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -439,15 +422,21 @@ llvm::Value * LLVMCompiler::CompileWhile(const WhileNode *While)
     Builder.CreateBr(LoopHeader);
     Builder.SetInsertPoint(LoopHeader);
     llvm::Value* Cond = CompileNode(While->Condition);
-    Cond = Builder.CreateICmpNE(
-        Cond, llvm::ConstantInt::get(Cond->getType(), 0));
+    Cond = CastToBool(Cond);
 
     llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
     llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
     Builder.CreateCondBr(Cond, ThenBB, EndBB);
 
+    LoopEndStack.push(EndBB);
+    LoopHeaderStack.push(LoopHeader);
+
     Builder.SetInsertPoint(ThenBB);
     CompileNode(While->Branch);
+
+    LoopEndStack.pop();
+    LoopHeaderStack.pop();
+
     if (!Builder.GetInsertBlock()->getTerminator())
         Builder.CreateBr(LoopHeader);
 
@@ -473,15 +462,22 @@ llvm::Value* LLVMCompiler::CompileFor(const ForNode *For)
     Builder.CreateBr(ForHeader);
     Builder.SetInsertPoint(ForHeader);
     llvm::Value* Cond = CompileNode(For->Condition);
-    Cond = Builder.CreateICmpNE(Cond, llvm::ConstantInt::get(Cond->getType(), 0));
+    Cond = CastToBool(Cond);
 
     llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
     llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
     llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
     Builder.CreateCondBr(Cond, ThenBB, EndBB);
 
+    LoopEndStack.push(EndBB);
+    LoopHeaderStack.push(ForHeader);
+
     Builder.SetInsertPoint(ThenBB);
     CompileNode(For->Body);
+
+    LoopEndStack.pop();
+    LoopHeaderStack.pop();
+
     Builder.CreateBr(LatchBB);
 
     Builder.SetInsertPoint(LatchBB);
@@ -493,6 +489,24 @@ llvm::Value* LLVMCompiler::CompileFor(const ForNode *For)
     Builder.SetInsertPoint(EndBB);
 
     ExitScope();
+    return nullptr;
+}
+
+llvm::Value* LLVMCompiler::CompileBreak(const BreakNode *Break)
+{
+    if (LoopEndStack.empty())
+        ERROR("break used outside loop")
+
+    Builder.CreateBr(LoopEndStack.top());
+    return nullptr;
+}
+
+llvm::Value* LLVMCompiler::CompileContinue(const ContinueNode *Continue)
+{
+    if (LoopHeaderStack.empty())
+        ERROR("continue used outside loop")
+
+    Builder.CreateBr(LoopHeaderStack.top());
     return nullptr;
 }
 
@@ -509,11 +523,10 @@ llvm::Type* LLVMCompiler::ToLLVMType(DataType Type)
             return llvm::Type::getInt1Ty(Context);
         default:
             ERROR("Unknown data type");
-            return nullptr;
     }
 }
 
-llvm::Value* LLVMCompiler::CastInteger(llvm::Value *Value, llvm::Type *Target, bool Signed)
+llvm::Value* LLVMCompiler::CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed)
 {
     llvm::Type* Src = Value->getType();
     if (Src == Target) return Value;
@@ -526,7 +539,6 @@ llvm::Value* LLVMCompiler::CastInteger(llvm::Value *Value, llvm::Type *Target, b
     }
 
     ERROR("Cannot cast this type");
-    return nullptr;
 }
 
 void LLVMCompiler::CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool Signed)
@@ -544,6 +556,24 @@ void LLVMCompiler::CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool
         Right = ImplicitCast(Right, LeftType, Signed);
     else
         Left = ImplicitCast(Left, RightType, Signed);
+}
+
+llvm::Value * LLVMCompiler::CastToBool(llvm::Value* Value)
+{
+    llvm::Type* Type = Value->getType();
+
+    if (Type == Builder.getInt1Ty())
+        return Value;
+
+    if (Type->isIntegerTy())
+        return Builder.CreateICmpNE(Value, llvm::ConstantInt::get(Type, 0));
+    if (Type->isFloatingPointTy())
+        return Builder.CreateFCmpONE(Value, llvm::ConstantFP::get(Type, 0.0));
+    if (Type->isPointerTy())
+        return Builder.CreateICmpNE(Value, llvm::ConstantPointerNull::get(
+            llvm::cast<llvm::PointerType>(Type)));
+
+    ERROR("Cannot cast to bool")
 }
 
 int LLVMCompiler::GetTypeRank(llvm::Type *Type)
@@ -595,7 +625,6 @@ llvm::Value* LLVMCompiler::ImplicitCast(llvm::Value* Value, llvm::Type* Target, 
     }
 
     ERROR("Cannot cast this type")
-    return nullptr;
 }
 
 void LLVMCompiler::DeclareVariable(const std::string &Name, llvm::AllocaInst *AllocaInst)
@@ -625,6 +654,7 @@ llvm::AllocaInst* LLVMCompiler::GetVariable(const std::string &Name)
 {
     if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
         return Iter->second;
+
     return nullptr;
 }
 
