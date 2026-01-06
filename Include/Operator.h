@@ -51,21 +51,6 @@ public:
         LSHIFT,
         RSHIFT
     };
-    using OpMap = std::unordered_map<Token::TokenType, Type>;
-
-    static std::unordered_map<Type, std::string> OperatorStrings;
-
-private:
-    static OpMap Assignment;
-    static OpMap Logical;
-    static OpMap Bitwise;
-    static OpMap Equality;
-    static OpMap Relational;
-    static OpMap Shift;
-    static OpMap Additive;
-    static OpMap Multiplicative;
-    static OpMap Unary;
-    static OpMap Postfix;
 
 public:
     static Type GetAssignmentOp(Token::TokenType Op);
@@ -78,6 +63,8 @@ public:
     static Type GetMultiplicativeOp(Token::TokenType Op);
     static Type GetUnaryOp(Token::TokenType Op);
     static Type GetPostfix(Token::TokenType Op);
+
+    static std::string ToString(Type Op);
 };
 
 

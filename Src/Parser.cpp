@@ -12,9 +12,7 @@ void Parser::PrintASTTree(ASTNode *Node, int Tabs)
     static auto PrintTabs = [](int Spaces)
     {
         for (size_t i = 0; i < Spaces; i++)
-        {
-            std::cout << "     ";
-        }
+            std::cout << "  ";
     };
 
     PrintTabs(Tabs);
@@ -59,13 +57,13 @@ void Parser::PrintASTTree(ASTNode *Node, int Tabs)
     }
     else if (auto UnaryOp = Cast<UnaryOpNode>(Node))
     {
-        std::cout << "OpType: " << Operator::OperatorStrings[UnaryOp->Type];
+        std::cout << "OpType: " << Operator::ToString(UnaryOp->Type);
         std::cout << std::endl;
         PrintASTTree(UnaryOp->Operand, Tabs + 1);
     }
     else if (auto BinaryOp = Cast<BinaryOpNode>(Node))
     {
-        std::cout << "OpType: " << Operator::OperatorStrings[BinaryOp->Type];
+        std::cout << "OpType: " << Operator::ToString(BinaryOp->Type);
         std::cout << std::endl;
         PrintASTTree(BinaryOp->Left, Tabs + 1);
         PrintASTTree(BinaryOp->Right, Tabs + 1);

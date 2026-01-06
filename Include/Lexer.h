@@ -6,7 +6,6 @@
 #define CVOLT_LEXER_H
 
 #include <string>
-#include <string_view>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>

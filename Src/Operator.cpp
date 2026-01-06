@@ -4,178 +4,168 @@
 
 #include "Operator.h"
 
-std::unordered_map<Operator::Type, std::string> Operator::OperatorStrings = {
-    { UNKNOWN, "UNKNOWN" },
-    { ADD, "ADD" },
-    { SUB, "SUB" },
-    { UN_PLS, "UN_PLS" },
-    { UN_MNS, "UN_MNS" },
-    { MUL, "MUL" },
-    { DIV, "DIV" },
-    { MOD, "MOD" },
-    { INC, "INC" },
-    { DEC, "DEC" },
-    { ASSIGN, "ASSIGN" },
-    { ADD_ASSIGN, "ADD_ASSIGN" },
-    { SUB_ASSIGN, "SUB_ASSIGN" },
-    { MUL_ASSIGN, "MUL_ASSIGN" },
-    { DIV_ASSIGN, "DIV_ASSIGN" },
-    { MOD_ASSIGN, "MOD_ASSIGN" },
-    { AND_ASSIGN, "AND_ASSIGN" },
-    { OR_ASSIGN, "OR_ASSIGN" },
-    { XOR_ASSIGN, "XOR_ASSIGN" },
-    { LSHIFT_ASSIGN, "LSHIFT_ASSIGN" },
-    { RSHIFT_ASSIGN, "RSHIFT_ASSIGN" },
-    { EQ, "EQ" },
-    { NEQ, "NEQ" },
-    { GT, "GT" },
-    { GTE, "GTE" },
-    { LT, "LT" },
-    { LTE, "LTE" },
-    { LOGICAL_AND, "LOGICAL_AND" },
-    { LOGICAL_OR, "LOGICAL_OR" },
-    { LOGICAL_NOT, "LOGICAL_NOT" },
-    { BIT_AND, "BIT_AND" },
-    { BIT_OR, "BIT_OR" },
-    { BIT_XOR, "BIT_XOR" },
-    { BIT_NOT, "BIT_NOT" },
-    { LSHIFT, "LSHIFT" },
-    { RSHIFT, "RSHIFT" }
-};
-
-Operator::OpMap Operator::Assignment = {
-    { Token::OP_ASSIGN, ASSIGN },
-    { Token::OP_ADD_ASSIGN, ADD_ASSIGN },
-    { Token::OP_SUB_ASSIGN, SUB_ASSIGN },
-    { Token::OP_MUL_ASSIGN, MUL_ASSIGN },
-    { Token::OP_DIV_ASSIGN, DIV_ASSIGN },
-    { Token::OP_MOD_ASSIGN, MOD_ASSIGN },
-    { Token::OP_AND_ASSIGN, AND_ASSIGN },
-    { Token::OP_OR_ASSIGN, OR_ASSIGN },
-    { Token::OP_XOR_ASSIGN, XOR_ASSIGN },
-    { Token::OP_LSHIFT_ASSIGN, LSHIFT_ASSIGN },
-    { Token::OP_RSHIFT_ASSIGN, RSHIFT_ASSIGN },
-};
-
-Operator::OpMap Operator::Logical = {
-    { Token::OP_LOGICAL_AND, LOGICAL_AND },
-    { Token::OP_LOGICAL_OR, LOGICAL_OR }
-};
-
-Operator::OpMap Operator::Bitwise = {
-    { Token::OP_BIT_OR, BIT_OR },
-    { Token::OP_BIT_XOR, BIT_XOR },
-    { Token::OP_BIT_AND, BIT_AND }
-};
-
-Operator::OpMap Operator::Equality = {
-    { Token::OP_EQ, EQ },
-    { Token::OP_NEQ, NEQ }
-};
-
-Operator::OpMap Operator::Relational = {
-    { Token::OP_GT, GT },
-    { Token::OP_GTE, GTE },
-    { Token::OP_LT, LT },
-    { Token::OP_LTE, LTE }
-};
-
-Operator::OpMap Operator::Shift = {
-    { Token::OP_LSHIFT, LSHIFT },
-    { Token::OP_RSHIFT, RSHIFT }
-};
-
-Operator::OpMap Operator::Additive = {
-    { Token::OP_ADD, ADD },
-    { Token::OP_SUB, SUB }
-};
-
-Operator::OpMap Operator::Multiplicative = {
-    { Token::OP_MUL, MUL },
-    { Token::OP_DIV, DIV },
-    { Token::OP_MOD, MOD }
-};
-
-Operator::OpMap Operator::Unary = {
-    { Token::OP_ADD, UN_PLS },
-    { Token::OP_SUB, UN_MNS },
-    { Token::OP_LOGICAL_NOT, LOGICAL_NOT },
-    { Token::OP_BIT_NOT, BIT_NOT },
-    { Token::OP_INC, INC },
-    { Token::OP_DEC, DEC }
-};
-
-Operator::OpMap Operator::Postfix = {
-    { Token::OP_INC, INC },
-    { Token::OP_DEC, DEC }
-};
+#define GEN_CASE(Op) case Token::OP_##Op: return Op;
+#define GEN_CASE_TO_STRING(Op) case Op: return #Op;
 
 Operator::Type Operator::GetAssignmentOp(Token::TokenType Op)
 {
-    if (auto Iter = Assignment.find(Op); Iter != Assignment.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(ASSIGN)
+        GEN_CASE(ADD_ASSIGN)
+        GEN_CASE(SUB_ASSIGN)
+        GEN_CASE(MUL_ASSIGN)
+        GEN_CASE(DIV_ASSIGN)
+        GEN_CASE(MOD_ASSIGN)
+        GEN_CASE(AND_ASSIGN)
+        GEN_CASE(OR_ASSIGN)
+        GEN_CASE(XOR_ASSIGN)
+        GEN_CASE(LSHIFT_ASSIGN)
+        GEN_CASE(RSHIFT_ASSIGN)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetLogicalOp(Token::TokenType Op)
 {
-    if (auto Iter = Logical.find(Op); Iter != Logical.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(LOGICAL_AND)
+        GEN_CASE(LOGICAL_OR)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetBitwiseOp(Token::TokenType Op)
 {
-    if (auto Iter = Bitwise.find(Op); Iter != Bitwise.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(BIT_AND)
+        GEN_CASE(BIT_OR)
+        GEN_CASE(BIT_XOR)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetEqualityOp(Token::TokenType Op)
 {
-    if (auto Iter = Equality.find(Op); Iter != Equality.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(EQ)
+        GEN_CASE(NEQ)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetRelationalOp(Token::TokenType Op)
 {
-    if (auto Iter = Relational.find(Op); Iter != Relational.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(GT)
+        GEN_CASE(GTE)
+        GEN_CASE(LT)
+        GEN_CASE(LTE)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetShiftOp(Token::TokenType Op)
 {
-    if (auto Iter = Shift.find(Op); Iter != Shift.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(LSHIFT)
+        GEN_CASE(RSHIFT)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetAdditiveOp(Token::TokenType Op)
 {
-    if (auto Iter = Additive.find(Op); Iter != Additive.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(ADD)
+        GEN_CASE(SUB)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetMultiplicativeOp(Token::TokenType Op)
 {
-    if (auto Iter = Multiplicative.find(Op); Iter != Multiplicative.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(MUL)
+        GEN_CASE(SUB)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetUnaryOp(Token::TokenType Op)
 {
-    if (auto Iter = Unary.find(Op); Iter != Unary.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(ADD)
+        GEN_CASE(SUB)
+        GEN_CASE(LOGICAL_NOT)
+        GEN_CASE(BIT_NOT)
+        GEN_CASE(INC)
+        GEN_CASE(DEC)
+        default: return UNKNOWN;
+    }
 }
 
 Operator::Type Operator::GetPostfix(Token::TokenType Op)
 {
-    if (auto Iter = Postfix.find(Op); Iter != Postfix.end())
-        return Iter->second;
-    return UNKNOWN;
+    switch (Op)
+    {
+        GEN_CASE(INC)
+        GEN_CASE(DEC)
+        default: return UNKNOWN;
+    }
 }
+
+std::string Operator::ToString(Type Op)
+{
+    switch (Op)
+    {
+        GEN_CASE_TO_STRING(UNKNOWN)
+        GEN_CASE_TO_STRING(ADD)
+        GEN_CASE_TO_STRING(SUB)
+        GEN_CASE_TO_STRING(UN_PLS)
+        GEN_CASE_TO_STRING(UN_MNS)
+        GEN_CASE_TO_STRING(MUL)
+        GEN_CASE_TO_STRING(DIV)
+        GEN_CASE_TO_STRING(MOD)
+        GEN_CASE_TO_STRING(INC)
+        GEN_CASE_TO_STRING(DEC)
+        GEN_CASE_TO_STRING(ASSIGN)
+        GEN_CASE_TO_STRING(ADD_ASSIGN)
+        GEN_CASE_TO_STRING(SUB_ASSIGN)
+        GEN_CASE_TO_STRING(MUL_ASSIGN)
+        GEN_CASE_TO_STRING(DIV_ASSIGN)
+        GEN_CASE_TO_STRING(MOD_ASSIGN)
+        GEN_CASE_TO_STRING(AND_ASSIGN)
+        GEN_CASE_TO_STRING(OR_ASSIGN)
+        GEN_CASE_TO_STRING(XOR_ASSIGN)
+        GEN_CASE_TO_STRING(LSHIFT_ASSIGN)
+        GEN_CASE_TO_STRING(RSHIFT_ASSIGN)
+        GEN_CASE_TO_STRING(EQ)
+        GEN_CASE_TO_STRING(NEQ)
+        GEN_CASE_TO_STRING(GT)
+        GEN_CASE_TO_STRING(GTE)
+        GEN_CASE_TO_STRING(LT)
+        GEN_CASE_TO_STRING(LTE)
+        GEN_CASE_TO_STRING(LOGICAL_AND)
+        GEN_CASE_TO_STRING(LOGICAL_OR)
+        GEN_CASE_TO_STRING(LOGICAL_NOT)
+        GEN_CASE_TO_STRING(BIT_AND)
+        GEN_CASE_TO_STRING(BIT_OR)
+        GEN_CASE_TO_STRING(BIT_XOR)
+        GEN_CASE_TO_STRING(BIT_NOT)
+        GEN_CASE_TO_STRING(LSHIFT)
+        GEN_CASE_TO_STRING(RSHIFT)
+        default: return "?";
+    }
+}
+
+#undef GEN_CASE
+#undef GEN_CASE_TO_STRING

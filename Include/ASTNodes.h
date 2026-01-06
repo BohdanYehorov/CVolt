@@ -10,8 +10,9 @@
 #include <vector>
 #include "Operator.h"
 #include <algorithm>
-#include "../Include/BufferView.h"
+#include "BufferView.h"
 #include "DataType.h"
+#include <llvm/ADT/TinyPtrVector.h>
 
 class ASTNode : public Object
 {
@@ -89,7 +90,7 @@ class ArrayNode : public ASTNode
 {
     GENERATED_BODY(ArrayNode, ASTNode)
 public:
-    std::vector<ASTNode*> Elements;
+    llvm::SmallVector<ASTNode*, 16> Elements;
     void AddItem(ASTNode* El)
     {
         Elements.push_back(El);
@@ -138,7 +139,7 @@ class CallNode : public ASTNode
     GENERATED_BODY(CallNode, ASTNode)
 public:
     ASTNode* Callee;
-    std::vector<ASTNode*> Arguments;
+    llvm::TinyPtrVector<ASTNode*> Arguments;
     CallNode(ASTNode* Callee) : Callee(Callee) {}
     void AddArgument(ASTNode* Arg)
     {
@@ -191,7 +192,7 @@ class FunctionNode : public ASTNode
 public:
     DataTypeNode* ReturnType;
     BufferStringView Name;
-    std::vector<ParamNode*> Params;
+    llvm::TinyPtrVector<ParamNode*> Params;
     ASTNode* Body = nullptr;
     FunctionNode(DataTypeNode* Type, BufferStringView Name) : ReturnType(Type), Name(Name) {}
     bool AddParam(ParamNode* Prm)

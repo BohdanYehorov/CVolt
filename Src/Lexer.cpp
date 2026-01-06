@@ -5,220 +5,91 @@
 #include "Lexer.h"
 #include <sstream>
 
+#define GEN_CASE_TO_STRING(Op) case Op: TypeStr = #Op; break;
+
 std::string Token::ToString(const ArenaStream &Stream) const
 {
     std::string TypeStr;
 
     switch (Type)
     {
-    	case IDENTIFIER:
-			TypeStr = "IDENTIFIER";
-			break;
-		case INT_NUMBER:
-			TypeStr = "INT_NUMBER";
-			break;
-		case FLOAT_NUMBER:
-			TypeStr = "FLOAT_NUMBER";
-			break;
-		case STRING:
-			TypeStr = "STRING";
-			break;
-		case BOOL_TRUE:
-			TypeStr = "BOOL_TRUE";
-			break;
-		case BOOL_FALSE:
-			TypeStr = "BOOL_FALSE";
-			break;
-		case CHAR:
-			TypeStr = "CHAR";
-			break;
-		case OP_ADD:
-			TypeStr = "OP_ADD";
-			break;
-		case OP_SUB:
-			TypeStr = "OP_SUB";
-			break;
-		case OP_MUL:
-			TypeStr = "OP_MUL";
-			break;
-		case OP_DIV:
-			TypeStr = "OP_DIV";
-			break;
-		case OP_MOD:
-			TypeStr = "OP_MOD";
-			break;
-		case OP_INC:
-			TypeStr = "OP_INC";
-			break;
-		case OP_DEC:
-			TypeStr = "OP_DEC";
-			break;
-		case OP_ASSIGN:
-			TypeStr = "OP_ASSIGN";
-			break;
-		case OP_ADD_ASSIGN:
-			TypeStr = "OP_ADD_ASSIGN";
-			break;
-		case OP_SUB_ASSIGN:
-			TypeStr = "OP_SUB_ASSIGN";
-			break;
-		case OP_MUL_ASSIGN:
-			TypeStr = "OP_MUL_ASSIGN";
-			break;
-		case OP_DIV_ASSIGN:
-			TypeStr = "OP_DIV_ASSIGN";
-			break;
-		case OP_MOD_ASSIGN:
-			TypeStr = "OP_MOD_ASSIGN";
-			break;
-		case OP_AND_ASSIGN:
-			TypeStr = "OP_AND_ASSIGN";
-			break;
-		case OP_OR_ASSIGN:
-			TypeStr = "OP_OR_ASSIGN";
-			break;
-		case OP_XOR_ASSIGN:
-			TypeStr = "OP_XOR_ASSIGN";
-			break;
-		case OP_LSHIFT_ASSIGN:
-			TypeStr = "OP_LSHIFT_ASSIGN";
-			break;
-		case OP_RSHIFT_ASSIGN:
-			TypeStr = "OP_RSHIFT_ASSIGN";
-			break;
-		case OP_EQ:
-			TypeStr = "OP_EQ";
-			break;
-		case OP_NEQ:
-			TypeStr = "OP_NEQ";
-			break;
-		case OP_GT:
-			TypeStr = "OP_GT";
-			break;
-		case OP_GTE:
-			TypeStr = "OP_GTE";
-			break;
-		case OP_LT:
-			TypeStr = "OP_LT";
-			break;
-		case OP_LTE:
-			TypeStr = "OP_LTE";
-			break;
-		case OP_LOGICAL_AND:
-			TypeStr = "OP_LOGICAL_AND";
-			break;
-		case OP_LOGICAL_OR:
-			TypeStr = "OP_LOGICAL_OR";
-			break;
-		case OP_LOGICAL_NOT:
-			TypeStr = "OP_LOGICAL_NOT";
-			break;
-		case OP_BIT_AND:
-			TypeStr = "OP_BIT_AND";
-			break;
-		case OP_BIT_OR:
-			TypeStr = "OP_BIT_OR";
-			break;
-		case OP_BIT_XOR:
-			TypeStr = "OP_BIT_XOR";
-			break;
-		case OP_BIT_NOT:
-			TypeStr = "OP_BIT_NOT";
-			break;
-		case OP_LSHIFT:
-			TypeStr = "OP_LSHIFT";
-			break;
-		case OP_RSHIFT:
-			TypeStr = "OP_RSHIFT";
-			break;
-		case OP_DOT:
-			TypeStr = "OP_DOT";
-			break;
-		case OP_ARROW:
-			TypeStr = "OP_ARROW";
-			break;
-		case OP_SCOPE:
-			TypeStr = "OP_SCOPE";
-			break;
-		case OP_QUESTION:
-			TypeStr = "OP_QUESTION";
-			break;
-		case OP_COLON:
-			TypeStr = "OP_COLON";
-			break;
-		case OP_COMMA:
-			TypeStr = "OP_COMMA";
-			break;
-		case OP_SEMICOLON:
-			TypeStr = "OP_SEMICOLON";
-			break;
-		case OP_LPAREN:
-			TypeStr = "OP_LPAREN";
-			break;
-		case OP_RPAREN:
-			TypeStr = "OP_RPAREN";
-			break;
-		case OP_LBRACKET:
-			TypeStr = "OP_LBRACKET";
-			break;
-		case OP_RBRACKET:
-			TypeStr = "OP_RBRACKET";
-			break;
-		case OP_LBRACE:
-			TypeStr = "OP_LBRACE";
-			break;
-		case OP_RBRACE:
-			TypeStr = "OP_RBRACE";
-			break;
-		case KW_IF:
-			TypeStr = "KW_IF";
-			break;
-		case KW_ELSE:
-			TypeStr = "KW_ELSE";
-			break;
-		case KW_WHILE:
-			TypeStr = "KW_WHILE";
-			break;
-		case KW_FOR:
-			TypeStr = "KW_FOR";
-			break;
-		case KW_RETURN:
-			TypeStr = "KW_RETURN";
-			break;
-		case KW_BREAK:
-			TypeStr = "KW_BREAK";
-			break;
-		case KW_CONTINUE:
-			TypeStr = "KW_CONTINUE";
-			break;
-    	case TYPE_VOID:
-    		TypeStr = "TYPE_VOID";
-    		break;
-		case TYPE_INT:
-			TypeStr = "TYPE_INT";
-			break;
-		case TYPE_FLOAT:
-			TypeStr = "TYPE_FLOAT";
-			break;
-		case TYPE_BOOL:
-			TypeStr = "TYPE_BOOL";
-			break;
-		case TYPE_CHAR:
-			TypeStr = "TYPE_CHAR";
-			break;
-		case INVALID:
-			TypeStr = "INVALID";
-			break;
-		case UNKNOWN:
-			TypeStr = "UNKNOWN";
-			break;
+    	GEN_CASE_TO_STRING(IDENTIFIER)
+		GEN_CASE_TO_STRING(INT_NUMBER)
+		GEN_CASE_TO_STRING(FLOAT_NUMBER)
+		GEN_CASE_TO_STRING(STRING)
+		GEN_CASE_TO_STRING(BOOL_TRUE)
+		GEN_CASE_TO_STRING(BOOL_FALSE)
+		GEN_CASE_TO_STRING(CHAR)
+		GEN_CASE_TO_STRING(OP_ADD)
+		GEN_CASE_TO_STRING(OP_SUB)
+		GEN_CASE_TO_STRING(OP_MUL)
+		GEN_CASE_TO_STRING(OP_DIV)
+		GEN_CASE_TO_STRING(OP_MOD)
+		GEN_CASE_TO_STRING(OP_INC)
+		GEN_CASE_TO_STRING(OP_DEC)
+		GEN_CASE_TO_STRING(OP_ASSIGN)
+		GEN_CASE_TO_STRING(OP_ADD_ASSIGN)
+		GEN_CASE_TO_STRING(OP_SUB_ASSIGN)
+		GEN_CASE_TO_STRING(OP_MUL_ASSIGN)
+		GEN_CASE_TO_STRING(OP_DIV_ASSIGN)
+		GEN_CASE_TO_STRING(OP_MOD_ASSIGN)
+		GEN_CASE_TO_STRING(OP_AND_ASSIGN)
+		GEN_CASE_TO_STRING(OP_OR_ASSIGN)
+		GEN_CASE_TO_STRING(OP_XOR_ASSIGN)
+		GEN_CASE_TO_STRING(OP_LSHIFT_ASSIGN)
+		GEN_CASE_TO_STRING(OP_RSHIFT_ASSIGN)
+		GEN_CASE_TO_STRING(OP_EQ)
+		GEN_CASE_TO_STRING(OP_NEQ)
+		GEN_CASE_TO_STRING(OP_GT)
+		GEN_CASE_TO_STRING(OP_GTE)
+		GEN_CASE_TO_STRING(OP_LT)
+		GEN_CASE_TO_STRING(OP_LTE)
+		GEN_CASE_TO_STRING(OP_LOGICAL_AND)
+		GEN_CASE_TO_STRING(OP_LOGICAL_OR)
+		GEN_CASE_TO_STRING(OP_LOGICAL_NOT)
+		GEN_CASE_TO_STRING(OP_BIT_AND)
+		GEN_CASE_TO_STRING(OP_BIT_OR)
+		GEN_CASE_TO_STRING(OP_BIT_XOR)
+		GEN_CASE_TO_STRING(OP_BIT_NOT)
+		GEN_CASE_TO_STRING(OP_LSHIFT)
+		GEN_CASE_TO_STRING(OP_RSHIFT)
+		GEN_CASE_TO_STRING(OP_DOT)
+		GEN_CASE_TO_STRING(OP_ARROW)
+		GEN_CASE_TO_STRING(OP_SCOPE)
+		GEN_CASE_TO_STRING(OP_QUESTION)
+		GEN_CASE_TO_STRING(OP_COLON)
+		GEN_CASE_TO_STRING(OP_COMMA)
+		GEN_CASE_TO_STRING(OP_SEMICOLON)
+		GEN_CASE_TO_STRING(OP_LPAREN)
+		GEN_CASE_TO_STRING(OP_RPAREN)
+		GEN_CASE_TO_STRING(OP_LBRACKET)
+		GEN_CASE_TO_STRING(OP_RBRACKET)
+		GEN_CASE_TO_STRING(OP_LBRACE)
+		GEN_CASE_TO_STRING(OP_RBRACE)
+		GEN_CASE_TO_STRING(KW_IF)
+		GEN_CASE_TO_STRING(KW_ELSE)
+		GEN_CASE_TO_STRING(KW_WHILE)
+		GEN_CASE_TO_STRING(KW_FOR)
+		GEN_CASE_TO_STRING(KW_RETURN)
+		GEN_CASE_TO_STRING(KW_BREAK)
+		GEN_CASE_TO_STRING(KW_CONTINUE)
+		GEN_CASE_TO_STRING(TYPE_VOID)
+		GEN_CASE_TO_STRING(TYPE_INT)
+		GEN_CASE_TO_STRING(TYPE_FLOAT)
+		GEN_CASE_TO_STRING(TYPE_BOOL)
+		GEN_CASE_TO_STRING(TYPE_CHAR)
+		GEN_CASE_TO_STRING(INVALID)
+		GEN_CASE_TO_STRING(UNKNOWN)
     }
 
     std::stringstream SStr;
 
-	SStr << TypeStr << ", " << Stream.Read(Lexeme).ToString() << ", " << Pos << ", " << Line << ", " << Column;
+	SStr << "Token Kind: " << TypeStr << ", Lexeme: '" << Stream.Read(Lexeme).ToString() <<
+		"', Pos: " << Pos << ", Line: " << Line << ", Column: " << Column;
     return SStr.str();
 }
+
+#undef GEN_CASE_TO_STRING
 
 std::unordered_set<char> Lexer::OperatorChars = {
     '+', '-', '*', '/', '%', '=', '!', '<', '>',
