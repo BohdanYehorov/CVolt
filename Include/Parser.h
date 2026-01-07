@@ -57,7 +57,7 @@ private:
     ASTNode* ParseSequence();
     ASTNode* ParseBlock();
 
-    DataTypeNodeBase *ParseDataType();
+    DataTypeNodeBase* ParseDataType();
 
     ASTNode* ParseParameter();
     ASTNode* ParseFunction();

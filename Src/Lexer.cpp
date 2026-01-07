@@ -71,6 +71,7 @@ std::string Token::ToString(const ArenaStream &Stream) const
 		GEN_CASE_TO_STRING(OP_RBRACKET)
 		GEN_CASE_TO_STRING(OP_LBRACE)
 		GEN_CASE_TO_STRING(OP_RBRACE)
+    	GEN_CASE_TO_STRING(OP_REFERENCE)
 		GEN_CASE_TO_STRING(KW_IF)
 		GEN_CASE_TO_STRING(KW_ELSE)
 		GEN_CASE_TO_STRING(KW_WHILE)
@@ -102,7 +103,7 @@ std::string Token::ToString(const ArenaStream &Stream) const
 std::unordered_set<char> Lexer::OperatorChars = {
     '+', '-', '*', '/', '%', '=', '!', '<', '>',
     '&', '|', '^', '~', '.', ':', '?', ',', ';',
-    '(', ')', '[', ']', '{', '}'
+    '(', ')', '[', ']', '{', '}', '$'
 };
 
 std::unordered_map<std::string, Token::TokenType> Lexer::Operators = {
@@ -157,7 +158,9 @@ std::unordered_map<std::string, Token::TokenType> Lexer::Operators = {
     {"[", Token::OP_LBRACKET },
     { "]", Token::OP_RBRACKET },
     { "{", Token::OP_LBRACE },
-    { "}", Token::OP_RBRACE }
+    { "}", Token::OP_RBRACE },
+
+	{ "$", Token::OP_REFERENCE }
 };
 
 std::unordered_map<std::string, Token::TokenType> Lexer::Keywords = {

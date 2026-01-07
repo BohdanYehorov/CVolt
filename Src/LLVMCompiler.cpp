@@ -11,16 +11,29 @@
 
 void LLVMCompiler::Compile()
 {
-    llvm::FunctionType* OutTy = llvm::FunctionType::get(
+    llvm::FunctionType* OutIntTy = llvm::FunctionType::get(
     llvm::Type::getVoidTy(Context),
     { llvm::Type::getInt32Ty(Context) },
     false
-);
+    );
+
+    llvm::FunctionType* OutStrTy = llvm::FunctionType::get(
+        llvm::Type::getVoidTy(Context),
+        { llvm::PointerType::get(Context, 0) },
+        false
+    );
 
     llvm::Function::Create(
-        OutTy,
+        OutIntTy,
         llvm::Function::ExternalLinkage,
-        "Out",
+        "OutInt",
+        Module.get()
+    );
+
+    llvm::Function::Create(
+        OutStrTy,
+        llvm::Function::ExternalLinkage,
+        "OutStr",
         Module.get()
     );
 
@@ -46,10 +59,16 @@ int LLVMCompiler::Run()
 
     llvm::orc::SymbolMap Symbols;
 
-    Symbols[JIT->get()->mangleAndIntern("Out")] =
+    Symbols[JIT->get()->mangleAndIntern("OutInt")] =
         llvm::orc::ExecutorSymbolDef(
-            llvm::orc::ExecutorAddr::fromPtr(&Out),
+            llvm::orc::ExecutorAddr::fromPtr(&OutInt),
             llvm::JITSymbolFlags::Exported
+        );
+
+    Symbols[JIT->get()->mangleAndIntern("OutStr")] =
+        llvm::orc::ExecutorSymbolDef(
+            llvm::orc::ExecutorAddr::fromPtr(&OutStr),
+                llvm::JITSymbolFlags::Exported
         );
 
     cantFail(JIT->get()->getMainJITDylib().define(
@@ -86,8 +105,12 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
         return CompileInt(Int);
     if (const auto Bool = Cast<BoolNode>(Node))
         return CompileBool(Bool);
+    if (const auto String = Cast<StringNode>(Node))
+        return CompileString(String);
     if (const auto Identifier = Cast<IdentifierNode>(Node))
         return CompileIdentifier(Identifier);
+    if (const auto Ref = Cast<RefNode>(Node))
+        return CompileRef(Ref);
     if (const auto Prefix = Cast<PrefixOpNode>(Node))
         return CompilePrefix(Prefix);
     if (const auto Suffix = Cast<SuffixOpNode>(Node))
@@ -172,6 +195,16 @@ llvm::Value* LLVMCompiler::CompileBool(const BoolNode* Bool)
     return llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value);
 }
 
+llvm::Value* LLVMCompiler::CompileChar(const CharNode* Char)
+{
+    return llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value);
+}
+
+llvm::Value* LLVMCompiler::CompileString(const StringNode *String)
+{
+    return Builder.CreateGlobalString(String->Value.ToString());
+}
+
 llvm::Value* LLVMCompiler::CompileIdentifier(const IdentifierNode* Identifier)
 {
     const std::string Value = Identifier->Value.ToString();
@@ -183,6 +216,15 @@ llvm::Value* LLVMCompiler::CompileIdentifier(const IdentifierNode* Identifier)
     }
 
     ERROR("Cannot resolve symbol: '" + Value + "'")
+}
+
+llvm::Value* LLVMCompiler::CompileRef(const RefNode *Ref)
+{
+    llvm::AllocaInst* LValue = GetLValue(Ref->Target);
+    if (!LValue)
+        ERROR("Cannot apply operator '$' to l-value")
+
+    return LValue;
 }
 
 llvm::Value* LLVMCompiler::CompilePrefix(const PrefixOpNode* Prefix)
@@ -354,9 +396,9 @@ llvm::Value* LLVMCompiler::CompileCall(const CallNode* Call)
             return Builder.CreateCall(Iter->second);
         }
 
-        if (FuncName == "Out")
+        if (FuncName == "OutInt" || FuncName == "OutStr")
         {
-            llvm::Function* OutFunc = Module->getFunction("Out");
+            llvm::Function* OutFunc = Module->getFunction(FuncName);
             return Builder.CreateCall(OutFunc, { CompileNode(Call->Arguments[0]) });
         }
 
@@ -558,13 +600,20 @@ llvm::Type* LLVMCompiler::ToLLVMType(DataType Type)
 {
     switch (Type)
     {
-        case DataType::INT:
-            return llvm::Type::getInt32Ty(Context);
-        case DataType::FLOAT:
-            return llvm::Type::getFloatTy(Context);
+        case DataType::VOID:
+            return llvm::Type::getVoidTy(Context);
         case DataType::BOOL:
         case DataType::CHAR:
+        case DataType::BYTE:
             return llvm::Type::getInt1Ty(Context);
+        case DataType::INT:
+            return llvm::Type::getInt32Ty(Context);
+        case DataType::LONG:
+            return llvm::Type::getInt64Ty(Context);
+        case DataType::FLOAT:
+            return llvm::Type::getFloatTy(Context);
+        case DataType::DOUBLE:
+            return llvm::Type::getDoubleTy(Context);
         default:
             ERROR("Unknown data type");
     }
@@ -723,7 +772,7 @@ llvm::Type* LLVMCompiler::CompileType(const DataTypeNodeBase* Type)
     if (const auto PrimitiveType = Cast<const PrimitiveDataTypeNode>(Type))
         return ToLLVMType(PrimitiveType->PrimitiveType);
     if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
-        return llvm::PointerType::get(CompileType(PtrType->BaseType), 0);
+        return llvm::PointerType::get(CompileType(PtrType->BaseType)->getContext(), 0);
 
     ERROR("Unsupported type node: " + Type->GetName());
 }
@@ -734,4 +783,11 @@ llvm::AllocaInst* LLVMCompiler::GetLValue(const ASTNode* Node)
         return GetVariable(Identifier->Value.ToString());
 
     return nullptr;
+}
+
+void LLVMCompiler::CreateDefaultFunction(const std::string &Name, llvm::Type *RetType,
+    const llvm::SmallVector<llvm::Type*, 8> &Params)
+{
+    llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, Params, false);
+    llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Name, Module.get());
 }

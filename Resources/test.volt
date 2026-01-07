@@ -1,6 +1,5 @@
 int Main()
 {
-    int Num = 0;
-    Out(Num);
+    OutStr("Hello, World!\n");
     return 0;
 }

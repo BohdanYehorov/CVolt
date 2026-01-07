@@ -55,6 +55,11 @@ void Parser::PrintASTTree(ASTNode *Node, int Tabs)
         for (auto El : Array->Elements)
             PrintASTTree(El, Tabs + 1);
     }
+    else if (auto Ref = Cast<RefNode>(Node))
+    {
+        std::cout << "Target:\n";
+        PrintASTTree(Ref->Target, Tabs + 1);
+    }
     else if (auto UnaryOp = Cast<UnaryOpNode>(Node))
     {
         std::cout << "OpType: " << Operator::ToString(UnaryOp->Type);
@@ -88,11 +93,6 @@ void Parser::PrintASTTree(ASTNode *Node, int Tabs)
         PrintTabs(Tabs);
         std::cout << "Index:\n";
         PrintASTTree(Subscript->Index, Tabs + 1);
-    }
-    else if (auto Type = Cast<DataTypeNode>(Node))
-    {
-        std::cout << "Type: " << int(Type->TypeInfo.BaseType) << ", Pointer Depth: " <<
-            std::boolalpha << Type->TypeInfo.PointerDepth << std::endl;
     }
     else if (auto PrimitiveType = Cast<PrimitiveDataTypeNode>(Node))
     {
@@ -453,7 +453,7 @@ DataTypeNodeBase* Parser::ParseDataType()
             case Token::OP_MUL:
                 Type = NodesArena.Create<PtrDataTypeNode>(Type);
                 break;
-            case Token::OP_BIT_AND:
+            case Token::OP_REFERENCE:
                 Type = NodesArena.Create<RefDataTypeNode>(Type);
                 break;
             default:
@@ -1016,6 +1016,17 @@ ASTNode* Parser::ParseUnary()
 
         return NodesArena.Create<UnaryOpNode>(OpType, Operand);
     }
+
+    if (Tok.Type == Token::OP_REFERENCE)
+    {
+        Consume();
+        ASTNode* Target = ParseUnary();
+        if (!Target)
+            return nullptr;
+
+        return NodesArena.Create<RefNode>(Target);
+    }
+
     return ParsePostfix();
 }
 

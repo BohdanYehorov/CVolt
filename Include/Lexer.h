@@ -85,6 +85,7 @@ struct Token
         OP_RBRACKET,
         OP_LBRACE,
         OP_RBRACE,
+        OP_REFERENCE,
 
         KW_IF,
         KW_ELSE,

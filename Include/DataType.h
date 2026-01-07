@@ -14,10 +14,4 @@ enum class DataType : UInt8
     FLOAT, DOUBLE
 };
 
-struct DataTypeInfo
-{
-    DataType BaseType;
-    size_t PointerDepth;
-};
-
 #endif //CVOLT_DATATYPE_H

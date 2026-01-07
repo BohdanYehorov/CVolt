@@ -7,14 +7,17 @@
 
 #include <iostream>
 
-extern "C" inline void Out(int Num)
+extern "C"
 {
-    std::cout << Num << std::endl;
-}
+    inline void OutInt(int Num)
+    {
+        std::cout << Num;
+    }
 
-extern "C" inline void OutStr(const char* Str)
-{
-    std::cout << Str << std::endl;
+    inline void OutStr(const char* Str)
+    {
+        std::cout << Str;
+    }
 }
 
 #endif //CVOLT_DEFAULT_FUNCTIONS_H

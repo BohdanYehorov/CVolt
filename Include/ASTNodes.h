@@ -113,6 +113,14 @@ public:
     }
 };
 
+class RefNode : public ASTNode
+{
+    GENERATED_BODY(RefNode, ASTNode)
+public:
+    ASTNode* Target;
+    RefNode(ASTNode* Target) : Target(Target) {}
+};
+
 class UnaryOpNode : public ASTNode
 {
     GENERATED_BODY(UnaryOpNode, ASTNode)

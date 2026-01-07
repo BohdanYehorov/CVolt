@@ -12,6 +12,7 @@
 #include "ASTNodes.h"
 #include <unordered_map>
 #include <stack>
+#include <llvm/ExecutionEngine/Orc/CoreContainers.h>
 
 class LLVMCompiler
 {
@@ -46,7 +47,10 @@ private:
     llvm::Value* CompileInt(const IntegerNode* Int);
     llvm::Value* CompileFloat(const FloatingPointNode* Float);
     llvm::Value* CompileBool(const BoolNode* Bool);
+    llvm::Value* CompileChar(const CharNode* Char);
+    llvm::Value* CompileString(const StringNode* String);
     llvm::Value* CompileIdentifier(const IdentifierNode* Identifier);
+    llvm::Value* CompileRef(const RefNode* Ref);
     llvm::Value* CompilePrefix(const PrefixOpNode* Prefix);
     llvm::Value* CompileSufix(const SuffixOpNode* Suffix);
     llvm::Value* CompileUnary(const UnaryOpNode* Unary);
@@ -78,9 +82,10 @@ private:
     void ExitScope();
 
     llvm::Type* CompileType(const DataTypeNodeBase* Type);
-
     llvm::AllocaInst* GetLValue(const ASTNode* Node);
-};
 
+    void CreateDefaultFunction(const std::string& Name, llvm::Type* RetType,
+        const llvm::SmallVector<llvm::Type*, 8>& Params);
+};
 
 #endif //CVOLT_LLVMCOMPILER_H
