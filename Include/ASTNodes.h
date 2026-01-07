@@ -189,22 +189,46 @@ public:
         : Target(Target), Index(Index) {}
 };
 
-class DataTypeNode : public ASTNode
+class DataTypeNodeBase : public ASTNode
 {
-    GENERATED_BODY(DataTypeNode, ASTNode)
+    GENERATED_BODY(DataTypeNodeBase, ASTNode)
+};
+
+class PrimitiveDataTypeNode : public DataTypeNodeBase
+{
+    GENERATED_BODY(PrimitiveDataTypeNode, DataTypeNodeBase)
 public:
-    DataTypeInfo TypeInfo;
-    DataTypeNode(const DataTypeInfo& TypeInfo) : TypeInfo(TypeInfo) {}
+    DataType PrimitiveType;
+    PrimitiveDataTypeNode(DataType PrimitiveType)
+        : PrimitiveType(PrimitiveType) {}
+};
+
+class PtrDataTypeNode : public DataTypeNodeBase
+{
+    GENERATED_BODY(PtrDataTypeNode, DataTypeNodeBase)
+public:
+    DataTypeNodeBase* BaseType;
+    PtrDataTypeNode(DataTypeNodeBase* BaseType)
+        : BaseType(BaseType) {}
+};
+
+class RefDataTypeNode : public DataTypeNodeBase
+{
+    GENERATED_BODY(RefDataTypeNode, DataTypeNodeBase)
+public:
+    DataTypeNodeBase* BaseType;
+    RefDataTypeNode(DataTypeNodeBase* BaseType)
+        : BaseType(BaseType) {}
 };
 
 class VariableNode : public ASTNode
 {
     GENERATED_BODY(VariableNode, ASTNode)
 public:
-    DataTypeNode* Type;
+    DataTypeNodeBase* Type;
     BufferStringView Name;
     ASTNode* Value;
-    VariableNode(DataTypeNode* Type, BufferStringView Name, ASTNode* Value)
+    VariableNode(DataTypeNodeBase* Type, BufferStringView Name, ASTNode* Value)
         : Type(Type), Name(Name), Value(Value) {}
 };
 
@@ -212,10 +236,10 @@ class ParamNode : public ASTNode
 {
     GENERATED_BODY(ParamNode, ASTNode)
 public:
-    DataTypeNode* Type;
+    DataTypeNodeBase* Type;
     BufferStringView Name;
     ASTNode* DefaultValue;
-    ParamNode(DataTypeNode* Type, BufferStringView Name, ASTNode* Value)
+    ParamNode(DataTypeNodeBase* Type, BufferStringView Name, ASTNode* Value)
         : Type(Type), Name(Name), DefaultValue(Value) {}
 };
 
@@ -223,11 +247,11 @@ class FunctionNode : public ASTNode
 {
     GENERATED_BODY(FunctionNode, ASTNode)
 public:
-    DataTypeNode* ReturnType;
+    DataTypeNodeBase* ReturnType;
     BufferStringView Name;
     llvm::TinyPtrVector<ParamNode*> Params;
     ASTNode* Body = nullptr;
-    FunctionNode(DataTypeNode* Type, BufferStringView Name)
+    FunctionNode(DataTypeNodeBase* Type, BufferStringView Name)
         : ReturnType(Type), Name(Name) {}
     bool AddParam(ParamNode* Prm)
     {

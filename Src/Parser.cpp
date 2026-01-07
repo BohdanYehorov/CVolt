@@ -91,8 +91,55 @@ void Parser::PrintASTTree(ASTNode *Node, int Tabs)
     }
     else if (auto Type = Cast<DataTypeNode>(Node))
     {
-        std::cout << "Type: " << int(Type->TypeInfo.BaseType) << ", Size: " << Type->TypeInfo.Size << ", Align: " <<
-            Type->TypeInfo.Align << std::endl;
+        std::cout << "Type: " << int(Type->TypeInfo.BaseType) << ", Pointer Depth: " <<
+            std::boolalpha << Type->TypeInfo.PointerDepth << std::endl;
+    }
+    else if (auto PrimitiveType = Cast<PrimitiveDataTypeNode>(Node))
+    {
+        std::string TypeStr;
+
+        switch (PrimitiveType->PrimitiveType)
+        {
+            case DataType::VOID:
+                TypeStr = "VOID";
+                break;
+            case DataType::BOOL:
+                TypeStr = "BOOL";
+                break;
+            case DataType::CHAR:
+                TypeStr = "CHAR";
+                break;
+            case DataType::BYTE:
+                TypeStr = "BYTE";
+                break;
+            case DataType::INT:
+                TypeStr = "INT";
+                break;
+            case DataType::LONG:
+                TypeStr = "LONG";
+                break;
+            case DataType::FLOAT:
+                TypeStr = "FLOAT";
+                break;
+            case DataType::DOUBLE:
+                TypeStr = "DOUBLE";
+                break;
+            default:
+                TypeStr = "?";
+                break;
+        }
+
+        std::cout << "Type: " << TypeStr << std::endl;
+    }
+    else if (auto PtrType = Cast<PtrDataTypeNode>(Node))
+    {
+        std::cout << std::endl;
+        PrintASTTree(PtrType->BaseType, Tabs + 1);
+    }
+    else if (auto RefType = Cast<RefDataTypeNode>(Node))
+    {
+        std::cout << std::endl;
+        PrintASTTree(RefType->BaseType, Tabs + 1);
     }
     else if (auto Variable = Cast<VariableNode>(Node))
     {
@@ -356,54 +403,71 @@ ASTNode* Parser::ParseBlock()
     return nullptr;
 }
 
-ASTNode* Parser::ParseDataType()
+DataTypeNodeBase* Parser::ParseDataType()
 {
     if (!IsValidIndex())
         return nullptr;
 
     const Token& Tok = CurrentToken();
 
-    DataType Type;
-    size_t Size = 0;
-    size_t Align = 0;
+    DataType PrimitiveType;
     switch (Tok.Type)
     {
         case Token::TYPE_VOID:
-            Type = DataType::VOID;
+            PrimitiveType = DataType::VOID;
             break;
         case Token::TYPE_BOOL:
-            Type = DataType::BOOL;
+            PrimitiveType = DataType::BOOL;
             break;
         case Token::TYPE_CHAR:
-            Type = DataType::CHAR;
+            PrimitiveType = DataType::CHAR;
             break;
         case Token::TYPE_BYTE:
-            Type = DataType::BYTE;
+            PrimitiveType = DataType::BYTE;
             break;
         case Token::TYPE_INT:
-            Type = DataType::INT;
+            PrimitiveType = DataType::INT;
             break;
         case Token::TYPE_LONG:
-            Type = DataType::LONG;
+            PrimitiveType = DataType::LONG;
             break;
         case Token::TYPE_FLOAT:
-            Type = DataType::FLOAT;
+            PrimitiveType = DataType::FLOAT;
             break;
         case Token::TYPE_DOUBLE:
-            Type = DataType::DOUBLE;
+            PrimitiveType = DataType::DOUBLE;
             break;
         default:
             return nullptr;
     }
     Consume();
 
-    return NodesArena.Create<DataTypeNode>(DataTypeInfo{ Type, Size, Align });
+    DataTypeNodeBase* Type = NodesArena.Create<PrimitiveDataTypeNode>(PrimitiveType);
+
+    if (!IsValidIndex()) return Type;
+
+    while (true)
+    {
+        switch (CurrentToken().Type)
+        {
+            case Token::OP_MUL:
+                Type = NodesArena.Create<PtrDataTypeNode>(Type);
+                break;
+            case Token::OP_BIT_AND:
+                Type = NodesArena.Create<RefDataTypeNode>(Type);
+                break;
+            default:
+                return Type;
+        }
+
+        Consume();
+    }
 }
 
 ASTNode* Parser::ParseParameter()
 {
     const Token* TokPtr;
-    auto DataType = Cast<DataTypeNode>(ParseDataType());
+    DataTypeNodeBase* DataType = ParseDataType();
     if (!DataType)
         return nullptr;
 
@@ -425,7 +489,7 @@ ASTNode* Parser::ParseFunction()
 {
     size_t StartIndex = Index;
     const Token* TokPtr;
-    auto DataType = Cast<DataTypeNode>(ParseDataType());
+    DataTypeNodeBase* DataType = ParseDataType();
     if (!DataType)
         return nullptr;
 
@@ -472,7 +536,7 @@ ASTNode* Parser::ParseVariable()
     size_t StartIndex = Index;
     const Token* TokPtr;
 
-    auto DataType = Cast<DataTypeNode>(ParseDataType());
+    DataTypeNodeBase* DataType = ParseDataType();
     if (!DataType)
         return nullptr;
 

@@ -77,7 +77,9 @@ private:
     void EnterScope();
     void ExitScope();
 
-    llvm::AllocaInst* GetLValue(ASTNode* Node);
+    llvm::Type* CompileType(const DataTypeNodeBase* Type);
+
+    llvm::AllocaInst* GetLValue(const ASTNode* Node);
 };
 
 

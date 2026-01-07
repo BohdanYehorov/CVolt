@@ -114,9 +114,9 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
         return CompileWhile(While);
     if (const auto For = Cast<ForNode>(Node))
         return CompileFor(For);
-    if (const auto Break = Cast<BreakNode>(Node))
+    if (Cast<BreakNode>(Node))
         return CompileBreak();
-    if (const auto Continue = Cast<ContinueNode>(Node))
+    if (Cast<ContinueNode>(Node))
         return CompileContinue();
 
     ERROR("Cannot resolve node: '" + Node->GetName() + "'");
@@ -141,12 +141,30 @@ llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
 
 llvm::Value* LLVMCompiler::CompileInt(const IntegerNode* Int)
 {
-    return llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value);
+    switch (Int->Type)
+    {
+        case IntegerNode::BYTE:
+            return llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value);
+        case IntegerNode::INT:
+            return llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value);
+        case IntegerNode::LONG:
+            return llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value);
+        default:
+            ERROR("Unknown integer type")
+    }
 }
 
-llvm::Value * LLVMCompiler::CompileFloat(const FloatingPointNode* Float)
+llvm::Value* LLVMCompiler::CompileFloat(const FloatingPointNode* Float)
 {
-    return llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value);
+    switch (Float->Type)
+    {
+        case FloatingPointNode::DOUBLE:
+            return llvm::ConstantFP::get(llvm::Type::getDoubleTy(Context), Float->Value);
+        case FloatingPointNode::FLOAT:
+            return llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value);
+        default:
+            ERROR("Unknown float type")
+    }
 }
 
 llvm::Value* LLVMCompiler::CompileBool(const BoolNode* Bool)
@@ -309,7 +327,7 @@ llvm::Value* LLVMCompiler::CompileBinary(const BinaryOpNode* BinaryOp)
         case Operator::SUB:     return Builder.CreateSub(Left, Right);
         case Operator::MUL:     return Builder.CreateMul(Left, Right);
         case Operator::DIV:     return IsFP ? Builder.CreateFDiv(Left, Right) :
-            Builder.CreateSDiv(Left, Right);
+                                              Builder.CreateSDiv(Left, Right);
         case Operator::MOD:     return Builder.CreateSRem(Left, Right);
         case Operator::BIT_AND: return Builder.CreateAnd(Left, Right);
         case Operator::BIT_OR:  return Builder.CreateOr(Left, Right);
@@ -351,7 +369,7 @@ llvm::Value* LLVMCompiler::CompileCall(const CallNode* Call)
 llvm::Value* LLVMCompiler::CompileVariable(const VariableNode* Var)
 {
     llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-    llvm::Type* Type = ToLLVMType(Var->Type->TypeInfo.BaseType);
+    llvm::Type* Type = CompileType(Var->Type);
 
     llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
     llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type, nullptr, Var->Name.ToString());
@@ -370,10 +388,10 @@ llvm::Value* LLVMCompiler::CompileFunction(const FunctionNode* Function)
     Params.reserve(Function->Params.size());
 
     for (const auto Param : Function->Params)
-        Params.push_back(ToLLVMType(Param->Type->TypeInfo.BaseType));
+        Params.push_back(CompileType(Param->Type));
 
     llvm::FunctionType* FuncType = llvm::FunctionType::get(
-        ToLLVMType(Function->ReturnType->TypeInfo.BaseType), Params, false);
+        CompileType(Function->ReturnType), Params, false);
 
     const std::string& FuncName = Function->Name.ToString();
     llvm::Function* Func = llvm::Function::Create(
@@ -384,17 +402,17 @@ llvm::Value* LLVMCompiler::CompileFunction(const FunctionNode* Function)
     CompileBlock(Cast<BlockNode>(Function->Body));
 
     llvm::BasicBlock* Bb = Builder.GetInsertBlock();
-    if (!Bb->getTerminator()) {
-        if (Function->ReturnType->TypeInfo.BaseType == DataType::VOID)
-            Builder.CreateRetVoid();
-        else
-            Builder.CreateRet(
-                llvm::ConstantInt::get(
-                    llvm::Type::getInt32Ty(Context),
-                    0
-                )
-            );
-    }
+    // if (!Bb->getTerminator()) {
+    //     if (Function->ReturnType->TypeInfo.BaseType == DataType::VOID)
+    //         Builder.CreateRetVoid();
+    //     else
+    //         Builder.CreateRet(
+    //             llvm::ConstantInt::get(
+    //                 llvm::Type::getInt32Ty(Context),
+    //                 0
+    //             )
+    //         );
+    // }
 
     Functions[FuncName] = Func;
 
@@ -417,7 +435,7 @@ llvm::Value* LLVMCompiler::CompileIf(const IfNode* If)
 
     auto ThenBB  = llvm::BasicBlock::Create(Context, "then", Func);
     auto ElseBB  = llvm::BasicBlock::Create(Context, "else", Func);
-    auto MergeBB = llvm::BasicBlock::Create(Context, "ifcont"); // ще без parent
+    auto MergeBB = llvm::BasicBlock::Create(Context, "ifcont");
 
     Builder.CreateCondBr(Cond, ThenBB, ElseBB);
 
@@ -584,7 +602,7 @@ void LLVMCompiler::CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool
         Left = ImplicitCast(Left, RightType, Signed);
 }
 
-llvm::Value * LLVMCompiler::CastToBool(llvm::Value* Value)
+llvm::Value* LLVMCompiler::CastToBool(llvm::Value* Value)
 {
     llvm::Type* Type = Value->getType();
 
@@ -700,9 +718,19 @@ void LLVMCompiler::ExitScope()
     }
 }
 
-llvm::AllocaInst* LLVMCompiler::GetLValue(ASTNode* Node)
+llvm::Type* LLVMCompiler::CompileType(const DataTypeNodeBase* Type)
 {
-    if (const auto Identifier = Cast<IdentifierNode>(Node))
+    if (const auto PrimitiveType = Cast<const PrimitiveDataTypeNode>(Type))
+        return ToLLVMType(PrimitiveType->PrimitiveType);
+    if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
+        return llvm::PointerType::get(CompileType(PtrType->BaseType), 0);
+
+    ERROR("Unsupported type node: " + Type->GetName());
+}
+
+llvm::AllocaInst* LLVMCompiler::GetLValue(const ASTNode* Node)
+{
+    if (const auto Identifier = Cast<const IdentifierNode>(Node))
         return GetVariable(Identifier->Value.ToString());
 
     return nullptr;

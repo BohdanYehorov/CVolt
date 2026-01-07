@@ -41,17 +41,17 @@ int main()
 
     MyParser.PrintASTTree();
     //
-    // LLVMCompiler MyCompiler(MyParser.GetASTTree());
-    // MyCompiler.Compile();
-    // MyCompiler.Print();
-    //
-    // std::cout << "=======================Output=======================\n\n";
-    //
-    // int Res = MyCompiler.Run();
-    //
-    // std::cout << "\n====================================================\n";
-    //
-    // std::cout << "Exited With Code: " << Res << std::endl;
+    LLVMCompiler MyCompiler(MyParser.GetASTTree());
+    MyCompiler.Compile();
+    MyCompiler.Print();
+
+    std::cout << "=======================Output=======================\n\n";
+
+    int Res = MyCompiler.Run();
+
+    std::cout << "\n====================================================\n";
+
+    std::cout << "Exited With Code: " << Res << std::endl;
 
     return 0;
 }

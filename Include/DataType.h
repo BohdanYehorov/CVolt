@@ -17,8 +17,7 @@ enum class DataType : UInt8
 struct DataTypeInfo
 {
     DataType BaseType;
-    size_t Size;
-    size_t Align;
+    size_t PointerDepth;
 };
 
 #endif //CVOLT_DATATYPE_H
