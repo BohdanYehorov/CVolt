@@ -58,8 +58,8 @@ class FloatNode : public ASTNode
 {
     GENERATED_BODY(FloatNode, ASTNode)
 public:
-    double Value;
-    FloatNode(double Value) : Value(Value) {}
+    float Value;
+    FloatNode(float Value) : Value(Value) {}
 };
 
 class BoolNode : public ASTNode

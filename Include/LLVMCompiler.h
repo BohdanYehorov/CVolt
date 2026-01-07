@@ -44,13 +44,14 @@ private:
     llvm::Value* CompileBlock(const BlockNode* Block);
 
     llvm::Value* CompileInt(const IntNode* Int);
+    llvm::Value* CompileFloat(const FloatNode* Float);
     llvm::Value* CompileBool(const BoolNode* Bool);
     llvm::Value* CompileIdentifier(const IdentifierNode* Identifier);
-    llvm::Value* CompileComparison(const ComparisonNode* Comparison);
-    llvm::Value* CompileAssignment(const AssignmentNode* Assignment);
     llvm::Value* CompilePrefix(const PrefixOpNode* Prefix);
     llvm::Value* CompileSufix(const SuffixOpNode* Suffix);
     llvm::Value* CompileUnary(const UnaryOpNode* Unary);
+    llvm::Value* CompileComparison(const ComparisonNode* Comparison);
+    llvm::Value* CompileAssignment(const AssignmentNode* Assignment);
     llvm::Value* CompileBinary(const BinaryOpNode* BinaryOp);
     llvm::Value* CompileCall(const CallNode* Call);
     llvm::Value* CompileVariable(const VariableNode* Var);
@@ -59,8 +60,8 @@ private:
     llvm::Value* CompileIf(const IfNode *If);
     llvm::Value* CompileWhile(const WhileNode* While);
     llvm::Value* CompileFor(const ForNode* For);
-    llvm::Value* CompileBreak(const BreakNode* Break);
-    llvm::Value* CompileContinue(const ContinueNode* Continue);
+    llvm::Value* CompileBreak();
+    llvm::Value* CompileContinue();
 
     llvm::Type* ToLLVMType(DataType Type);
     llvm::Value* CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed = true);

@@ -22,9 +22,9 @@ int main()
     if (MyLexer.HasErrors())
     {
         for (const auto& Err : MyLexer.GetErrors())
-        {
             std::cout << Err.ToString() << std::endl;
-        }
+
+        return -1;
     }
 
     Parser MyParser(MyLexer);
@@ -36,6 +36,8 @@ int main()
         std::cout << "Errors:\n";
         for (const auto& Error : ErrorList)
             std::cout << Error.ToString() << std::endl;
+
+        return -1;
     }
 
     MyParser.PrintASTTree();

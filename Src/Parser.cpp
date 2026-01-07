@@ -318,23 +318,7 @@ ASTNode* Parser::ParseSequence()
     while (IsValidIndex())
     {
         if (ASTNode* Expr = ParseExpression())
-        {
             Sequence->Statements.push_back(Expr);
-            if (LastNodeIsBlock)
-            {
-                LastNodeIsBlock = false;
-                SkipSemicolons();
-                continue;
-            }
-        }
-
-        if (!Expect(Token::OP_SEMICOLON))
-        {
-            while (IsValidIndex() && !ConsumeIf(Token::OP_SEMICOLON))
-                Consume();
-        }
-        else
-            SkipSemicolons();
     }
 
     return Sequence;
@@ -364,20 +348,8 @@ ASTNode* Parser::ParseBlock()
         {
             Block->Statements.push_back(Expr);
             if (LastNodeIsBlock)
-            {
                 LastNodeIsBlock = false;
-                SkipSemicolons();
-                continue;
-            }
         }
-
-        if (!Expect(Token::OP_SEMICOLON))
-        {
-            while (IsValidIndex() && !ConsumeIf(Token::OP_SEMICOLON))
-                Consume();
-        }
-        else
-            SkipSemicolons();
     }
 
     Expect(Token::OP_RBRACE);
@@ -403,8 +375,8 @@ ASTNode* Parser::ParseDataType()
             break;
         case Token::TYPE_FLOAT:
             Type = DataType::FLOAT;
-            Size = sizeof(double);
-            Align = alignof(double);
+            Size = sizeof(float);
+            Align = alignof(float);
             break;
         case Token::TYPE_BOOL:
             Type = DataType::BOOL;
@@ -538,10 +510,8 @@ ASTNode* Parser::ParseIf()
         Branch = ParseBlock();
     else
     {
-        Branch = ParseStatement();
-        if (!LastNodeIsBlock)
-            Expect(Token::OP_SEMICOLON);
-        SkipSemicolons();
+        Branch = ParseExpression();
+        LastNodeIsBlock = true;
     }
 
     if (!Branch)
@@ -556,10 +526,8 @@ ASTNode* Parser::ParseIf()
         ElseBranch = ParseBlock();
     else
     {
-        ElseBranch = ParseStatement();
-        if (!LastNodeIsBlock)
-            Expect(Token::OP_SEMICOLON);
-        SkipSemicolons();
+        ElseBranch = ParseExpression();
+        LastNodeIsBlock = true;
     }
 
     if (!ElseBranch)
@@ -593,10 +561,8 @@ ASTNode* Parser::ParseWhile()
         Branch = ParseBlock();
     else
     {
-        Branch = ParseStatement();
-        if (!LastNodeIsBlock)
-            Expect(Token::OP_SEMICOLON);
-        SkipSemicolons();
+        Branch = ParseExpression();
+        LastNodeIsBlock = true;
     }
     InLoop = OldInLoop;
 
@@ -632,10 +598,8 @@ ASTNode* Parser::ParseFor()
         Body = ParseBlock();
     else
     {
-        Body = ParseStatement();
-        if (!LastNodeIsBlock)
-            Expect(Token::OP_SEMICOLON);
-        SkipSemicolons();
+        Body = ParseExpression();
+        LastNodeIsBlock = true;
     }
     LoopsCount--;
 
@@ -683,7 +647,17 @@ ASTNode* Parser::ParseContinue()
 
 ASTNode* Parser::ParseExpression()
 {
-    return ParseStatement();
+    ASTNode* Node = ParseStatement();
+
+    if (LastNodeIsBlock)
+    {
+        SkipSemicolons();
+        return Node;
+    }
+
+    Expect(Token::OP_SEMICOLON);
+    SkipSemicolons();
+    return Node;
 }
 
 ASTNode* Parser::ParseStatement()
@@ -1079,7 +1053,7 @@ ASTNode* Parser::ParsePrimary()
             return NodesArena.Create<StringNode>(GetTokenLexeme(Tok));
         case Token::OP_LPAREN:
         {
-            ASTNode* Node = ParseExpression();
+            ASTNode* Node = ParseAssignment();
             if (!Expect(Token::OP_RPAREN))
                 return nullptr;
             return Node;

@@ -95,6 +95,7 @@ Operator::Type Operator::GetMultiplicativeOp(Token::TokenType Op)
     {
         GEN_CASE(MUL)
         GEN_CASE(SUB)
+        GEN_CASE(MOD)
         default: return UNKNOWN;
     }
 }

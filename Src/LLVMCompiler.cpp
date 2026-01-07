@@ -115,9 +115,9 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
     if (const auto For = Cast<ForNode>(Node))
         return CompileFor(For);
     if (const auto Break = Cast<BreakNode>(Node))
-        return CompileBreak(Break);
+        return CompileBreak();
     if (const auto Continue = Cast<ContinueNode>(Node))
-        return CompileContinue(Continue);
+        return CompileContinue();
 
     ERROR("Cannot resolve node: '" + Node->GetName() + "'");
 }
@@ -139,17 +139,22 @@ llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileInt(const IntNode *Int)
+llvm::Value* LLVMCompiler::CompileInt(const IntNode* Int)
 {
     return llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value);
 }
 
-llvm::Value* LLVMCompiler::CompileBool(const BoolNode *Bool)
+llvm::Value * LLVMCompiler::CompileFloat(const FloatNode* Float)
+{
+    return llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value);
+}
+
+llvm::Value* LLVMCompiler::CompileBool(const BoolNode* Bool)
 {
     return llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value);
 }
 
-llvm::Value* LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
+llvm::Value* LLVMCompiler::CompileIdentifier(const IdentifierNode* Identifier)
 {
     const std::string Value = Identifier->Value.ToString();
 
@@ -162,63 +167,7 @@ llvm::Value* LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
     ERROR("Cannot resolve symbol: '" + Value + "'")
 }
 
-llvm::Value* LLVMCompiler::CompileComparison(const ComparisonNode *Comparison)
-{
-    llvm::Value* Left = CompileNode(Comparison->Left);
-    llvm::Value* Right = CompileNode(Comparison->Right);
-
-    CastToJointType(Left, Right);
-
-    llvm::Type* Type = Left->getType();
-
-    if (Type->isIntegerTy())
-    {
-        switch (Comparison->Type)
-        {
-            case Operator::EQ:  return Builder.CreateICmpEQ(Left, Right);
-            case Operator::NEQ: return Builder.CreateICmpNE(Left, Right);
-            case Operator::LT:  return Builder.CreateICmpSLT(Left, Right);
-            case Operator::LTE: return Builder.CreateICmpSLE(Left, Right);
-            case Operator::GT:  return Builder.CreateICmpSGT(Left, Right);
-            case Operator::GTE: return Builder.CreateICmpSGE(Left, Right);
-            default: ERROR("Unknown comparison operator")
-        }
-    }
-
-    return nullptr;
-}
-
-llvm::Value* LLVMCompiler::CompileAssignment(const AssignmentNode *Assignment)
-{
-    llvm::AllocaInst* LValue = GetLValue(Assignment->Left);
-    if (!LValue)
-        ERROR("Cannot apply assignment operator to r-value")
-
-    llvm::Value* Right = CompileNode(Assignment->Right);
-
-    if (Assignment->Type == Operator::ASSIGN)
-        return Builder.CreateStore(Right, LValue);
-
-    llvm::Value* Left = Builder.CreateLoad(LValue->getAllocatedType(), LValue);
-    switch (Assignment->Type)
-    {
-        case Operator::ADD_ASSIGN:
-            Left = Builder.CreateAdd(Left, Right);
-            break;
-        case Operator::SUB_ASSIGN:
-            Left = Builder.CreateSub(Left, Right);
-            break;
-        case Operator::MUL_ASSIGN:
-            Left = Builder.CreateMul(Left, Right);
-            break;
-        default:
-            ERROR("Unknown assignment operator")
-    }
-
-    return Builder.CreateStore(Left, LValue);
-}
-
-llvm::Value* LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
+llvm::Value* LLVMCompiler::CompilePrefix(const PrefixOpNode* Prefix)
 {
     llvm::AllocaInst* LValue = GetLValue(Prefix->Operand);
     if (!LValue)
@@ -241,7 +190,7 @@ llvm::Value* LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
     return Value;
 }
 
-llvm::Value* LLVMCompiler::CompileSufix(const SuffixOpNode *Suffix)
+llvm::Value* LLVMCompiler::CompileSufix(const SuffixOpNode* Suffix)
 {
     llvm::AllocaInst* LValue = GetLValue(Suffix->Operand);
     if (!LValue)
@@ -278,23 +227,100 @@ llvm::Value* LLVMCompiler::CompileUnary(const UnaryOpNode* Unary)
     }
 }
 
-llvm::Value* LLVMCompiler::CompileBinary(const BinaryOpNode *BinaryOp)
+llvm::Value* LLVMCompiler::CompileComparison(const ComparisonNode* Comparison)
+{
+    llvm::Value* Left = CompileNode(Comparison->Left);
+    llvm::Value* Right = CompileNode(Comparison->Right);
+
+    CastToJointType(Left, Right);
+
+    llvm::Type* Type = Left->getType();
+
+    if (Type->isIntegerTy())
+    {
+        switch (Comparison->Type)
+        {
+            case Operator::EQ:  return Builder.CreateICmpEQ(Left, Right);
+            case Operator::NEQ: return Builder.CreateICmpNE(Left, Right);
+            case Operator::LT:  return Builder.CreateICmpSLT(Left, Right);
+            case Operator::LTE: return Builder.CreateICmpSLE(Left, Right);
+            case Operator::GT:  return Builder.CreateICmpSGT(Left, Right);
+            case Operator::GTE: return Builder.CreateICmpSGE(Left, Right);
+            default: ERROR("Unknown comparison operator")
+        }
+    }
+
+    return nullptr;
+}
+
+llvm::Value* LLVMCompiler::CompileAssignment(const AssignmentNode* Assignment)
+{
+    llvm::AllocaInst* LValue = GetLValue(Assignment->Left);
+    if (!LValue)
+        ERROR("Cannot apply assignment operator to r-value")
+
+    llvm::Value* Right = CompileNode(Assignment->Right);
+
+    if (Assignment->Type == Operator::ASSIGN)
+        return Builder.CreateStore(Right, LValue);
+
+    llvm::Type* Type = LValue->getAllocatedType();
+    llvm::Value* Left = Builder.CreateLoad(Type, LValue);
+
+    bool IsFP = Type->isFloatingPointTy();
+
+    switch (Assignment->Type)
+    {
+        case Operator::ADD_ASSIGN:
+            Left = Builder.CreateAdd(Left, Right);
+            break;
+        case Operator::SUB_ASSIGN:
+            Left = Builder.CreateSub(Left, Right);
+            break;
+        case Operator::MUL_ASSIGN:
+            Left = Builder.CreateMul(Left, Right);
+            break;
+        case Operator::DIV_ASSIGN:
+            Left = IsFP ? Builder.CreateFDiv(Left, Right) :
+                Builder.CreateSDiv(Left, Right);
+            break;
+        case Operator::MOD_ASSIGN:
+            Left = Builder.CreateSRem(Left, Right);
+            break;
+        default:
+            ERROR("Unknown assignment operator")
+    }
+
+    return Builder.CreateStore(Left, LValue);
+}
+
+llvm::Value* LLVMCompiler::CompileBinary(const BinaryOpNode* BinaryOp)
 {
     llvm::Value* Left = CompileNode(BinaryOp->Left);
     llvm::Value* Right = CompileNode(BinaryOp->Right);
 
     CastToJointType(Left, Right);
+    llvm::Type* Type = Left->getType();
+    bool IsFP = Type->isFloatingPointTy();
 
     switch (BinaryOp->Type)
     {
-        case Operator::ADD: return Builder.CreateAdd(Left, Right);
-        case Operator::SUB: return Builder.CreateSub(Left, Right);
-        case Operator::MUL: return Builder.CreateMul(Left, Right);
+        case Operator::ADD:     return Builder.CreateAdd(Left, Right);
+        case Operator::SUB:     return Builder.CreateSub(Left, Right);
+        case Operator::MUL:     return Builder.CreateMul(Left, Right);
+        case Operator::DIV:     return IsFP ? Builder.CreateFDiv(Left, Right) :
+            Builder.CreateSDiv(Left, Right);
+        case Operator::MOD:     return Builder.CreateSRem(Left, Right);
+        case Operator::BIT_AND: return Builder.CreateAnd(Left, Right);
+        case Operator::BIT_OR:  return Builder.CreateOr(Left, Right);
+        case Operator::BIT_XOR: return Builder.CreateXor(Left, Right);
+        case Operator::LSHIFT:  return Builder.CreateShl(Left, Right);
+        case Operator::RSHIFT:  return Builder.CreateAShr(Left, Right);
         default: ERROR("Unknown binary operator")
     }
 }
 
-llvm::Value * LLVMCompiler::CompileCall(const CallNode* Call)
+llvm::Value* LLVMCompiler::CompileCall(const CallNode* Call)
 {
     if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
     {
@@ -322,7 +348,7 @@ llvm::Value * LLVMCompiler::CompileCall(const CallNode* Call)
     ERROR("Called object is not a function")
 }
 
-llvm::Value* LLVMCompiler::CompileVariable(const VariableNode *Var)
+llvm::Value* LLVMCompiler::CompileVariable(const VariableNode* Var)
 {
     llvm::Function* Func = Builder.GetInsertBlock()->getParent();
     llvm::Type* Type = ToLLVMType(Var->Type->TypeInfo.BaseType);
@@ -338,7 +364,7 @@ llvm::Value* LLVMCompiler::CompileVariable(const VariableNode *Var)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileFunction(const FunctionNode *Function)
+llvm::Value* LLVMCompiler::CompileFunction(const FunctionNode* Function)
 {
     std::vector<llvm::Type*> Params;
     Params.reserve(Function->Params.size());
@@ -375,7 +401,7 @@ llvm::Value* LLVMCompiler::CompileFunction(const FunctionNode *Function)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileReturn(const ReturnNode *Return)
+llvm::Value* LLVMCompiler::CompileReturn(const ReturnNode* Return)
 {
     llvm::Value* RetVal = CompileNode(Return->ReturnValue);
     Builder.CreateRet(RetVal);
@@ -414,7 +440,7 @@ llvm::Value* LLVMCompiler::CompileIf(const IfNode* If)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileWhile(const WhileNode *While)
+llvm::Value* LLVMCompiler::CompileWhile(const WhileNode* While)
 {
     llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -447,7 +473,7 @@ llvm::Value* LLVMCompiler::CompileWhile(const WhileNode *While)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileFor(const ForNode *For)
+llvm::Value* LLVMCompiler::CompileFor(const ForNode* For)
 {
     llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -492,19 +518,19 @@ llvm::Value* LLVMCompiler::CompileFor(const ForNode *For)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileBreak(const BreakNode *Break)
+llvm::Value* LLVMCompiler::CompileBreak()
 {
     if (LoopEndStack.empty())
-        ERROR("break used outside loop")
+        ERROR("'break' used outside loop")
 
     Builder.CreateBr(LoopEndStack.top());
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileContinue(const ContinueNode *Continue)
+llvm::Value* LLVMCompiler::CompileContinue()
 {
     if (LoopHeaderStack.empty())
-        ERROR("continue used outside loop")
+        ERROR("'continue' used outside loop")
 
     Builder.CreateBr(LoopHeaderStack.top());
     return nullptr;
@@ -517,7 +543,7 @@ llvm::Type* LLVMCompiler::ToLLVMType(DataType Type)
         case DataType::INT:
             return llvm::Type::getInt32Ty(Context);
         case DataType::FLOAT:
-            return llvm::Type::getDoubleTy(Context);
+            return llvm::Type::getFloatTy(Context);
         case DataType::BOOL:
         case DataType::CHAR:
             return llvm::Type::getInt1Ty(Context);

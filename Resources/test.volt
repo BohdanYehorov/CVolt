@@ -1,13 +1,5 @@
-int main()
+int Main()
 {
-    int a = 0;
-    while (a < 100)
-    {
-        a++;
-        if (a == 50)
-            continue;
-
-        Out(a);
-    }
+    Out(5);
     return 0;
 }
