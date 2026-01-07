@@ -3,6 +3,8 @@
 //
 
 #include "Lexer.h"
+
+#include <complex.h>
 #include <sstream>
 
 #define GEN_CASE_TO_STRING(Op) case Op: TypeStr = #Op; break;
@@ -14,8 +16,11 @@ std::string Token::ToString(const ArenaStream &Stream) const
     switch (Type)
     {
     	GEN_CASE_TO_STRING(IDENTIFIER)
+    	GEN_CASE_TO_STRING(BYTE_NUMBER)
 		GEN_CASE_TO_STRING(INT_NUMBER)
+    	GEN_CASE_TO_STRING(LONG_NUMBER)
 		GEN_CASE_TO_STRING(FLOAT_NUMBER)
+    	GEN_CASE_TO_STRING(DOUBLE_NUMBER)
 		GEN_CASE_TO_STRING(STRING)
 		GEN_CASE_TO_STRING(BOOL_TRUE)
 		GEN_CASE_TO_STRING(BOOL_FALSE)
@@ -74,10 +79,13 @@ std::string Token::ToString(const ArenaStream &Stream) const
 		GEN_CASE_TO_STRING(KW_BREAK)
 		GEN_CASE_TO_STRING(KW_CONTINUE)
 		GEN_CASE_TO_STRING(TYPE_VOID)
-		GEN_CASE_TO_STRING(TYPE_INT)
-		GEN_CASE_TO_STRING(TYPE_FLOAT)
-		GEN_CASE_TO_STRING(TYPE_BOOL)
+    	GEN_CASE_TO_STRING(TYPE_BOOL)
 		GEN_CASE_TO_STRING(TYPE_CHAR)
+    	GEN_CASE_TO_STRING(TYPE_BYTE)
+		GEN_CASE_TO_STRING(TYPE_INT)
+    	GEN_CASE_TO_STRING(TYPE_LONG)
+		GEN_CASE_TO_STRING(TYPE_FLOAT)
+    	GEN_CASE_TO_STRING(TYPE_DOUBLE)
 		GEN_CASE_TO_STRING(INVALID)
 		GEN_CASE_TO_STRING(UNKNOWN)
     }
@@ -164,10 +172,16 @@ std::unordered_map<std::string, Token::TokenType> Lexer::Keywords = {
 
 std::unordered_map<std::string, Token::TokenType> Lexer::DataTypes = {
 	{ "void", Token::TYPE_VOID },
-	{ "int", Token::TYPE_INT },
-	{ "float", Token::TYPE_FLOAT },
+
 	{ "bool", Token::TYPE_BOOL },
-	{ "char", Token::TYPE_CHAR }
+	{ "char", Token::TYPE_CHAR },
+
+	{ "byte", Token::TYPE_BYTE },
+	{ "int", Token::TYPE_INT },
+	{ "long", Token::TYPE_LONG },
+
+	{ "float", Token::TYPE_FLOAT },
+	{ "double", Token::TYPE_DOUBLE }
 };
 
 std::string Lexer::GetOperatorLexeme(Token::TokenType Type)
@@ -314,7 +328,9 @@ bool Lexer::GetNumberToken(Token &Tok)
     bool HasExponent = false;
     bool HasExponentSign = false;
     bool HasExponentDigits = false;
-    bool InvalidToken = false;
+    bool IsInvalidToken = false;
+
+	StringRef Suffix{ 0, 0 };
 
     while (IsValidPos())
     {
@@ -330,9 +346,9 @@ bool Lexer::GetNumberToken(Token &Tok)
         {
             if (HasDot || HasExponent)
             {
-            	if (!InvalidToken)
+            	if (!IsInvalidToken)
 	            {
-		            InvalidToken = true;
+		            IsInvalidToken = true;
 	            	SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
 	            }
             }
@@ -343,9 +359,9 @@ bool Lexer::GetNumberToken(Token &Tok)
         {
             if (!HasDigit || HasExponent)
             {
-            	if (!InvalidToken)
+            	if (!IsInvalidToken)
             	{
-            		InvalidToken = true;
+            		IsInvalidToken = true;
             		SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
             	}
             }
@@ -359,9 +375,9 @@ bool Lexer::GetNumberToken(Token &Tok)
 
             if (HasExponentDigits || HasExponentSign)
             {
-            	if (!InvalidToken)
+            	if (!IsInvalidToken)
             	{
-            		InvalidToken = true;
+            		IsInvalidToken = true;
             		SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
             	}
             }
@@ -370,11 +386,16 @@ bool Lexer::GetNumberToken(Token &Tok)
         }
         else if (isalpha(Ch) || Ch == '_')
         {
-        	if (!InvalidToken)
-        	{
-        		InvalidToken = true;
-        		SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
-        	}
+        	// if (!InvalidToken)
+        	// {
+        	// 	InvalidToken = true;
+        	// 	SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
+        	// }
+
+        	if (Suffix.Length == 0)
+        		Suffix.Ptr = ExprRef.Ptr + Pos;
+
+        	Suffix.Length++;
         }
         else
             break;
@@ -387,9 +408,9 @@ bool Lexer::GetNumberToken(Token &Tok)
 
 	if (HasExponent && !HasExponentDigits)
 	{
-		if (!InvalidToken)
+		if (!IsInvalidToken)
 		{
-			InvalidToken = true;
+			IsInvalidToken = true;
 			SendError(LexErrorType::UnterminatedNumber, StartLine, StartCol);
 		}
 	}
@@ -397,10 +418,44 @@ bool Lexer::GetNumberToken(Token &Tok)
     StringRef Lexeme(ExprRef.Ptr + StartPos, Pos - StartPos);
 	Token::TokenType TokenType = Token::INT_NUMBER;
 
-    if (InvalidToken)
-        TokenType = Token::INVALID;
-    else if (HasDot || HasExponent)
-    	TokenType = Token::FLOAT_NUMBER;
+	BufferStringView SuffixStr = TokensArena.Read(Suffix);
+
+	if (IsInvalidToken)
+	{
+		Tok = Token(Token::INVALID, Lexeme,
+					StartPos, StartLine, StartCol);
+
+		return true;
+	}
+
+	if (HasDot || HasExponent)
+	{
+		if (SuffixStr == "f")
+			TokenType = Token::FLOAT_NUMBER;
+		else if (Suffix.Length == 0)
+			TokenType = Token::DOUBLE_NUMBER;
+		else
+		{
+			SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
+			Tok = InvalidToken(StartPos, StartLine, StartCol);
+			return true;
+		}
+	}
+	else
+	{
+		if (SuffixStr == "b")
+			TokenType = Token::BYTE_NUMBER;
+		else if (SuffixStr == "l")
+			TokenType = Token::LONG_NUMBER;
+		else if (Suffix.Length == 0)
+			TokenType = Token::INT_NUMBER;
+		else
+		{
+			SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
+			Tok = InvalidToken(StartPos, StartLine, StartCol);
+			return true;
+		}
+	}
 
 	Tok = Token(TokenType, Lexeme,
 					StartPos, StartLine, StartCol);
@@ -460,7 +515,6 @@ bool Lexer::GetChar(Token &Tok)
 		return true;
 	}
 
-	size_t Index = CharStorage.size();
 	char Ch = CurrentChar();
 
 	MovePos();

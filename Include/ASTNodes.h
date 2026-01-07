@@ -213,13 +213,25 @@ public:
     FunctionNode(DataTypeNode* Type, BufferStringView Name) : ReturnType(Type), Name(Name) {}
     bool AddParam(ParamNode* Prm)
     {
-        if (auto Iter = std::find_if(
+        if (std::find_if(
         Params.begin(), Params.end(),
         [&Prm](const ParamNode* Value)
             {
                 return Prm->Name == Value->Name;
-            }); Iter != Params.end())
-            return false;
+            }) != Params.end())
+                return false;
+
+        if (!Prm->DefaultValue)
+        {
+            if (std::find_if(
+        Params.begin(), Params.end(),
+        [&Prm](const ParamNode* Value)
+            {
+                return Value->DefaultValue;
+            }) != Params.end())
+                return false;
+        }
+
         Params.push_back(Prm);
         return true;
     }

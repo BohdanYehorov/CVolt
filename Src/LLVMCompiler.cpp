@@ -61,7 +61,7 @@ int LLVMCompiler::Run()
 
     if (auto Err = JIT->get()->addIRModule(std::move(TSM)))
         return 1;
-    auto MainSymOrErr = JIT->get()->lookup("main");
+    auto MainSymOrErr = JIT->get()->lookup("Main");
     if (!MainSymOrErr) {
         llvm::logAllUnhandledErrors(MainSymOrErr.takeError(), llvm::errs(), "Error: ");
         return 1;

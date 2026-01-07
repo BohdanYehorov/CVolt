@@ -20,8 +20,14 @@ struct Token
     enum TokenType
     {
         IDENTIFIER,
+
+        BYTE_NUMBER,
         INT_NUMBER,
+        LONG_NUMBER,
+
         FLOAT_NUMBER,
+        DOUBLE_NUMBER,
+
         STRING,
         BOOL_TRUE,
         BOOL_FALSE,
@@ -89,10 +95,16 @@ struct Token
         KW_CONTINUE,
 
         TYPE_VOID,
-        TYPE_INT,
-        TYPE_FLOAT,
+
         TYPE_BOOL,
         TYPE_CHAR,
+
+        TYPE_BYTE,
+        TYPE_INT,
+        TYPE_LONG,
+
+        TYPE_FLOAT,
+        TYPE_DOUBLE,
 
         INVALID,
         UNKNOWN

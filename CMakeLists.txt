@@ -22,8 +22,6 @@ add_executable(CVolt Src/main.cpp
         Include/Operator.h
         Src/Errors.cpp
         Include/Errors.h
-        #Src/Compiler.cpp
-        #Include/Compiler.h
         Include/TypeDefs.h
         Include/BufferView.h
         Src/BufferView.cpp

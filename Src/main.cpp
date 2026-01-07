@@ -1,7 +1,6 @@
 #include <iostream>
 #include "Object.h"
 #include "Parser.h"
-#include "Compiler.h"
 #include <fstream>
 #include <sstream>
 #include "LLVMCompiler.h"
@@ -27,37 +26,32 @@ int main()
         return -1;
     }
 
-    Parser MyParser(MyLexer);
-    MyParser.Parse();
-
-    const std::vector<ParseError> ErrorList = MyParser.GetErrorList();
-    if (!ErrorList.empty())
-    {
-        std::cout << "Errors:\n";
-        for (const auto& Error : ErrorList)
-            std::cout << Error.ToString() << std::endl;
-
-        return -1;
-    }
-
-    MyParser.PrintASTTree();
-
-    // Compiler MyCompiler(MyParser);
+    // Parser MyParser(MyLexer);
+    // MyParser.Parse();
+    //
+    // const std::vector<ParseError> ErrorList = MyParser.GetErrorList();
+    // if (!ErrorList.empty())
+    // {
+    //     std::cout << "Errors:\n";
+    //     for (const auto& Error : ErrorList)
+    //         std::cout << Error.ToString() << std::endl;
+    //
+    //     return -1;
+    // }
+    //
+    // MyParser.PrintASTTree();
+    //
+    // LLVMCompiler MyCompiler(MyParser.GetASTTree());
     // MyCompiler.Compile();
-    // MyCompiler.PrintVariables();
-    // MyCompiler.PrintSections();
-
-    LLVMCompiler MyCompiler(MyParser.GetASTTree());
-    MyCompiler.Compile();
-    MyCompiler.Print();
-
-    std::cout << "=======================Output=======================\n\n";
-
-    int Res = MyCompiler.Run();
-
-    std::cout << "\n====================================================\n";
-
-    std::cout << "Exited With Code: " << Res << std::endl;
+    // MyCompiler.Print();
+    //
+    // std::cout << "=======================Output=======================\n\n";
+    //
+    // int Res = MyCompiler.Run();
+    //
+    // std::cout << "\n====================================================\n";
+    //
+    // std::cout << "Exited With Code: " << Res << std::endl;
 
     return 0;
 }
