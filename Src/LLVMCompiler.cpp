@@ -82,7 +82,7 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
     }
     if (const auto Block = Cast<BlockNode>(Node))
         return CompileBlock(Block);
-    if (const auto Int = Cast<IntNode>(Node))
+    if (const auto Int = Cast<IntegerNode>(Node))
         return CompileInt(Int);
     if (const auto Bool = Cast<BoolNode>(Node))
         return CompileBool(Bool);
@@ -139,12 +139,12 @@ llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
     return nullptr;
 }
 
-llvm::Value* LLVMCompiler::CompileInt(const IntNode* Int)
+llvm::Value* LLVMCompiler::CompileInt(const IntegerNode* Int)
 {
     return llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value);
 }
 
-llvm::Value * LLVMCompiler::CompileFloat(const FloatNode* Float)
+llvm::Value * LLVMCompiler::CompileFloat(const FloatingPointNode* Float)
 {
     return llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value);
 }

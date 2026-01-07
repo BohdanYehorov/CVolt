@@ -39,9 +39,9 @@ void Parser::PrintASTTree(ASTNode *Node, int Tabs)
     }
     else if (auto Identifier = Cast<IdentifierNode>(Node))
         std::cout << Identifier->Value.ToString() << std::endl;
-    else if (auto Float = Cast<FloatNode>(Node))
+    else if (auto Float = Cast<FloatingPointNode>(Node))
         std::cout << Float->Value << std::endl;
-    else if (auto Int = Cast<IntNode>(Node))
+    else if (auto Int = Cast<IntegerNode>(Node))
         std::cout << Int->Value << std::endl;
     else if (auto Bool = Cast<BoolNode>(Node))
         std::cout << std::boolalpha << Bool->Value << std::endl;
@@ -364,34 +364,33 @@ ASTNode* Parser::ParseDataType()
     const Token& Tok = CurrentToken();
 
     DataType Type;
-    size_t Size;
-    size_t Align;
+    size_t Size = 0;
+    size_t Align = 0;
     switch (Tok.Type)
     {
-        case Token::TYPE_INT:
-            Type = DataType::INT;
-            Size = sizeof(int);
-            Align = alignof(int);
-            break;
-        case Token::TYPE_FLOAT:
-            Type = DataType::FLOAT;
-            Size = sizeof(float);
-            Align = alignof(float);
+        case Token::TYPE_VOID:
+            Type = DataType::VOID;
             break;
         case Token::TYPE_BOOL:
             Type = DataType::BOOL;
-            Size = sizeof(bool);
-            Align = alignof(bool);
             break;
         case Token::TYPE_CHAR:
             Type = DataType::CHAR;
-            Size = sizeof(char);
-            Align = alignof(char);
             break;
-        case Token::TYPE_VOID:
-            Type = DataType::VOID;
-            Size = 0;
-            Align = 0;
+        case Token::TYPE_BYTE:
+            Type = DataType::BYTE;
+            break;
+        case Token::TYPE_INT:
+            Type = DataType::INT;
+            break;
+        case Token::TYPE_LONG:
+            Type = DataType::LONG;
+            break;
+        case Token::TYPE_FLOAT:
+            Type = DataType::FLOAT;
+            break;
+        case Token::TYPE_DOUBLE:
+            Type = DataType::DOUBLE;
             break;
         default:
             return nullptr;
@@ -1031,17 +1030,35 @@ ASTNode* Parser::ParsePrimary()
     {
         case Token::IDENTIFIER:
             return NodesArena.Create<IdentifierNode>(GetTokenLexeme(Tok));
+        case Token::BYTE_NUMBER:
+        {
+            UInt8 Value;
+            std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
+            return NodesArena.Create<IntegerNode>(IntegerNode::BYTE, Value);
+        }
+        case Token::INT_NUMBER:
+        {
+            UInt32 Value;
+            std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
+            return NodesArena.Create<IntegerNode>(IntegerNode::INT, Value);
+        }
+        case Token::LONG_NUMBER:
+        {
+            UInt64 Value;
+            std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
+            return NodesArena.Create<IntegerNode>(IntegerNode::LONG, Value);
+        }
         case Token::FLOAT_NUMBER:
         {
             float Value;
             std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
-            return NodesArena.Create<FloatNode>(Value);
+            return NodesArena.Create<FloatingPointNode>(FloatingPointNode::FLOAT, Value);
         }
-        case Token::INT_NUMBER:
+        case Token::DOUBLE_NUMBER:
         {
-            int Value;
+            double Value;
             std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
-            return NodesArena.Create<IntNode>(Value);
+            return NodesArena.Create<FloatingPointNode>(FloatingPointNode::DOUBLE, Value);
         }
         case Token::BOOL_TRUE:
             return NodesArena.Create<BoolNode>(true);

@@ -26,20 +26,20 @@ int main()
         return -1;
     }
 
-    // Parser MyParser(MyLexer);
-    // MyParser.Parse();
-    //
-    // const std::vector<ParseError> ErrorList = MyParser.GetErrorList();
-    // if (!ErrorList.empty())
-    // {
-    //     std::cout << "Errors:\n";
-    //     for (const auto& Error : ErrorList)
-    //         std::cout << Error.ToString() << std::endl;
-    //
-    //     return -1;
-    // }
-    //
-    // MyParser.PrintASTTree();
+    Parser MyParser(MyLexer);
+    MyParser.Parse();
+
+    const std::vector<ParseError> ErrorList = MyParser.GetErrorList();
+    if (!ErrorList.empty())
+    {
+        std::cout << "Errors:\n";
+        for (const auto& Error : ErrorList)
+            std::cout << Error.ToString() << std::endl;
+
+        return -1;
+    }
+
+    MyParser.PrintASTTree();
     //
     // LLVMCompiler MyCompiler(MyParser.GetASTTree());
     // MyCompiler.Compile();

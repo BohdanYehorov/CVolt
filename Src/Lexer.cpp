@@ -430,10 +430,10 @@ bool Lexer::GetNumberToken(Token &Tok)
 
 	if (HasDot || HasExponent)
 	{
-		if (SuffixStr == "f")
-			TokenType = Token::FLOAT_NUMBER;
-		else if (Suffix.Length == 0)
+		if (Suffix.Length == 0)
 			TokenType = Token::DOUBLE_NUMBER;
+		else if (SuffixStr == "f")
+			TokenType = Token::FLOAT_NUMBER;
 		else
 		{
 			SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
@@ -443,12 +443,12 @@ bool Lexer::GetNumberToken(Token &Tok)
 	}
 	else
 	{
-		if (SuffixStr == "b")
+		if (Suffix.Length == 0)
+			TokenType = Token::INT_NUMBER;
+		else if (SuffixStr == "b")
 			TokenType = Token::BYTE_NUMBER;
 		else if (SuffixStr == "l")
 			TokenType = Token::LONG_NUMBER;
-		else if (Suffix.Length == 0)
-			TokenType = Token::INT_NUMBER;
 		else
 		{
 			SendError(LexErrorType::InvalidNumber, StartLine, StartCol);

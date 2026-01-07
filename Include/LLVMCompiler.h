@@ -43,8 +43,8 @@ private:
 
     llvm::Value* CompileBlock(const BlockNode* Block);
 
-    llvm::Value* CompileInt(const IntNode* Int);
-    llvm::Value* CompileFloat(const FloatNode* Float);
+    llvm::Value* CompileInt(const IntegerNode* Int);
+    llvm::Value* CompileFloat(const FloatingPointNode* Float);
     llvm::Value* CompileBool(const BoolNode* Bool);
     llvm::Value* CompileIdentifier(const IdentifierNode* Identifier);
     llvm::Value* CompilePrefix(const PrefixOpNode* Prefix);

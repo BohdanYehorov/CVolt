@@ -1,7 +1,6 @@
-void
-char bool
-byte int long
-float double
+byte Num = 1b;
+int Num1 = 1;
+long Num2 = 1l;
 
-5b 5 5l
-5.0 5.f
+float Num3 = 1.f;
+double Num4 = 1.0;

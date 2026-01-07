@@ -46,20 +46,36 @@ public:
     IdentifierNode(BufferStringView Value) : Value(Value) {}
 };
 
-class IntNode : public ASTNode
+class IntegerNode : public ASTNode
 {
-    GENERATED_BODY(IntNode, ASTNode)
+    GENERATED_BODY(IntegerNode, ASTNode)
 public:
-    int Value;
-    IntNode(int Value) : Value(Value) {}
+    enum IntType
+    {
+        BYTE, INT, LONG
+    };
+
+public:
+    IntType Type;
+    UInt64 Value;
+    IntegerNode(IntType Type, UInt64 Value)
+        : Type(Type), Value(Value) {}
 };
 
-class FloatNode : public ASTNode
+class FloatingPointNode : public ASTNode
 {
-    GENERATED_BODY(FloatNode, ASTNode)
+    GENERATED_BODY(FloatingPointNode, ASTNode)
 public:
-    float Value;
-    FloatNode(float Value) : Value(Value) {}
+    enum FPType
+    {
+        FLOAT, DOUBLE
+    };
+
+public:
+    FPType Type;
+    double Value;
+    FloatingPointNode(FPType Type, double Value)
+        : Type(Type), Value(Value) {}
 };
 
 class BoolNode : public ASTNode
@@ -169,7 +185,8 @@ class SubscriptNode : public ASTNode
 public:
     ASTNode* Target;
     ASTNode* Index;
-    SubscriptNode(ASTNode* Target, ASTNode* Index) : Target(Target), Index(Index) {}
+    SubscriptNode(ASTNode* Target, ASTNode* Index)
+        : Target(Target), Index(Index) {}
 };
 
 class DataTypeNode : public ASTNode
@@ -210,7 +227,8 @@ public:
     BufferStringView Name;
     llvm::TinyPtrVector<ParamNode*> Params;
     ASTNode* Body = nullptr;
-    FunctionNode(DataTypeNode* Type, BufferStringView Name) : ReturnType(Type), Name(Name) {}
+    FunctionNode(DataTypeNode* Type, BufferStringView Name)
+        : ReturnType(Type), Name(Name) {}
     bool AddParam(ParamNode* Prm)
     {
         if (std::find_if(
@@ -262,7 +280,8 @@ class WhileNode : public ASTNode
 public:
     ASTNode* Condition;
     ASTNode* Branch;
-    WhileNode(ASTNode* Condition, ASTNode* Branch) : Condition(Condition), Branch(Branch) {}
+    WhileNode(ASTNode* Condition, ASTNode* Branch)
+        : Condition(Condition), Branch(Branch) {}
 };
 
 class ForNode : public ASTNode
@@ -274,7 +293,8 @@ public:
     ASTNode* Iteration;
     ASTNode* Body;
     ForNode(ASTNode* Initialization, ASTNode* Condition, ASTNode* Iteration, ASTNode* Body)
-        : Initialization(Initialization), Condition(Condition), Iteration(Iteration), Body(Body) {}
+        : Initialization(Initialization), Condition(Condition),
+        Iteration(Iteration), Body(Body) {}
 };
 
 class BreakNode : public ASTNode
