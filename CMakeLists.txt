@@ -30,6 +30,10 @@ add_executable(CVolt Src/main.cpp
         Src/LLVMCompiler.cpp
         Include/LLVMCompiler.h
         Include/DefaultFunction.h
+        Src/Hash.cpp
+        Include/Hash.h
+        Src/Hash.cpp
+        Include/Hash.h
 )
 
 target_link_libraries(CVolt PRIVATE LLVM edit xml2)

@@ -114,7 +114,7 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
     if (const auto Prefix = Cast<PrefixOpNode>(Node))
         return CompilePrefix(Prefix);
     if (const auto Suffix = Cast<SuffixOpNode>(Node))
-        return CompileSufix(Suffix);
+        return CompileSuffix(Suffix);
     if (const auto Unary = Cast<UnaryOpNode>(Node))
         return CompileUnary(Unary);
     if (const auto Comparison = Cast<ComparisonNode>(Node))
@@ -148,6 +148,19 @@ llvm::Value* LLVMCompiler::CompileNode(ASTNode *Node)
 llvm::Value* LLVMCompiler::CompileBlock(const BlockNode *Block)
 {
     EnterScope();
+
+    if (CurrentFunction)
+    {
+        for (llvm::Argument& Arg : CurrentFunction->args())
+        {
+            llvm::Type* ArgType = Arg.getType();
+            llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg.getName());
+
+            Builder.CreateStore(&Arg, Alloca);
+            DeclareVariable(Arg.getName().str(), Alloca);
+        }
+        CurrentFunction = nullptr;
+    }
 
     for (auto Stmt : Block->Statements)
     {
@@ -250,7 +263,7 @@ llvm::Value* LLVMCompiler::CompilePrefix(const PrefixOpNode* Prefix)
     return Value;
 }
 
-llvm::Value* LLVMCompiler::CompileSufix(const SuffixOpNode* Suffix)
+llvm::Value* LLVMCompiler::CompileSuffix(const SuffixOpNode* Suffix)
 {
     llvm::AllocaInst* LValue = GetLValue(Suffix->Operand);
     if (!LValue)
@@ -393,7 +406,7 @@ llvm::Value* LLVMCompiler::CompileCall(const CallNode* Call)
             for (auto& Arg : Call->Arguments)
                 Args.push_back(CompileNode(Arg));
 
-            return Builder.CreateCall(Iter->second);
+            return Builder.CreateCall(Iter->second, Args);
         }
 
         if (FuncName == "OutInt" || FuncName == "OutStr")
@@ -426,35 +439,42 @@ llvm::Value* LLVMCompiler::CompileVariable(const VariableNode* Var)
 
 llvm::Value* LLVMCompiler::CompileFunction(const FunctionNode* Function)
 {
-    std::vector<llvm::Type*> Params;
+    llvm::SmallVector<llvm::Type*, 8> Params;
     Params.reserve(Function->Params.size());
 
     for (const auto Param : Function->Params)
         Params.push_back(CompileType(Param->Type));
 
+    llvm::Type* RetType = CompileType(Function->ReturnType);
     llvm::FunctionType* FuncType = llvm::FunctionType::get(
-        CompileType(Function->ReturnType), Params, false);
+        RetType, Params, false);
 
     const std::string& FuncName = Function->Name.ToString();
     llvm::Function* Func = llvm::Function::Create(
         FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
+
+    const auto& FuncParams = Function->Params;
+    for (size_t i = 0; i < FuncParams.size(); i++)
+    {
+        auto Arg = Func->args().begin() + i;
+        Arg->setName(FuncParams[i]->Name.ToString());
+    }
+
+    CurrentFunction = Func;
 
     llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
     Builder.SetInsertPoint(Entry);
     CompileBlock(Cast<BlockNode>(Function->Body));
 
     llvm::BasicBlock* Bb = Builder.GetInsertBlock();
-    // if (!Bb->getTerminator()) {
-    //     if (Function->ReturnType->TypeInfo.BaseType == DataType::VOID)
-    //         Builder.CreateRetVoid();
-    //     else
-    //         Builder.CreateRet(
-    //             llvm::ConstantInt::get(
-    //                 llvm::Type::getInt32Ty(Context),
-    //                 0
-    //             )
-    //         );
-    // }
+
+    if (!Bb->getTerminator())
+    {
+        if (RetType->isVoidTy())
+            Builder.CreateRetVoid();
+        else
+            ERROR("Function '" + FuncName + "' must return value");
+    }
 
     Functions[FuncName] = Func;
 
@@ -463,8 +483,13 @@ llvm::Value* LLVMCompiler::CompileFunction(const FunctionNode* Function)
 
 llvm::Value* LLVMCompiler::CompileReturn(const ReturnNode* Return)
 {
-    llvm::Value* RetVal = CompileNode(Return->ReturnValue);
-    Builder.CreateRet(RetVal);
+    if (Return->ReturnValue)
+    {
+        llvm::Value* RetVal = CompileNode(Return->ReturnValue);
+        Builder.CreateRet(RetVal);
+    }
+    else
+        Builder.CreateRetVoid();
     return nullptr;
 }
 
@@ -669,7 +694,7 @@ llvm::Value* LLVMCompiler::CastToBool(llvm::Value* Value)
     ERROR("Cannot cast to bool")
 }
 
-int LLVMCompiler::GetTypeRank(llvm::Type *Type)
+int LLVMCompiler::GetTypeRank(llvm::Type* Type)
 {
     if (Type->isIntegerTy(1)) return 0;
 

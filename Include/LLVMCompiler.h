@@ -30,6 +30,8 @@ private:
     std::stack<llvm::BasicBlock*> LoopEndStack;
     std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
+    llvm::Function* CurrentFunction = nullptr;
+
 public:
     LLVMCompiler(ASTNode* ASTTree)
         : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context), ASTTree(ASTTree) {}
@@ -52,7 +54,7 @@ private:
     llvm::Value* CompileIdentifier(const IdentifierNode* Identifier);
     llvm::Value* CompileRef(const RefNode* Ref);
     llvm::Value* CompilePrefix(const PrefixOpNode* Prefix);
-    llvm::Value* CompileSufix(const SuffixOpNode* Suffix);
+    llvm::Value* CompileSuffix(const SuffixOpNode* Suffix);
     llvm::Value* CompileUnary(const UnaryOpNode* Unary);
     llvm::Value* CompileComparison(const ComparisonNode* Comparison);
     llvm::Value* CompileAssignment(const AssignmentNode* Assignment);
