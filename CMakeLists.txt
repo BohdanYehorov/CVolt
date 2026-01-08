@@ -34,6 +34,8 @@ add_executable(CVolt Src/main.cpp
         Include/Hash.h
         Src/Hash.cpp
         Include/Hash.h
+        Src/FunctionSignature.cpp
+        Include/FunctionSignature.h
 )
 
 target_link_libraries(CVolt PRIVATE LLVM edit xml2)
