@@ -14,7 +14,7 @@ int main()
     std::stringstream SStr;
     SStr << File.rdbuf();
 
-    Lexer MyLexer(SStr.str());
+    Volt::Lexer MyLexer(SStr.str());
     MyLexer.Lex();
     MyLexer.PrintTokens();
 
@@ -26,10 +26,10 @@ int main()
         return -1;
     }
 
-    Parser MyParser(MyLexer);
+    Volt::Parser MyParser(MyLexer);
     MyParser.Parse();
 
-    const std::vector<ParseError> ErrorList = MyParser.GetErrorList();
+    const std::vector<Volt::ParseError> ErrorList = MyParser.GetErrorList();
     if (!ErrorList.empty())
     {
         std::cout << "Errors:\n";
@@ -41,7 +41,7 @@ int main()
 
     MyParser.PrintASTTree();
 
-    LLVMCompiler MyCompiler(MyParser.GetASTTree());
+    Volt::LLVMCompiler MyCompiler(MyParser.GetASTTree());
     MyCompiler.Compile();
     MyCompiler.Print();
 

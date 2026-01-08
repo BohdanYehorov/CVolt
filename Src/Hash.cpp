@@ -2,40 +2,43 @@
 // Created by bohdan on 08.01.26.
 //
 
-#include "../Include/Hash.h"
+#include "Hash.h"
 
-size_t CombineHashes(llvm::ArrayRef<size_t> Hashes)
+namespace Volt
 {
-    size_t Res = 0;
-
-    for (size_t Hash : Hashes)
-        Res ^= Hash + 0x9e3779b9 + (Res << 6) + (Res >> 2);
-
-    return Res;
-}
-
-size_t DataTypeHash::operator()(const DataTypeNodeBase *Type) const
-{
-    if (const auto PrimitiveType = Cast<const PrimitiveDataTypeNode>(Type))
-        return std::hash<int>{}(static_cast<int>(PrimitiveType->PrimitiveType));
-
-    if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
+    size_t CombineHashes(llvm::ArrayRef<size_t> Hashes)
     {
-        size_t Res = operator()(PtrType->BaseType);
-        return Res + 0x9e3779b9 + (Res << 6) + (Res >> 2);
+        size_t Res = 0;
+
+        for (size_t Hash : Hashes)
+            Res ^= Hash + 0x9e3779b9 + (Res << 6) + (Res >> 2);
+
+        return Res;
     }
 
-    return 0;
-}
+    size_t DataTypeHash::operator()(const DataTypeNodeBase *Type) const
+    {
+        if (const auto PrimitiveType = Cast<const PrimitiveDataTypeNode>(Type))
+            return std::hash<int>{}(static_cast<int>(PrimitiveType->PrimitiveType));
 
-size_t FunctionSignatureHash::operator()(const FunctionSignature &FuncSign) const
-{
-    size_t Seed = 0;
-    CombineHashes(Seed, std::hash<std::string>{}(FuncSign.Name));
-    CombineHashes(Seed, DataTypeHash{}(FuncSign.ReturnType));
+        if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
+        {
+            size_t Res = operator()(PtrType->BaseType);
+            return Res + 0x9e3779b9 + (Res << 6) + (Res >> 2);
+        }
 
-    for (auto Param : FuncSign.Params)
-        CombineHashes(Seed, DataTypeHash{}(Param));
+        return 0;
+    }
 
-    return Seed;
+    size_t FunctionSignatureHash::operator()(const FunctionSignature &FuncSign) const
+    {
+        size_t Seed = 0;
+        CombineHashes(Seed, std::hash<std::string>{}(FuncSign.Name));
+        CombineHashes(Seed, DataTypeHash{}(FuncSign.ReturnType));
+
+        for (auto Param : FuncSign.Params)
+            CombineHashes(Seed, DataTypeHash{}(Param));
+
+        return Seed;
+    }
 }

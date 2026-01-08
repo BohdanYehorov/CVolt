@@ -6,7 +6,8 @@
 #include <cstring>
 #include <iostream>
 
-void ArenaAllocator::Allocate(size_t InSize)
+namespace Volt
+{void ArenaAllocator::Allocate(size_t InSize)
 {
     Size = InSize;
     Data = static_cast<std::byte*>(::operator new(InSize));
@@ -102,4 +103,4 @@ BufferStringView ArenaStream::Read(size_t Count) const
     BufferStringView Ptr = Alloc.Read(ReadPtr, Count);
     ReadPtr += sizeof(char) * Count;
     return Ptr;
-}
+}}

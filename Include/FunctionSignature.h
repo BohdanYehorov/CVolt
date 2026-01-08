@@ -9,15 +9,17 @@
 #include "ASTNodes.h"
 #include <string>
 
-struct FunctionSignature
+namespace Volt
 {
-    std::string Name;
-    DataTypeNodeBase* ReturnType;
-    llvm::SmallVector<DataTypeNodeBase*, 8> Params;
+    struct FunctionSignature
+    {
+        std::string Name;
+        DataTypeNodeBase* ReturnType;
+        llvm::SmallVector<DataTypeNodeBase*, 8> Params;
 
-    FunctionSignature(const std::string& Name, DataTypeNodeBase* ReturnType, llvm::ArrayRef<DataTypeNodeBase*> Params)
-        : Name(Name), ReturnType(ReturnType), Params(Params) {}
-};
-
+        FunctionSignature(const std::string& Name, DataTypeNodeBase* ReturnType, llvm::ArrayRef<DataTypeNodeBase*> Params)
+            : Name(Name), ReturnType(ReturnType), Params(Params) {}
+    };
+}
 
 #endif //CVOLT_FUNCTIONSIGNATURE_H

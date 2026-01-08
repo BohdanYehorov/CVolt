@@ -12,82 +12,91 @@
 #include "ASTNodes.h"
 #include <unordered_map>
 #include <stack>
-#include <llvm/ExecutionEngine/Orc/CoreContainers.h>
+#include "Hash.h"
+#include "CompilerTypes.h"
+#include "Arena.h"
+#include "TypedValue.h"
 
-class LLVMCompiler
+namespace Volt
 {
-private:
-    llvm::LLVMContext Context;
-    std::unique_ptr<llvm::Module> Module = nullptr;
-    llvm::IRBuilder<> Builder;
+    class LLVMCompiler
+    {
+    private:
+        llvm::LLVMContext Context;
+        std::unique_ptr<llvm::Module> Module = nullptr;
+        llvm::IRBuilder<> Builder;
+        Arena CompilerArena;
 
-    ASTNode* ASTTree;
+        ASTNode* ASTTree;
 
-    std::unordered_map<std::string, llvm::Function*> Functions;
-    std::unordered_map<std::string, llvm::AllocaInst*> SymbolTable;
+        std::unordered_map<std::string, llvm::Function*> Functions;
+        std::unordered_map<std::string, llvm::AllocaInst*> SymbolTable;
 
-    std::vector<std::vector<ScopeEntry>> ScopeStack;
-    std::stack<llvm::BasicBlock*> LoopEndStack;
-    std::stack<llvm::BasicBlock*> LoopHeaderStack;
+        std::vector<std::vector<ScopeEntry>> ScopeStack;
+        std::stack<llvm::BasicBlock*> LoopEndStack;
+        std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
-    llvm::Function* CurrentFunction = nullptr;
+        llvm::Function* CurrentFunction = nullptr;
 
-public:
-    LLVMCompiler(ASTNode* ASTTree)
-        : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context), ASTTree(ASTTree) {}
+    public:
+        LLVMCompiler(ASTNode* ASTTree)
+            : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context), ASTTree(ASTTree) {}
 
-    void Compile();
-    void Print() const { Module->print(llvm::outs(), nullptr); }
+        void Compile();
+        void Print() const { Module->print(llvm::outs(), nullptr); }
 
-    int Run();
+        int Run();
 
-private:
-    llvm::Value* CompileNode(ASTNode* Node);
+    private:
+        TypedValue CompileNode(ASTNode *Node);
 
-    llvm::Value* CompileBlock(const BlockNode* Block);
+        TypedValue CompileBlock(const BlockNode *Block);
 
-    llvm::Value* CompileInt(const IntegerNode* Int);
-    llvm::Value* CompileFloat(const FloatingPointNode* Float);
-    llvm::Value* CompileBool(const BoolNode* Bool);
-    llvm::Value* CompileChar(const CharNode* Char);
-    llvm::Value* CompileString(const StringNode* String);
-    llvm::Value* CompileIdentifier(const IdentifierNode* Identifier);
-    llvm::Value* CompileRef(const RefNode* Ref);
-    llvm::Value* CompilePrefix(const PrefixOpNode* Prefix);
-    llvm::Value* CompileSuffix(const SuffixOpNode* Suffix);
-    llvm::Value* CompileUnary(const UnaryOpNode* Unary);
-    llvm::Value* CompileComparison(const ComparisonNode* Comparison);
-    llvm::Value* CompileAssignment(const AssignmentNode* Assignment);
-    llvm::Value* CompileBinary(const BinaryOpNode* BinaryOp);
-    llvm::Value* CompileCall(const CallNode* Call);
-    llvm::Value* CompileVariable(const VariableNode* Var);
-    llvm::Value* CompileFunction(const FunctionNode *Function);
-    llvm::Value* CompileReturn(const ReturnNode* Return);
-    llvm::Value* CompileIf(const IfNode *If);
-    llvm::Value* CompileWhile(const WhileNode* While);
-    llvm::Value* CompileFor(const ForNode* For);
-    llvm::Value* CompileBreak();
-    llvm::Value* CompileContinue();
+        TypedValue CompileInt(const IntegerNode *Int);
+        TypedValue CompileFloat(const FloatingPointNode *Float);
+        TypedValue CompileBool(const BoolNode *Bool);
+        TypedValue CompileChar(const CharNode *Char);
+        TypedValue CompileString(const StringNode *String);
+        TypedValue CompileIdentifier(const IdentifierNode *Identifier);
+        TypedValue CompileRef(const RefNode *Ref);
+        TypedValue CompilePrefix(const PrefixOpNode *Prefix);
+        TypedValue CompileSuffix(const SuffixOpNode *Suffix);
+        TypedValue CompileUnary(const UnaryOpNode *Unary);
+        TypedValue CompileComparison(const ComparisonNode *Comparison);
+        TypedValue CompileAssignment(const AssignmentNode *Assignment);
+        TypedValue CompileBinary(const BinaryOpNode *BinaryOp);
+        TypedValue CompileCall(const CallNode *Call);
+        TypedValue CompileVariable(const VariableNode *Var);
+        TypedValue CompileFunction(const FunctionNode *Function);
+        TypedValue CompileReturn(const ReturnNode *Return);
+        TypedValue CompileIf(const IfNode *If);
+        TypedValue CompileWhile(const WhileNode *While);
+        TypedValue CompileFor(const ForNode *For);
+        TypedValue CompileBreak();
+        TypedValue CompileContinue();
 
-    llvm::Type* ToLLVMType(DataType Type);
-    llvm::Value* CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
-    void CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool Signed = true);
-    llvm::Value* CastToBool(llvm::Value* Value);
+        llvm::Type* ToLLVMType(DataType Type);
+        llvm::Value* CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
+        void CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool Signed = true);
+        llvm::Value* CastToBool(llvm::Value* Value);
 
-    static int GetTypeRank(llvm::Type* Type);
-    llvm::Value* ImplicitCast(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
+        static int GetTypeRank(llvm::Type* Type);
+        llvm::Value* ImplicitCast(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
 
-    void DeclareVariable(const std::string& Name, llvm::AllocaInst* AllocaInst);
-    llvm::AllocaInst* GetVariable(const std::string& Name);
+        void DeclareVariable(const std::string& Name, llvm::AllocaInst* AllocaInst);
+        llvm::AllocaInst* GetVariable(const std::string& Name);
 
-    void EnterScope();
-    void ExitScope();
+        void EnterScope();
+        void ExitScope();
 
-    llvm::Type* CompileType(const DataTypeNodeBase* Type);
-    llvm::AllocaInst* GetLValue(const ASTNode* Node);
+        llvm::Type* CompileType(const DataTypeNodeBase* Type);
+        llvm::AllocaInst* GetLValue(const ASTNode* Node);
 
-    void CreateDefaultFunction(const std::string& Name, llvm::Type* RetType,
-        const llvm::SmallVector<llvm::Type*, 8>& Params);
-};
+        void CreateDefaultFunction(const std::string& Name, llvm::Type* RetType,
+            const llvm::SmallVector<llvm::Type*, 8>& Params);
+
+        TypedValue ImplicitCast(const TypedValue& Value, DataTypeNodeBase* Target);
+    };
+}
 
 #endif //CVOLT_LLVMCOMPILER_H

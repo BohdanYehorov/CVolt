@@ -8,83 +8,85 @@
 #include <vector>
 #include <string>
 #include <format>
-#include <unordered_map>
 
-enum class ErrorCode
+namespace Volt
 {
-    InvalidCharacter,
-    InvalidNumber,
-    UnterminatedString,
-    InvalidEscape,
-    UnterminatedComment,
-    InvalidIdentifier,
-    UnknownOperator,
-    InternalError,
+    enum class ErrorCode
+    {
+        InvalidCharacter,
+        InvalidNumber,
+        UnterminatedString,
+        InvalidEscape,
+        UnterminatedComment,
+        InvalidIdentifier,
+        UnknownOperator,
+        InternalError,
 
-    UnexpectedToken,
-    ExpectedToken,
-    ExpectedExpression,
-    ExpectedIdentifier,
-    ExpectedType,
-    DuplicateParameter
-};
+        UnexpectedToken,
+        ExpectedToken,
+        ExpectedExpression,
+        ExpectedIdentifier,
+        ExpectedType,
+        DuplicateParameter
+    };
 
-enum class LexErrorType
-{
-    InvalidCharacter,
-    InvalidNumber,
-    UnterminatedNumber,
+    enum class LexErrorType
+    {
+        InvalidCharacter,
+        InvalidNumber,
+        UnterminatedNumber,
 
-    UnterminatedString,
-    InvalidEscape,
-    UnterminatedEscape,
-    NewlineInString,
+        UnterminatedString,
+        InvalidEscape,
+        UnterminatedEscape,
+        NewlineInString,
 
-    InvalidCharacterLiteral,
-    UnterminatedCharacterLiteral,
+        InvalidCharacterLiteral,
+        UnterminatedCharacterLiteral,
 
-    UnterminatedBlockComment,
-    NestedBlockComment,
+        UnterminatedBlockComment,
+        NestedBlockComment,
 
-    InvalidIdentifier,
-    KeywordAsIdentifier,
+        InvalidIdentifier,
+        KeywordAsIdentifier,
 
-    UnknownOperator,
-    IncompleteOperator,
+        UnknownOperator,
+        IncompleteOperator,
 
-    InvalidDelimiter,
-    UnexpectedEOF,
+        InvalidDelimiter,
+        UnexpectedEOF,
 
-    InvalidUnicode,
-    UnexpectedBOM,
+        InvalidUnicode,
+        UnexpectedBOM,
 
-    InternalError,
-    TokenCreationFailed,
-    InfiniteLoop
-};
+        InternalError,
+        TokenCreationFailed,
+        InfiniteLoop
+    };
 
-struct LexError
-{
-    LexErrorType Type;
-    size_t Line;
-    size_t Column;
-    std::vector<std::string> Context;
+    struct LexError
+    {
+        LexErrorType Type;
+        size_t Line;
+        size_t Column;
+        std::vector<std::string> Context;
 
-    LexError(LexErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context)
-        : Type(Type), Line(Line), Column(Column), Context(std::move(Context)) {}
+        LexError(LexErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context)
+            : Type(Type), Line(Line), Column(Column), Context(std::move(Context)) {}
 
-    [[nodiscard]] std::string ToString() const;
-};
+        [[nodiscard]] std::string ToString() const;
+    };
 
-struct ParseError
-{
-    ErrorCode Code;
-    size_t Pos;
-    std::vector<std::string> Context;
+    struct ParseError
+    {
+        ErrorCode Code;
+        size_t Pos;
+        std::vector<std::string> Context;
 
-    ParseError(ErrorCode Code, size_t Pos, const std::vector<std::string>& Context)
-        : Code(Code), Pos(Pos), Context(Context) {}
-    [[nodiscard]] std::string ToString() const;
-};
+        ParseError(ErrorCode Code, size_t Pos, const std::vector<std::string>& Context)
+            : Code(Code), Pos(Pos), Context(Context) {}
+        [[nodiscard]] std::string ToString() const;
+    };
+}
 
 #endif //CVOLT_ERRORS_H

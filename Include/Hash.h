@@ -8,23 +8,26 @@
 #include "ASTNodes.h"
 #include "FunctionSignature.h"
 
-size_t CombineHashes(llvm::ArrayRef<size_t> Hashes);
-
-inline void CombineHashes(size_t& Seed, size_t Hash)
+namespace Volt
 {
-    Seed ^= Hash + 0x9e3779b9 + (Seed << 6) + (Seed >> 2);
+    size_t CombineHashes(llvm::ArrayRef<size_t> Hashes);
+
+    inline void CombineHashes(size_t& Seed, size_t Hash)
+    {
+        Seed ^= Hash + 0x9e3779b9 + (Seed << 6) + (Seed >> 2);
+    }
+
+    class DataTypeHash
+    {
+    public:
+        size_t operator()(const DataTypeNodeBase* Type) const;
+    };
+
+    class FunctionSignatureHash
+    {
+    public:
+        size_t operator()(const FunctionSignature& FuncSign) const;
+    };
 }
-
-class DataTypeHash
-{
-public:
-    size_t operator()(const DataTypeNodeBase* Type) const;
-};
-
-class FunctionSignatureHash
-{
-public:
-    size_t operator()(const FunctionSignature& FuncSign) const;
-};
 
 #endif //CVOLT_HASH_H

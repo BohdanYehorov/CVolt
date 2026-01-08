@@ -22,4 +22,10 @@ struct CompilerError : std::exception
     [[nodiscard]] const char* what() const noexcept override { return Str.c_str(); }
 };
 
+// struct TypedValue
+// {
+//     llvm::Value* Value = nullptr;
+//     DataTypeNodeBase* Type = nullptr;
+// };
+
 #endif //CVOLT_INSTRUCTION_H

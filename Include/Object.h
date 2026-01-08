@@ -8,33 +8,36 @@
 #include <cstddef>
 #include <string>
 
-class Object
+namespace Volt
 {
-protected:
-    static size_t GenerateType() { static size_t Id = 0; return ++Id; }
+    class Object
+    {
+    protected:
+        static size_t GenerateType() { static size_t Id = 0; return ++Id; }
 
-public:
-    virtual ~Object() = default;
+    public:
+        virtual ~Object() = default;
 
-    static size_t StaticType() { static size_t Id = GenerateType(); return Id; }
-    [[nodiscard]] virtual size_t GetType() const { return  StaticType(); };
-    [[nodiscard]] virtual bool IsA(size_t Type) const { return Type == StaticType(); };
-    [[nodiscard]] virtual std::string GetName() const { return "Object"; }
-};
+        static size_t StaticType() { static size_t Id = GenerateType(); return Id; }
+        [[nodiscard]] virtual size_t GetType() const { return  StaticType(); };
+        [[nodiscard]] virtual bool IsA(size_t Type) const { return Type == StaticType(); };
+        [[nodiscard]] virtual std::string GetName() const { return "Object"; }
+    };
 
-#define GENERATED_BODY(Object, Base) \
-public:\
-    static size_t StaticType() { static size_t Id = GenerateType(); return Id; } \
-    size_t GetType() const override { return StaticType(); } \
-    bool IsA(size_t Type_) const override { return Type_ == StaticType() || Base::IsA(Type_); } \
-    std::string GetName() const override { return #Object; }
+    #define GENERATED_BODY(Object, Base) \
+    public:\
+        static size_t StaticType() { static size_t Id = GenerateType(); return Id; } \
+        size_t GetType() const override { return StaticType(); } \
+        bool IsA(size_t Type_) const override { return Type_ == StaticType() || Base::IsA(Type_); } \
+        std::string GetName() const override { return #Object; }
 
-template<typename To, typename From>
-To* Cast(From* Obj)
-{
-    if (Obj && Obj->IsA(To::StaticType()))
-        return reinterpret_cast<To*>(Obj);
-    return nullptr;
+    template<typename To, typename From>
+    To* Cast(From* Obj)
+    {
+        if (Obj && Obj->IsA(To::StaticType()))
+            return reinterpret_cast<To*>(Obj);
+        return nullptr;
+    }
 }
 
 #endif //CVOLT_OBJECT_H

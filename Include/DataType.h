@@ -6,12 +6,15 @@
 #define CVOLT_DATATYPE_H
 #include "TypeDefs.h"
 
-enum class DataType : UInt8
+namespace Volt
 {
-    VOID,
-    BOOL, CHAR,
-    BYTE, INT, LONG,
-    FLOAT, DOUBLE
-};
+    enum class DataType : UInt8
+    {
+        VOID,
+        BOOL, CHAR,
+        BYTE, INT, LONG,
+        FLOAT, DOUBLE
+    };
+}
 
 #endif //CVOLT_DATATYPE_H

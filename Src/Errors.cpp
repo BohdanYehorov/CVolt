@@ -4,93 +4,95 @@
 
 #include "Errors.h"
 
-
-std::string LexError::ToString() const
+namespace Volt
 {
-    using enum LexErrorType;
-
-    switch (Type)
+    std::string LexError::ToString() const
     {
-        case InvalidCharacter:
-            return std::format("Invalid character '{}'.", Context[0]);
+        using enum LexErrorType;
 
-        case InvalidNumber:
-            return "Invalid numeric literal.";
+        switch (Type)
+        {
+            case InvalidCharacter:
+                return std::format("Invalid character '{}'.", Context[0]);
 
-        case UnterminatedNumber:
-            return "Unterminated numeric literal.";
+            case InvalidNumber:
+                return "Invalid numeric literal.";
 
-        case UnterminatedString:
-            return "Unterminated string literal.";
+            case UnterminatedNumber:
+                return "Unterminated numeric literal.";
 
-        case InvalidEscape:
-            return std::format("Invalid escape sequence '\\{}'.", Context[0]);
+            case UnterminatedString:
+                return "Unterminated string literal.";
 
-        case UnterminatedEscape:
-            return "Unterminated escape sequence in string literal.";
+            case InvalidEscape:
+                return std::format("Invalid escape sequence '\\{}'.", Context[0]);
 
-        case NewlineInString:
-            return "Newline in string literal.";
+            case UnterminatedEscape:
+                return "Unterminated escape sequence in string literal.";
 
-        case InvalidCharacterLiteral:
-            return "Invalid character literal.";
+            case NewlineInString:
+                return "Newline in string literal.";
 
-        case UnterminatedCharacterLiteral:
-            return "Unterminated character literal.";
+            case InvalidCharacterLiteral:
+                return "Invalid character literal.";
 
-        case UnterminatedBlockComment:
-            return "Unterminated block comment.";
+            case UnterminatedCharacterLiteral:
+                return "Unterminated character literal.";
 
-        case NestedBlockComment:
-            return "Nested block comments are not supported.";
+            case UnterminatedBlockComment:
+                return "Unterminated block comment.";
 
-        case InvalidIdentifier:
-            return "Invalid identifier.";
+            case NestedBlockComment:
+                return "Nested block comments are not supported.";
 
-        case KeywordAsIdentifier:
-            return std::format("Keyword '{}' cannot be used as an identifier.", Context[0]);
+            case InvalidIdentifier:
+                return "Invalid identifier.";
 
-        case UnknownOperator:
-            return std::format("Unknown operator '{}'.", Context[0]);
+            case KeywordAsIdentifier:
+                return std::format("Keyword '{}' cannot be used as an identifier.", Context[0]);
 
-        case IncompleteOperator:
-            return std::format("Incomplete operator '{}'.", Context[0]);
+            case UnknownOperator:
+                return std::format("Unknown operator '{}'.", Context[0]);
 
-        case InvalidDelimiter:
-            return std::format("Invalid delimiter '{}'.", Context[0]);
+            case IncompleteOperator:
+                return std::format("Incomplete operator '{}'.", Context[0]);
 
-        case UnexpectedEOF:
-            return "Unexpected end of file.";
+            case InvalidDelimiter:
+                return std::format("Invalid delimiter '{}'.", Context[0]);
 
-        case InvalidUnicode:
-            return "Invalid Unicode character.";
+            case UnexpectedEOF:
+                return "Unexpected end of file.";
 
-        case UnexpectedBOM:
-            return "Unexpected byte order mark (BOM).";
+            case InvalidUnicode:
+                return "Invalid Unicode character.";
 
-        case InternalError:
-            return "Internal lexer error.";
+            case UnexpectedBOM:
+                return "Unexpected byte order mark (BOM).";
 
-        case TokenCreationFailed:
-            return "Failed to create token.";
+            case InternalError:
+                return "Internal lexer error.";
 
-        case InfiniteLoop:
-            return "Lexer entered an infinite loop.";
+            case TokenCreationFailed:
+                return "Failed to create token.";
+
+            case InfiniteLoop:
+                return "Lexer entered an infinite loop.";
+        }
+
+        return "Unknown lexer error.";
     }
 
-    return "Unknown lexer error.";
-}
-
-std::string ParseError::ToString() const
-{
-    switch (Code)
+    std::string ParseError::ToString() const
     {
-        case ErrorCode::ExpectedToken:
-            return "Expected '" + Context.at(0) + "'";
-        case ErrorCode::UnexpectedToken:
-            return "Unexpected '" + Context.at(0) + "'";
-        default:
-            break;
+        switch (Code)
+        {
+            case ErrorCode::ExpectedToken:
+                return "Expected '" + Context.at(0) + "'";
+            case ErrorCode::UnexpectedToken:
+                return "Unexpected '" + Context.at(0) + "'";
+            default:
+                break;
+        }
+        return "";
     }
-    return "";
 }
