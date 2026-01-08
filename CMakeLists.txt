@@ -26,7 +26,7 @@ add_executable(CVolt Src/main.cpp
         Include/BufferView.h
         Src/BufferView.cpp
         Include/CompilerTypes.h
-        Include/DataType.h
+        Include/PrimitiveDataType.h
         Src/LLVMCompiler.cpp
         Include/LLVMCompiler.h
         Include/DefaultFunction.h
@@ -37,6 +37,8 @@ add_executable(CVolt Src/main.cpp
         Include/FunctionSignature.h
         Src/TypedValue.cpp
         Include/TypedValue.h
+        Src/DataType.cpp
+        Include/DataType.h
 )
 
 target_link_libraries(CVolt PRIVATE LLVM edit xml2)

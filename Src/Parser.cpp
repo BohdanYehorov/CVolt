@@ -102,28 +102,28 @@ namespace Volt
 
             switch (PrimitiveType->PrimitiveType)
             {
-                case DataType::VOID:
+                case PrimitiveDataType::VOID:
                     TypeStr = "VOID";
                     break;
-                case DataType::BOOL:
+                case PrimitiveDataType::BOOL:
                     TypeStr = "BOOL";
                     break;
-                case DataType::CHAR:
+                case PrimitiveDataType::CHAR:
                     TypeStr = "CHAR";
                     break;
-                case DataType::BYTE:
+                case PrimitiveDataType::BYTE:
                     TypeStr = "BYTE";
                     break;
-                case DataType::INT:
+                case PrimitiveDataType::INT:
                     TypeStr = "INT";
                     break;
-                case DataType::LONG:
+                case PrimitiveDataType::LONG:
                     TypeStr = "LONG";
                     break;
-                case DataType::FLOAT:
+                case PrimitiveDataType::FLOAT:
                     TypeStr = "FLOAT";
                     break;
-                case DataType::DOUBLE:
+                case PrimitiveDataType::DOUBLE:
                     TypeStr = "DOUBLE";
                     break;
                 default:
@@ -412,32 +412,32 @@ namespace Volt
 
         const Token& Tok = CurrentToken();
 
-        DataType PrimitiveType;
+        PrimitiveDataType PrimitiveType;
         switch (Tok.Type)
         {
             case Token::TYPE_VOID:
-                PrimitiveType = DataType::VOID;
+                PrimitiveType = PrimitiveDataType::VOID;
                 break;
             case Token::TYPE_BOOL:
-                PrimitiveType = DataType::BOOL;
+                PrimitiveType = PrimitiveDataType::BOOL;
                 break;
             case Token::TYPE_CHAR:
-                PrimitiveType = DataType::CHAR;
+                PrimitiveType = PrimitiveDataType::CHAR;
                 break;
             case Token::TYPE_BYTE:
-                PrimitiveType = DataType::BYTE;
+                PrimitiveType = PrimitiveDataType::BYTE;
                 break;
             case Token::TYPE_INT:
-                PrimitiveType = DataType::INT;
+                PrimitiveType = PrimitiveDataType::INT;
                 break;
             case Token::TYPE_LONG:
-                PrimitiveType = DataType::LONG;
+                PrimitiveType = PrimitiveDataType::LONG;
                 break;
             case Token::TYPE_FLOAT:
-                PrimitiveType = DataType::FLOAT;
+                PrimitiveType = PrimitiveDataType::FLOAT;
                 break;
             case Token::TYPE_DOUBLE:
-                PrimitiveType = DataType::DOUBLE;
+                PrimitiveType = PrimitiveDataType::DOUBLE;
                 break;
             default:
                 return nullptr;

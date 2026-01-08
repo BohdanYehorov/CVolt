@@ -183,13 +183,13 @@ namespace Volt
         {
             case IntegerNode::BYTE:
                 return { llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(DataType::BYTE) };
+                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::BYTE) };
             case IntegerNode::INT:
                 return { llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(DataType::INT) };
+                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::INT) };
             case IntegerNode::LONG:
                 return { llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value),
-                             CompilerArena.Create<PrimitiveDataTypeNode>(DataType::LONG) };
+                             CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::LONG) };
             default:
                 ERROR("Unknown integer type")
         }
@@ -201,10 +201,10 @@ namespace Volt
         {
             case FloatingPointNode::DOUBLE:
                 return { llvm::ConstantFP::get(llvm::Type::getDoubleTy(Context), Float->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(DataType::DOUBLE) };
+                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::DOUBLE) };
             case FloatingPointNode::FLOAT:
                 return { llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(DataType::FLOAT) };
+                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::FLOAT) };
             default:
                 ERROR("Unknown float type")
         }
@@ -213,20 +213,20 @@ namespace Volt
     TypedValue LLVMCompiler::CompileBool(const BoolNode *Bool)
     {
         return { llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value),
-                    CompilerArena.Create<PrimitiveDataTypeNode>(DataType::BOOL) };
+                    CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::BOOL) };
     }
 
     TypedValue LLVMCompiler::CompileChar(const CharNode *Char)
     {
         return { llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value),
-                    CompilerArena.Create<PrimitiveDataTypeNode>(DataType::CHAR) };
+                    CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::CHAR) };
     }
 
     TypedValue LLVMCompiler::CompileString(const StringNode *String)
     {
         return { Builder.CreateGlobalString(String->Value.ToString()),
                     CompilerArena.Create<PtrDataTypeNode>(
-                        CompilerArena.Create<PrimitiveDataTypeNode>(DataType::CHAR)) };
+                        CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::CHAR)) };
     }
 
     TypedValue LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
@@ -659,23 +659,23 @@ namespace Volt
         return { };
     }
 
-    llvm::Type* LLVMCompiler::ToLLVMType(DataType Type)
+    llvm::Type* LLVMCompiler::ToLLVMType(PrimitiveDataType Type)
     {
         switch (Type)
         {
-            case DataType::VOID:
+            case PrimitiveDataType::VOID:
                 return llvm::Type::getVoidTy(Context);
-            case DataType::BOOL:
-            case DataType::CHAR:
-            case DataType::BYTE:
+            case PrimitiveDataType::BOOL:
+            case PrimitiveDataType::CHAR:
+            case PrimitiveDataType::BYTE:
                 return llvm::Type::getInt1Ty(Context);
-            case DataType::INT:
+            case PrimitiveDataType::INT:
                 return llvm::Type::getInt32Ty(Context);
-            case DataType::LONG:
+            case PrimitiveDataType::LONG:
                 return llvm::Type::getInt64Ty(Context);
-            case DataType::FLOAT:
+            case PrimitiveDataType::FLOAT:
                 return llvm::Type::getFloatTy(Context);
-            case DataType::DOUBLE:
+            case PrimitiveDataType::DOUBLE:
                 return llvm::Type::getDoubleTy(Context);
             default:
                 ERROR("Unknown data type");

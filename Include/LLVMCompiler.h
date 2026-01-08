@@ -75,7 +75,7 @@ namespace Volt
         TypedValue CompileBreak();
         TypedValue CompileContinue();
 
-        llvm::Type* ToLLVMType(DataType Type);
+        llvm::Type* ToLLVMType(PrimitiveDataType Type);
         llvm::Value* CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
         void CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool Signed = true);
         llvm::Value* CastToBool(llvm::Value* Value);

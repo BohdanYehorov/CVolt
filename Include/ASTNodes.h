@@ -11,7 +11,7 @@
 #include "Operator.h"
 #include <algorithm>
 #include "BufferView.h"
-#include "DataType.h"
+#include "PrimitiveDataType.h"
 #include <llvm/ADT/TinyPtrVector.h>
 
 namespace Volt
@@ -208,8 +208,8 @@ namespace Volt
     {
         GENERATED_BODY(PrimitiveDataTypeNode, DataTypeNodeBase)
     public:
-        DataType PrimitiveType;
-        PrimitiveDataTypeNode(DataType PrimitiveType)
+        PrimitiveDataType PrimitiveType;
+        PrimitiveDataTypeNode(PrimitiveDataType PrimitiveType)
             : PrimitiveType(PrimitiveType) {}
     };
 
