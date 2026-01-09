@@ -6,26 +6,23 @@
 #define CVOLT_INSTRUCTION_H
 
 #include <string>
-#include <llvm/IR/Instructions.h>
+#include "TypedValue.h"
 
-struct ScopeEntry
+namespace Volt
 {
-    std::string Name;
-    bool HadPrevious;
-    llvm::AllocaInst* Previous;
-};
+    struct ScopeEntry
+    {
+        std::string Name;
+        bool HadPrevious;
+        TypedValue* Previous;
+    };
 
-struct CompilerError : std::exception
-{
-    std::string Str;
-    CompilerError(std::string&& Str) : Str(std::move(Str)) {}
-    [[nodiscard]] const char* what() const noexcept override { return Str.c_str(); }
-};
-
-// struct TypedValue
-// {
-//     llvm::Value* Value = nullptr;
-//     DataTypeNodeBase* Type = nullptr;
-// };
+    struct CompilerError : std::exception
+    {
+        std::string Str;
+        CompilerError(std::string&& Str) : Str(std::move(Str)) {}
+        [[nodiscard]] const char* what() const noexcept override { return Str.c_str(); }
+    };
+}
 
 #endif //CVOLT_INSTRUCTION_H

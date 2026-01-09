@@ -7,6 +7,7 @@
 
 #include <llvm/ADT/SmallVector.h>
 #include "ASTNodes.h"
+#include "DataType.h"
 #include <string>
 
 namespace Volt
@@ -14,11 +15,23 @@ namespace Volt
     struct FunctionSignature
     {
         std::string Name;
-        DataTypeNodeBase* ReturnType;
         llvm::SmallVector<DataTypeNodeBase*, 8> Params;
 
-        FunctionSignature(const std::string& Name, DataTypeNodeBase* ReturnType, llvm::ArrayRef<DataTypeNodeBase*> Params)
-            : Name(Name), ReturnType(ReturnType), Params(Params) {}
+        FunctionSignature(
+            const std::string& Name, llvm::ArrayRef<DataTypeNodeBase*> Params)
+                : Name(Name), Params(Params) {}
+
+        [[nodiscard]] bool operator==(const FunctionSignature& Other) const
+        {
+            if (Name != Other.Name || Params.size() != Other.Params.size())
+                return false;
+
+            for (size_t i = 0; i < Params.size(); i++)
+                if (!DataType::IsEqual(Params[i], Other.Params[i]))
+                    return false;
+
+            return true;
+        }
     };
 }
 

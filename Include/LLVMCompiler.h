@@ -30,7 +30,8 @@ namespace Volt
         ASTNode* ASTTree;
 
         std::unordered_map<std::string, llvm::Function*> Functions;
-        std::unordered_map<std::string, llvm::AllocaInst*> SymbolTable;
+        std::unordered_map<FunctionSignature, TypedFunction*, FunctionSignatureHash> FunctionSignatures;
+        std::unordered_map<std::string, TypedValue*> SymbolTable;
 
         std::vector<std::vector<ScopeEntry>> ScopeStack;
         std::stack<llvm::BasicBlock*> LoopEndStack;
@@ -48,54 +49,49 @@ namespace Volt
         int Run();
 
     private:
-        TypedValue CompileNode(ASTNode *Node);
+        TypedValue *CompileNode(ASTNode *Node);
+        TypedValue *CompileBlock(const BlockNode *Block);
+        TypedValue *CompileInt(const IntegerNode *Int);
+        TypedValue *CompileFloat(const FloatingPointNode *Float);
+        TypedValue *CompileBool(const BoolNode *Bool);
+        TypedValue *CompileChar(const CharNode *Char);
+        TypedValue *CompileString(const StringNode *String);
+        TypedValue *CompileIdentifier(const IdentifierNode *Identifier);
+        TypedValue *CompileRef(const RefNode *Ref);
+        TypedValue *CompilePrefix(const PrefixOpNode *Prefix);
+        TypedValue *CompileSuffix(const SuffixOpNode *Suffix);
+        TypedValue *CompileUnary(const UnaryOpNode *Unary);
+        TypedValue *CompileComparison(const ComparisonNode *Comparison);
+        TypedValue *CompileAssignment(const AssignmentNode *Assignment);
+        TypedValue *CompileBinary(const BinaryOpNode *BinaryOp);
+        TypedValue *CompileCall(const CallNode *Call);
+        TypedValue *CompileVariable(const VariableNode *Var);
+        TypedValue *CompileFunction(const FunctionNode *Function);
+        TypedValue *CompileReturn(const ReturnNode *Return);
+        TypedValue *CompileIf(const IfNode *If);
+        TypedValue *CompileWhile(const WhileNode *While);
+        TypedValue *CompileFor(const ForNode *For);
+        TypedValue *CompileBreak();
+        TypedValue *CompileContinue();
 
-        TypedValue CompileBlock(const BlockNode *Block);
-
-        TypedValue CompileInt(const IntegerNode *Int);
-        TypedValue CompileFloat(const FloatingPointNode *Float);
-        TypedValue CompileBool(const BoolNode *Bool);
-        TypedValue CompileChar(const CharNode *Char);
-        TypedValue CompileString(const StringNode *String);
-        TypedValue CompileIdentifier(const IdentifierNode *Identifier);
-        TypedValue CompileRef(const RefNode *Ref);
-        TypedValue CompilePrefix(const PrefixOpNode *Prefix);
-        TypedValue CompileSuffix(const SuffixOpNode *Suffix);
-        TypedValue CompileUnary(const UnaryOpNode *Unary);
-        TypedValue CompileComparison(const ComparisonNode *Comparison);
-        TypedValue CompileAssignment(const AssignmentNode *Assignment);
-        TypedValue CompileBinary(const BinaryOpNode *BinaryOp);
-        TypedValue CompileCall(const CallNode *Call);
-        TypedValue CompileVariable(const VariableNode *Var);
-        TypedValue CompileFunction(const FunctionNode *Function);
-        TypedValue CompileReturn(const ReturnNode *Return);
-        TypedValue CompileIf(const IfNode *If);
-        TypedValue CompileWhile(const WhileNode *While);
-        TypedValue CompileFor(const ForNode *For);
-        TypedValue CompileBreak();
-        TypedValue CompileContinue();
-
-        llvm::Type* ToLLVMType(PrimitiveDataType Type);
-        llvm::Value* CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
-        void CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool Signed = true);
         llvm::Value* CastToBool(llvm::Value* Value);
 
-        static int GetTypeRank(llvm::Type* Type);
-        llvm::Value* ImplicitCast(llvm::Value* Value, llvm::Type* Target, bool Signed = true);
-
-        void DeclareVariable(const std::string& Name, llvm::AllocaInst* AllocaInst);
-        llvm::AllocaInst* GetVariable(const std::string& Name);
+        void DeclareVariable(const std::string& Name, TypedValue *Var);
+        TypedValue *GetVariable(const std::string &Name);
 
         void EnterScope();
         void ExitScope();
 
-        llvm::Type* CompileType(const DataTypeNodeBase* Type);
-        llvm::AllocaInst* GetLValue(const ASTNode* Node);
+        TypedValue *GetLValue(const ASTNode *Node);
 
         void CreateDefaultFunction(const std::string& Name, llvm::Type* RetType,
-            const llvm::SmallVector<llvm::Type*, 8>& Params);
+            const llvm::SmallVector<llvm::Type*, 8>& Params) const;
 
-        TypedValue ImplicitCast(const TypedValue& Value, DataTypeNodeBase* Target);
+        void CastToJointType(TypedValue *&Left, TypedValue *&Right);
+        TypedValue *ImplicitCast(TypedValue *Value, DataType *Target);
+
+        template <typename T, typename ...Args_>
+        [[nodiscard]] T *Create(Args_&&... Args) { return CompilerArena.Create<T>(std::forward<Args_>(Args)...); }
     };
 }
 

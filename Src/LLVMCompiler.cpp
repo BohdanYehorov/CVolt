@@ -92,7 +92,7 @@ namespace Volt
         return MainFunc();
     }
 
-    TypedValue LLVMCompiler::CompileNode(ASTNode *Node)
+    TypedValue *LLVMCompiler::CompileNode(ASTNode *Node)
     {
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
@@ -107,6 +107,8 @@ namespace Volt
             return CompileInt(Int);
         if (const auto Bool = Cast<BoolNode>(Node))
             return CompileBool(Bool);
+        if (const auto Float = Cast<FloatingPointNode>(Node))
+            return CompileFloat(Float);
         if (const auto String = Cast<StringNode>(Node))
             return CompileString(String);
         if (const auto Identifier = Cast<IdentifierNode>(Node))
@@ -147,22 +149,22 @@ namespace Volt
         ERROR("Cannot resolve node: '" + Node->GetName() + "'");
     }
 
-    TypedValue LLVMCompiler::CompileBlock(const BlockNode *Block)
+    TypedValue *LLVMCompiler::CompileBlock(const BlockNode *Block)
     {
         EnterScope();
 
-        if (CurrentFunction)
-        {
-            for (llvm::Argument& Arg : CurrentFunction->args())
-            {
-                llvm::Type* ArgType = Arg.getType();
-                llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg.getName());
-
-                Builder.CreateStore(&Arg, Alloca);
-                DeclareVariable(Arg.getName().str(), Alloca);
-            }
-            CurrentFunction = nullptr;
-        }
+        // if (CurrentFunction)
+        // {
+        //     for (llvm::Argument& Arg : CurrentFunction->args())
+        //     {
+        //         llvm::Type* ArgType = Arg.getType();
+        //         llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg.getName());
+        //
+        //         Builder.CreateStore(&Arg, Alloca);
+        //         DeclareVariable(Arg.getName().str(), { Alloca, nullptr });
+        //     }
+        //     CurrentFunction = nullptr;
+        // }
 
         for (auto Stmt : Block->Statements)
         {
@@ -174,544 +176,522 @@ namespace Volt
 
         ExitScope();
 
-        return { };
+        return nullptr;
     }
 
-    TypedValue LLVMCompiler::CompileInt(const IntegerNode *Int)
+    TypedValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
         switch (Int->Type)
         {
             case IntegerNode::BYTE:
-                return { llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::BYTE) };
+                return Create<TypedValue>(
+                    llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value),
+                    DataType::CreatePrimitive(PrimitiveDataType::BYTE, CompilerArena));
             case IntegerNode::INT:
-                return { llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::INT) };
+                return Create<TypedValue>(
+                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value),
+                    DataType::CreatePrimitive(PrimitiveDataType::INT, CompilerArena));
             case IntegerNode::LONG:
-                return { llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value),
-                             CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::LONG) };
+                return Create<TypedValue>(
+                    llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value),
+                    DataType::CreatePrimitive(PrimitiveDataType::LONG, CompilerArena));
             default:
                 ERROR("Unknown integer type")
         }
     }
 
-    TypedValue LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
+    TypedValue *LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
     {
         switch (Float->Type)
         {
             case FloatingPointNode::DOUBLE:
-                return { llvm::ConstantFP::get(llvm::Type::getDoubleTy(Context), Float->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::DOUBLE) };
+                return Create<TypedValue>(llvm::ConstantFP::get(
+                    llvm::Type::getDoubleTy(Context), Float->Value),
+                    DataType::CreatePrimitive(PrimitiveDataType::DOUBLE, CompilerArena));
             case FloatingPointNode::FLOAT:
-                return { llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value),
-                            CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::FLOAT) };
+                return Create<TypedValue>(
+                    llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value),
+                    DataType::CreatePrimitive(PrimitiveDataType::FLOAT, CompilerArena));
             default:
                 ERROR("Unknown float type")
         }
     }
 
-    TypedValue LLVMCompiler::CompileBool(const BoolNode *Bool)
+    TypedValue *LLVMCompiler::CompileBool(const BoolNode *Bool)
     {
-        return { llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value),
-                    CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::BOOL) };
+        return Create<TypedValue>(
+            llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value),
+            DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
     }
 
-    TypedValue LLVMCompiler::CompileChar(const CharNode *Char)
+    TypedValue *LLVMCompiler::CompileChar(const CharNode *Char)
     {
-        return { llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value),
-                    CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::CHAR) };
+        return Create<TypedValue>(
+            llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value),
+            DataType::CreatePrimitive(PrimitiveDataType::CHAR, CompilerArena));
     }
 
-    TypedValue LLVMCompiler::CompileString(const StringNode *String)
+    TypedValue *LLVMCompiler::CompileString(const StringNode *String)
     {
-        return { Builder.CreateGlobalString(String->Value.ToString()),
-                    CompilerArena.Create<PtrDataTypeNode>(
-                        CompilerArena.Create<PrimitiveDataTypeNode>(PrimitiveDataType::CHAR)) };
+        return Create<TypedValue>(Builder.CreateGlobalString(String->Value.ToString()),
+            DataType::CreatePtr(Create<PrimitiveDataTypeNode>(PrimitiveDataType::CHAR ), CompilerArena));
     }
 
-    TypedValue LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
+    TypedValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
     {
-        // const std::string Value = Identifier->Value.ToString();
-        //
-        // if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
-        // {
-        //     llvm::AllocaInst* Alloca = Iter->second;
-        //     //return Builder.CreateLoad(Alloca->getAllocatedType(), Alloca, Value + "_val");
-        // }
-        //
-        // ERROR("Cannot resolve symbol: '" + Value + "'")
+        const std::string Value = Identifier->Value.ToString();
 
-        ERROR("Unsupported operation: identifier");
+        if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
+        {
+            TypedValue* Var = Iter->second;
+            return  Create<TypedValue>(Builder.CreateLoad(Var->GetDataType()->GetLLVMType(Context),
+                        Var->GetValue(), Value + "_val"), Var->GetDataType());
+        }
+
+        ERROR("Cannot resolve symbol: '" + Value + "'")
+
+        //ERROR("Unsupported operation: identifier");
     }
 
-    TypedValue LLVMCompiler::CompileRef(const RefNode *Ref)
+    TypedValue *LLVMCompiler::CompileRef(const RefNode *Ref)
     {
-        // llvm::AllocaInst* LValue = GetLValue(Ref->Target);
-        // if (!LValue)
-        //     ERROR("Cannot apply operator '$' to l-value")
+         TypedValue* LValue = GetLValue(Ref->Target);
+         if (!LValue)
+             ERROR("Cannot apply operator '$' to l-value")
 
-        ERROR("Unsupported operation: ref")
-        //return LValue;
+        return LValue;
     }
 
-    TypedValue LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
+    TypedValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
     {
-        // llvm::AllocaInst* LValue = GetLValue(Prefix->Operand);
-        // if (!LValue)
-        //     ERROR("Cannot apply prefix operator to r-value")
-        //
-        // llvm::Value* Value = Builder.CreateLoad(LValue->getAllocatedType(), LValue);
-        // switch (Prefix->Type)
-        // {
-        //     case Operator::INC:
-        //         Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
-        //         break;
-        //     case Operator::DEC:
-        //         Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
-        //         break;
-        //     default:
-        //         ERROR("Unknown prefix operator")
-        // }
-        //
-        // Builder.CreateStore(Value, LValue);
+        TypedValue* LValue = GetLValue(Prefix->Operand);
+        if (!LValue)
+            ERROR("Cannot apply prefix operator to r-value")
 
-        ERROR("Unsupported operation: prefix")
-        //return Value;
+        llvm::Value* Value = LValue->GetValue();
+        Value = Builder.CreateLoad(LValue->GetDataType()->GetLLVMType(Context), Value);
+        switch (Prefix->Type)
+        {
+            case Operator::INC:
+                Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
+                break;
+            case Operator::DEC:
+                Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
+                break;
+            default:
+                ERROR("Unknown prefix operator")
+        }
+
+        Builder.CreateStore(Value, LValue->GetValue());
+
+        return Create<TypedValue>(Value, LValue->GetDataType());
     }
 
-    TypedValue LLVMCompiler::CompileSuffix(const SuffixOpNode *Suffix)
+    TypedValue *LLVMCompiler::CompileSuffix(const SuffixOpNode *Suffix)
     {
-        // llvm::AllocaInst* LValue = GetLValue(Suffix->Operand);
-        // if (!LValue)
-        //     ERROR("Cannot apply suffix operator to r-value")
-        //
-        // llvm::Value* Value = Builder.CreateLoad(LValue->getAllocatedType(), LValue);
-        // llvm::Value* Temp = Value;
-        // switch (Suffix->Type)
-        // {
-        //     case Operator::INC:
-        //         Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
-        //         break;
-        //     case Operator::DEC:
-        //         Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
-        //         break;
-        //     default:
-        //         ERROR("Unknown suffix operator")
-        // }
-        //
-        // Builder.CreateStore(Value, LValue);
+         TypedValue* LValue = GetLValue(Suffix->Operand);
+         if (!LValue)
+             ERROR("Cannot apply suffix operator to r-value")
 
-        ERROR("Unsupported operation: suffix")
-        //return Temp;
+         llvm::Value* Value = LValue->GetValue();
+         Value = Builder.CreateLoad(LValue->GetDataType()->GetLLVMType(Context), Value);
+         llvm::Value* Temp = Value;
+         switch (Suffix->Type)
+         {
+             case Operator::INC:
+                 Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
+                 break;
+             case Operator::DEC:
+                 Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
+                 break;
+             default:
+                 ERROR("Unknown suffix operator")
+         }
+
+         Builder.CreateStore(Value, LValue->GetValue());
+
+        return Create<TypedValue>(Temp, LValue->GetDataType());
     }
 
-    TypedValue LLVMCompiler::CompileUnary(const UnaryOpNode *Unary)
+    TypedValue *LLVMCompiler::CompileUnary(const UnaryOpNode *Unary)
     {
-        // llvm::Value* Value = CompileNode(Unary->Operand).GetValue();
-        // switch (Unary->Type)
-        // {
-        //     case Operator::ADD:         return Value;
-        //     case Operator::SUB:         return Builder.CreateNeg(Value);
-        //     case Operator::LOGICAL_NOT: return Builder.CreateNot(CastToBool(Value));
-        //     case Operator::BIT_NOT:     return Builder.CreateNot(Value);
-        //     default: ERROR("Unknown unary operator")
-        // }
+        TypedValue* TValue = CompileNode(Unary->Operand);
+        llvm::Value* Value = TValue->GetValue();
+        DataType* Type = TValue->GetDataType();
+
+        switch (Unary->Type)
+        {
+            case Operator::ADD:         return TValue;
+            case Operator::SUB:         return Create<TypedValue>(Builder.CreateNeg(Value), Type);
+            case Operator::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(CastToBool(Value)), Type);
+            case Operator::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Type);
+            default: ERROR("Unknown unary operator")
+        }
     }
 
-    TypedValue LLVMCompiler::CompileComparison(const ComparisonNode *Comparison)
+    TypedValue *LLVMCompiler::CompileComparison(const ComparisonNode *Comparison)
     {
-        // llvm::Value* Left = CompileNode(Comparison->Left);
-        // llvm::Value* Right = CompileNode(Comparison->Right);
-        //
-        // CastToJointType(Left, Right);
-        //
-        // llvm::Type* Type = Left->getType();
-        //
-        // if (Type->isIntegerTy())
-        // {
-        //     switch (Comparison->Type)
-        //     {
-        //         case Operator::EQ:  return Builder.CreateICmpEQ(Left, Right);
-        //         case Operator::NEQ: return Builder.CreateICmpNE(Left, Right);
-        //         case Operator::LT:  return Builder.CreateICmpSLT(Left, Right);
-        //         case Operator::LTE: return Builder.CreateICmpSLE(Left, Right);
-        //         case Operator::GT:  return Builder.CreateICmpSGT(Left, Right);
-        //         case Operator::GTE: return Builder.CreateICmpSGE(Left, Right);
-        //         default: ERROR("Unknown comparison operator")
-        //     }
-        // }
-        //
-        // return nullptr;
+        TypedValue* Left = CompileNode(Comparison->Left);
+        TypedValue* Right = CompileNode(Comparison->Right);
 
-        ERROR("Unsupported operation: comparison")
+        llvm::Value* LeftVal = Left->GetValue();
+        llvm::Value* RightVal = Right->GetValue();
+
+        CastToJointType(Left, Right);
+        DataType* Type = Left->GetDataType();
+
+        if (Type->IsIntegerType())
+        {
+            switch (Comparison->Type)
+            {
+                case Operator::EQ:  return Create<TypedValue>(
+                                    Builder.CreateICmpEQ(LeftVal, RightVal),  Type);
+                case Operator::NEQ: return Create<TypedValue>(
+                                    Builder.CreateICmpNE(LeftVal, RightVal),  Type);
+                case Operator::LT:  return Create<TypedValue>(
+                                    Builder.CreateICmpSLT(LeftVal, RightVal), Type);
+                case Operator::LTE: return Create<TypedValue>(
+                                    Builder.CreateICmpSLE(LeftVal, RightVal), Type);
+                case Operator::GT:  return Create<TypedValue>(
+                                    Builder.CreateICmpSGT(LeftVal, RightVal), Type);
+                case Operator::GTE: return Create<TypedValue>(
+                                    Builder.CreateICmpSGE(LeftVal, RightVal), Type);
+                default: ERROR("Unknown comparison operator")
+            }
+        }
+
+        ERROR("Unsupported operation with non-integer types");
     }
 
-    TypedValue LLVMCompiler::CompileAssignment(const AssignmentNode *Assignment)
+    TypedValue *LLVMCompiler::CompileAssignment(const AssignmentNode *Assignment)
     {
-        // llvm::AllocaInst* LValue = GetLValue(Assignment->Left);
-        // if (!LValue)
-        //     ERROR("Cannot apply assignment operator to r-value")
-        //
-        // llvm::Value* Right = CompileNode(Assignment->Right);
-        //
-        // if (Assignment->Type == Operator::ASSIGN)
-        //     return Builder.CreateStore(Right, LValue);
-        //
-        // llvm::Type* Type = LValue->getAllocatedType();
-        // llvm::Value* Left = Builder.CreateLoad(Type, LValue);
-        //
-        // bool IsFP = Type->isFloatingPointTy();
-        //
-        // switch (Assignment->Type)
-        // {
-        //     case Operator::ADD_ASSIGN:
-        //         Left = Builder.CreateAdd(Left, Right);
-        //         break;
-        //     case Operator::SUB_ASSIGN:
-        //         Left = Builder.CreateSub(Left, Right);
-        //         break;
-        //     case Operator::MUL_ASSIGN:
-        //         Left = Builder.CreateMul(Left, Right);
-        //         break;
-        //     case Operator::DIV_ASSIGN:
-        //         Left = IsFP ? Builder.CreateFDiv(Left, Right) :
-        //             Builder.CreateSDiv(Left, Right);
-        //         break;
-        //     case Operator::MOD_ASSIGN:
-        //         Left = Builder.CreateSRem(Left, Right);
-        //         break;
-        //     default:
-        //         ERROR("Unknown assignment operator")
-        // }
-        //
-        // return Builder.CreateStore(Left, LValue);
+        TypedValue* LValue = GetLValue(Assignment->Left);
 
-        ERROR("Unsupported operation: assignment")
+        if (!LValue)
+            ERROR("Cannot apply assignment operator to r-value")
+
+        llvm::Value* Value = LValue->GetValue();
+
+        DataType* Type = LValue->GetDataType();
+        TypedValue* Right = ImplicitCast(CompileNode(Assignment->Right), Type);
+        llvm::Value* RightVal = Right->GetValue();
+
+        if (Assignment->Type == Operator::ASSIGN)
+            return Create<TypedValue>(Builder.CreateStore(RightVal, Value), Right->GetDataType());
+
+        llvm::Value* Left = Builder.CreateLoad(Type->GetLLVMType(Context), Value);
+
+        bool IsFP = Type->IsFloatingPointType();
+
+        switch (Assignment->Type)
+        {
+            case Operator::ADD_ASSIGN:
+                Left = Builder.CreateAdd(Left, RightVal);
+                break;
+            case Operator::SUB_ASSIGN:
+                Left = Builder.CreateSub(Left, RightVal);
+                break;
+            case Operator::MUL_ASSIGN:
+                Left = Builder.CreateMul(Left, RightVal);
+                break;
+            case Operator::DIV_ASSIGN:
+                Left = IsFP ? Builder.CreateFDiv(Left, RightVal) :
+                    Builder.CreateSDiv(Left, RightVal);
+                break;
+            case Operator::MOD_ASSIGN:
+                Left = Builder.CreateSRem(Left, RightVal);
+                break;
+            default:
+                ERROR("Unknown assignment operator")
+        }
+
+        return Create<TypedValue>(Builder.CreateStore(Left, Value), Type);
     }
 
-    TypedValue LLVMCompiler::CompileBinary(const BinaryOpNode *BinaryOp)
+    TypedValue* LLVMCompiler::CompileBinary(const BinaryOpNode *BinaryOp)
     {
-        // llvm::Value* Left = CompileNode(BinaryOp->Left);
-        // llvm::Value* Right = CompileNode(BinaryOp->Right);
-        //
-        // CastToJointType(Left, Right);
-        // llvm::Type* Type = Left->getType();
-        // bool IsFP = Type->isFloatingPointTy();
-        //
-        // switch (BinaryOp->Type)
-        // {
-        //     case Operator::ADD:     return Builder.CreateAdd(Left, Right);
-        //     case Operator::SUB:     return Builder.CreateSub(Left, Right);
-        //     case Operator::MUL:     return Builder.CreateMul(Left, Right);
-        //     case Operator::DIV:     return IsFP ? Builder.CreateFDiv(Left, Right) :
-        //                                           Builder.CreateSDiv(Left, Right);
-        //     case Operator::MOD:     return Builder.CreateSRem(Left, Right);
-        //     case Operator::BIT_AND: return Builder.CreateAnd(Left, Right);
-        //     case Operator::BIT_OR:  return Builder.CreateOr(Left, Right);
-        //     case Operator::BIT_XOR: return Builder.CreateXor(Left, Right);
-        //     case Operator::LSHIFT:  return Builder.CreateShl(Left, Right);
-        //     case Operator::RSHIFT:  return Builder.CreateAShr(Left, Right);
-        //     default: ERROR("Unknown binary operator")
-        // }
+        TypedValue* Left = CompileNode(BinaryOp->Left);
+        TypedValue* Right = CompileNode(BinaryOp->Right);
 
-        ERROR("Unsupported operation: binary")
+        llvm::Value* LeftVal = Left->GetValue();
+        llvm::Value* RightVal = Right->GetValue();
+
+        CastToJointType(Left, Right);
+        DataType* Type = Left->GetDataType();
+        bool IsFP = Type->IsFloatingPointType();
+
+        switch (BinaryOp->Type)
+        {
+            case Operator::ADD:     return Create<TypedValue>(
+                                    Builder.CreateAdd(LeftVal, RightVal), Type);
+            case Operator::SUB:     return Create<TypedValue>(
+                                    Builder.CreateSub(LeftVal, RightVal), Type);
+            case Operator::MUL:     return Create<TypedValue>(
+                                    Builder.CreateMul(LeftVal, RightVal), Type);
+            case Operator::DIV:     return Create<TypedValue>(IsFP ? Builder.CreateFDiv(LeftVal, RightVal) :
+                                                  Builder.CreateSDiv(LeftVal, RightVal), Type);
+            // case Operator::MOD:     return { Builder.CreateSRem(LeftVal, RightVal), Type };
+            // case Operator::BIT_AND: return { Builder.CreateAnd(LeftVal, RightVal), Type };
+            // case Operator::BIT_OR:  return { Builder.CreateOr(LeftVal, RightVal), Type };
+            // case Operator::BIT_XOR: return { Builder.CreateXor(LeftVal, RightVal), Type };
+            // case Operator::LSHIFT:  return { Builder.CreateShl(LeftVal, RightVal), Type };
+            // case Operator::RSHIFT:  return { Builder.CreateAShr(LeftVal, RightVal), Type };
+            default: ERROR("Unknown binary operator")
+        }
     }
 
-    TypedValue LLVMCompiler::CompileCall(const CallNode *Call)
+    TypedValue* LLVMCompiler::CompileCall(const CallNode *Call)
     {
-        // if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
-        // {
-        //     const std::string& FuncName = Identifier->Value.ToString();
-        //     if (auto Iter = Functions.find(FuncName); Iter != Functions.end())
-        //     {
-        //         llvm::SmallVector<llvm::Value*, 16> Args;
-        //         Args.reserve(Call->Arguments.size());
-        //
-        //         for (auto& Arg : Call->Arguments)
-        //             Args.push_back(CompileNode(Arg));
-        //
-        //         return Builder.CreateCall(Iter->second, Args);
-        //     }
-        //
-        //     if (FuncName == "OutInt" || FuncName == "OutStr")
-        //     {
-        //         llvm::Function* OutFunc = Module->getFunction(FuncName);
-        //         return Builder.CreateCall(OutFunc, { CompileNode(Call->Arguments[0]) });
-        //     }
-        //
-        //     ERROR("Function '" + FuncName + "' not found");
-        // }
-        //
-        // ERROR("Called object is not a function")
+        if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
+        {
+            const std::string& FuncName = Identifier->Value.ToString();
 
-        ERROR("Unsupported operation: call")
+            if (FuncName == "OutInt" || FuncName == "OutStr")
+            {
+                llvm::Function* OutFunc = Module->getFunction(FuncName);
+                return Create<TypedValue>(Builder.CreateCall(
+                    OutFunc,{ CompileNode(Call->Arguments[0])->GetValue() }),
+                    DataType::CreatePrimitive(PrimitiveDataType::VOID, CompilerArena) );
+            }
+
+            llvm::SmallVector<llvm::Value*, 8> LLVMArgs;
+            llvm::SmallVector<DataTypeNodeBase*, 8> ArgTypes;
+
+            const auto& Args = Call->Arguments;
+            LLVMArgs.reserve(Args.size());
+            ArgTypes.reserve(Args.size());
+
+            for (const auto Arg : Args)
+            {
+                TypedValue* ArgValue = CompileNode(Arg);
+
+                LLVMArgs.push_back(ArgValue->GetValue());
+                ArgTypes.push_back(ArgValue->GetDataType()->GetTypeBase());
+            }
+
+            FunctionSignature Signature{ FuncName, ArgTypes };
+
+            if (auto Iter = FunctionSignatures.find(Signature); Iter != FunctionSignatures.end())
+                return Create<TypedValue>(Builder.CreateCall(
+                            Iter->second->GetFunction(), LLVMArgs), Iter->second->GetReturnType());
+
+            ERROR("Function '" + FuncName + "' not found");
+        }
+
+        ERROR("Called object is not a function")
     }
 
-    TypedValue LLVMCompiler::CompileVariable(const VariableNode *Var)
+    TypedValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
     {
-        // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        // llvm::Type* Type = CompileType(Var->Type);
-        //
-        // llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
-        // llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type, nullptr, Var->Name.ToString());
-        //
-        // DeclareVariable(Var->Name.ToString(), Alloca);
-        //
-        // if (Var->Value)
-        //     Builder.CreateStore(CompileNode(Var->Value), Alloca);
-        //
-        // return nullptr;
+        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+        llvm::Type* Type = DataType::GetLLVMType(Var->Type, Context);
 
-        ERROR("Unsupported operation: variable")
+        llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
+        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type, nullptr, Var->Name.ToString());
+
+        DeclareVariable(Var->Name.ToString(),
+            Create<TypedValue>(Alloca, Create<DataType>(Var->Type), true));
+
+        if (Var->Value)
+        {
+            TypedValue* Value = CompileNode(Var->Value);
+            Builder.CreateStore(Value->GetValue(), Alloca);
+        }
+
+        return nullptr;
     }
 
-    TypedValue LLVMCompiler::CompileFunction(const FunctionNode *Function)
+    TypedValue *LLVMCompiler::CompileFunction(const FunctionNode *Function)
     {
-        // llvm::SmallVector<llvm::Type*, 8> Params;
-        // Params.reserve(Function->Params.size());
-        //
-        // for (const auto Param : Function->Params)
-        //     Params.push_back(CompileType(Param->Type));
-        //
-        // llvm::Type* RetType = CompileType(Function->ReturnType);
-        // llvm::FunctionType* FuncType = llvm::FunctionType::get(
-        //     RetType, Params, false);
-        //
-        // const std::string& FuncName = Function->Name.ToString();
-        // llvm::Function* Func = llvm::Function::Create(
-        //     FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
-        //
-        // const auto& FuncParams = Function->Params;
-        // for (size_t i = 0; i < FuncParams.size(); i++)
-        // {
-        //     auto Arg = Func->args().begin() + i;
-        //     Arg->setName(FuncParams[i]->Name.ToString());
-        // }
-        //
-        // CurrentFunction = Func;
-        //
-        // llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
-        // Builder.SetInsertPoint(Entry);
-        // CompileBlock(Cast<BlockNode>(Function->Body));
-        //
-        // llvm::BasicBlock* Bb = Builder.GetInsertBlock();
-        //
-        // if (!Bb->getTerminator())
-        // {
-        //     if (RetType->isVoidTy())
-        //         Builder.CreateRetVoid();
-        //     else
-        //         ERROR("Function '" + FuncName + "' must return value");
-        // }
-        //
-        // Functions[FuncName] = Func;
-        //
-        // return nullptr;
+        llvm::SmallVector<llvm::Type*, 8> Params;
+        Params.reserve(Function->Params.size());
 
-        ERROR("Unsupported operation: function");
+        for (const auto Param : Function->Params)
+            Params.push_back(DataType::GetLLVMType(Param->Type, Context));
+
+        llvm::Type* RetType = DataType::GetLLVMType(Function->ReturnType, Context);
+        llvm::FunctionType* FuncType = llvm::FunctionType::get(
+            RetType, Params, false);
+
+        const std::string& FuncName = Function->Name.ToString();
+        llvm::Function* Func = llvm::Function::Create(
+            FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
+
+        llvm::SmallVector<DataTypeNodeBase*, 8> ParamsTypes;
+
+        const auto& FuncParams = Function->Params;
+        ParamsTypes.reserve(FuncParams.size());
+        for (size_t i = 0; i < FuncParams.size(); i++)
+        {
+            auto Arg = Func->args().begin() + i;
+            Arg->setName(FuncParams[i]->Name.ToString());
+            ParamsTypes.push_back(FuncParams[i]->Type);
+        }
+
+        CurrentFunction = Func;
+
+        FunctionSignature Signature{ FuncName, ParamsTypes };
+        FunctionSignatures[Signature] = Create<TypedFunction>(Func, Create<DataType>(Function->ReturnType));
+
+        llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
+        Builder.SetInsertPoint(Entry);
+        CompileBlock(Cast<BlockNode>(Function->Body));
+
+        llvm::BasicBlock* Bb = Builder.GetInsertBlock();
+
+        if (!Bb->getTerminator())
+        {
+            if (RetType->isVoidTy())
+                Builder.CreateRetVoid();
+            else
+                ERROR("Function '" + FuncName + "' must return value");
+        }
+
+        return nullptr;
     }
 
-    TypedValue LLVMCompiler::CompileReturn(const ReturnNode *Return)
+    TypedValue* LLVMCompiler::CompileReturn(const ReturnNode *Return)
     {
-        // if (Return->ReturnValue)
-        // {
-        //     llvm::Value* RetVal = CompileNode(Return->ReturnValue);
-        //     Builder.CreateRet(RetVal);
-        // }
-        // else
-        //     Builder.CreateRetVoid();
-        // return nullptr;
-
-        ERROR("Unsupported operation: return");
+        if (Return->ReturnValue)
+        {
+            TypedValue* RetVal = CompileNode(Return->ReturnValue);
+            Builder.CreateRet(RetVal->GetValue());
+        }
+        else
+            Builder.CreateRetVoid();
+        return nullptr;
     }
 
-    TypedValue LLVMCompiler::CompileIf(const IfNode *If)
+    TypedValue *LLVMCompiler::CompileIf(const IfNode *If)
     {
-        // llvm::Value* Cond = CompileNode(If->Condition);
-        // Cond = CastToBool(Cond);
-        //
-        // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        //
-        // auto ThenBB  = llvm::BasicBlock::Create(Context, "then", Func);
-        // auto ElseBB  = llvm::BasicBlock::Create(Context, "else", Func);
-        // auto MergeBB = llvm::BasicBlock::Create(Context, "ifcont");
-        //
-        // Builder.CreateCondBr(Cond, ThenBB, ElseBB);
-        //
-        // Builder.SetInsertPoint(ThenBB);
-        // CompileNode(If->Branch);
-        // if (!Builder.GetInsertBlock()->getTerminator())
-        //     Builder.CreateBr(MergeBB);
-        //
-        // Builder.SetInsertPoint(ElseBB);
-        // if (If->ElseBranch)
-        //     CompileNode(If->ElseBranch);
-        // if (!Builder.GetInsertBlock()->getTerminator())
-        //     Builder.CreateBr(MergeBB);
-        //
-        // if (!MergeBB->getParent())
-        //     MergeBB->insertInto(Func);
-        //
-        // Builder.SetInsertPoint(MergeBB);
-        //
-        // return nullptr;
+        TypedValue* Cond = CompileNode(If->Condition);
+        Cond = ImplicitCast(Cond,DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
 
-        ERROR("Unsupported operation: if")
+        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+
+        auto ThenBB  = llvm::BasicBlock::Create(Context, "then", Func);
+        auto ElseBB  = llvm::BasicBlock::Create(Context, "else", Func);
+        auto MergeBB = llvm::BasicBlock::Create(Context, "ifcont");
+
+        Builder.CreateCondBr(Cond->GetValue(), ThenBB, ElseBB);
+
+        Builder.SetInsertPoint(ThenBB);
+        CompileNode(If->Branch);
+        if (!Builder.GetInsertBlock()->getTerminator())
+            Builder.CreateBr(MergeBB);
+
+        Builder.SetInsertPoint(ElseBB);
+        if (If->ElseBranch)
+            CompileNode(If->ElseBranch);
+        if (!Builder.GetInsertBlock()->getTerminator())
+            Builder.CreateBr(MergeBB);
+
+        if (!MergeBB->getParent())
+            MergeBB->insertInto(Func);
+
+        Builder.SetInsertPoint(MergeBB);
+
+        return nullptr;
     }
 
-    TypedValue LLVMCompiler::CompileWhile(const WhileNode *While)
+    TypedValue *LLVMCompiler::CompileWhile(const WhileNode *While)
     {
-        // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        //
-        // llvm::BasicBlock* LoopHeader = llvm::BasicBlock::Create(Context, "loop.header", Func);
-        // Builder.CreateBr(LoopHeader);
-        // Builder.SetInsertPoint(LoopHeader);
-        // llvm::Value* Cond = CompileNode(While->Condition);
-        // Cond = CastToBool(Cond);
-        //
-        // llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
-        // llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
-        // Builder.CreateCondBr(Cond, ThenBB, EndBB);
-        //
-        // LoopEndStack.push(EndBB);
-        // LoopHeaderStack.push(LoopHeader);
-        //
-        // Builder.SetInsertPoint(ThenBB);
-        // CompileNode(While->Branch);
-        //
-        // LoopEndStack.pop();
-        // LoopHeaderStack.pop();
-        //
-        // if (!Builder.GetInsertBlock()->getTerminator())
-        //     Builder.CreateBr(LoopHeader);
-        //
-        // if (!EndBB->getParent())
-        //     EndBB->insertInto(Func);
-        //
-        // Builder.SetInsertPoint(EndBB);
-        // return nullptr;
+        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* LoopHeader = llvm::BasicBlock::Create(Context, "loop.header", Func);
+        Builder.CreateBr(LoopHeader);
+        Builder.SetInsertPoint(LoopHeader);
+        TypedValue* Cond = CompileNode(While->Condition);
+        //Cond = CastToBool(Cond);
+
+        llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
+        llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
+        Builder.CreateCondBr(Cond->GetValue(), ThenBB, EndBB);
+
+        LoopEndStack.push(EndBB);
+        LoopHeaderStack.push(LoopHeader);
+
+        Builder.SetInsertPoint(ThenBB);
+        CompileNode(While->Branch);
+
+        LoopEndStack.pop();
+        LoopHeaderStack.pop();
+
+        if (!Builder.GetInsertBlock()->getTerminator())
+            Builder.CreateBr(LoopHeader);
+
+        if (!EndBB->getParent())
+            EndBB->insertInto(Func);
+
+        Builder.SetInsertPoint(EndBB);
+        return nullptr;
 
         ERROR("Unsupported operation: while")
     }
 
-    TypedValue LLVMCompiler::CompileFor(const ForNode *For)
+    TypedValue *LLVMCompiler::CompileFor(const ForNode *For)
     {
-        // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        //
-        // EnterScope();
-        //
-        // llvm::BasicBlock* InitializationBB = llvm::BasicBlock::Create(Context, "for.initialization", Func);
-        // Builder.CreateBr(InitializationBB);
-        // Builder.SetInsertPoint(InitializationBB);
-        // CompileNode(For->Initialization);
-        //
-        // llvm::BasicBlock* ForHeader = llvm::BasicBlock::Create(Context, "for.header", Func);
-        // Builder.CreateBr(ForHeader);
-        // Builder.SetInsertPoint(ForHeader);
-        // llvm::Value* Cond = CompileNode(For->Condition);
-        // Cond = CastToBool(Cond);
-        //
-        // llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
-        // llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
-        // llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
-        // Builder.CreateCondBr(Cond, ThenBB, EndBB);
-        //
-        // LoopEndStack.push(EndBB);
-        // LoopHeaderStack.push(ForHeader);
-        //
-        // Builder.SetInsertPoint(ThenBB);
-        // CompileNode(For->Body);
-        //
-        // LoopEndStack.pop();
-        // LoopHeaderStack.pop();
-        //
-        // Builder.CreateBr(LatchBB);
-        //
-        // Builder.SetInsertPoint(LatchBB);
-        // CompileNode(For->Iteration);
-        // Builder.CreateBr(ForHeader);
-        //
-        // if (!EndBB->getParent())
-        //     EndBB->insertInto(Func);
-        // Builder.SetInsertPoint(EndBB);
-        //
-        // ExitScope();
-        // return nullptr;
+        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+
+        EnterScope();
+
+        llvm::BasicBlock* InitializationBB = llvm::BasicBlock::Create(Context, "for.initialization", Func);
+        Builder.CreateBr(InitializationBB);
+        Builder.SetInsertPoint(InitializationBB);
+        CompileNode(For->Initialization);
+
+        llvm::BasicBlock* ForHeader = llvm::BasicBlock::Create(Context, "for.header", Func);
+        Builder.CreateBr(ForHeader);
+        Builder.SetInsertPoint(ForHeader);
+        TypedValue* Cond = CompileNode(For->Condition);
+        //Cond = CastToBool(Cond);
+
+        llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
+        llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
+        llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
+        Builder.CreateCondBr(Cond->GetValue(), ThenBB, EndBB);
+
+        LoopEndStack.push(EndBB);
+        LoopHeaderStack.push(ForHeader);
+
+        Builder.SetInsertPoint(ThenBB);
+        CompileNode(For->Body);
+
+        LoopEndStack.pop();
+        LoopHeaderStack.pop();
+
+        Builder.CreateBr(LatchBB);
+
+        Builder.SetInsertPoint(LatchBB);
+        CompileNode(For->Iteration);
+        Builder.CreateBr(ForHeader);
+
+        if (!EndBB->getParent())
+            EndBB->insertInto(Func);
+        Builder.SetInsertPoint(EndBB);
+
+        ExitScope();
+        return nullptr;
 
         ERROR("Unsupported operation: for");
     }
 
-    TypedValue LLVMCompiler::CompileBreak()
+    TypedValue *LLVMCompiler::CompileBreak()
     {
         if (LoopEndStack.empty())
             ERROR("'break' used outside loop")
 
         Builder.CreateBr(LoopEndStack.top());
-        return { };
+        return nullptr;
     }
 
-    TypedValue LLVMCompiler::CompileContinue()
+    TypedValue *LLVMCompiler::CompileContinue()
     {
         if (LoopHeaderStack.empty())
             ERROR("'continue' used outside loop")
 
         Builder.CreateBr(LoopHeaderStack.top());
-        return { };
-    }
-
-    llvm::Type* LLVMCompiler::ToLLVMType(PrimitiveDataType Type)
-    {
-        switch (Type)
-        {
-            case PrimitiveDataType::VOID:
-                return llvm::Type::getVoidTy(Context);
-            case PrimitiveDataType::BOOL:
-            case PrimitiveDataType::CHAR:
-            case PrimitiveDataType::BYTE:
-                return llvm::Type::getInt1Ty(Context);
-            case PrimitiveDataType::INT:
-                return llvm::Type::getInt32Ty(Context);
-            case PrimitiveDataType::LONG:
-                return llvm::Type::getInt64Ty(Context);
-            case PrimitiveDataType::FLOAT:
-                return llvm::Type::getFloatTy(Context);
-            case PrimitiveDataType::DOUBLE:
-                return llvm::Type::getDoubleTy(Context);
-            default:
-                ERROR("Unknown data type");
-        }
-    }
-
-    llvm::Value* LLVMCompiler::CastInteger(llvm::Value* Value, llvm::Type* Target, bool Signed)
-    {
-        llvm::Type* Src = Value->getType();
-        if (Src == Target) return Value;
-
-        if (Src->isIntegerTy() && Target->isIntegerTy())
-        {
-            if (Src->getIntegerBitWidth() < Target->getIntegerBitWidth())
-                return Signed ? Builder.CreateSExt(Value, Target) : Builder.CreateZExt(Value, Target);
-            return Builder.CreateTrunc(Value, Target);
-        }
-
-        ERROR("Cannot cast this type");
-    }
-
-    void LLVMCompiler::CastToJointType(llvm::Value*& Left, llvm::Value*& Right, bool Signed)
-    {
-        llvm::Type* LeftType = Left->getType();
-        llvm::Type* RightType = Right->getType();
-
-        int LeftRank = GetTypeRank(LeftType);
-        int RightRank = GetTypeRank(RightType);
-
-        if (LeftRank == RightRank)
-            return;
-
-        if (LeftRank > RightRank)
-            Right = ImplicitCast(Right, LeftType, Signed);
-        else
-            Left = ImplicitCast(Left, RightType, Signed);
+        return nullptr;
     }
 
     llvm::Value* LLVMCompiler::CastToBool(llvm::Value* Value)
@@ -732,58 +712,7 @@ namespace Volt
         ERROR("Cannot cast to bool")
     }
 
-    int LLVMCompiler::GetTypeRank(llvm::Type* Type)
-    {
-        if (Type->isIntegerTy(1)) return 0;
-
-        if (Type->isIntegerTy(8)) return 1;
-        if (Type->isIntegerTy(16)) return 2;
-        if (Type->isIntegerTy(32)) return 3;
-        if (Type->isIntegerTy(64)) return 4;
-
-        if (Type->isFloatTy()) return 5;
-        if (Type->isDoubleTy()) return 6;
-
-        return -1;
-    }
-
-    llvm::Value* LLVMCompiler::ImplicitCast(llvm::Value* Value, llvm::Type* Target, bool Signed)
-    {
-        llvm::Type* Src = Value->getType();
-
-        if (Src == Target)
-            return Value;
-
-        if (Src->isIntegerTy())
-        {
-            if (Target->isIntegerTy())
-            {
-                if (Src->getIntegerBitWidth() < Target->getIntegerBitWidth())
-                    return Signed ? Builder.CreateSExt(Value, Target) : Builder.CreateZExt(Value, Target);
-                return Builder.CreateTrunc(Value, Target);
-            }
-
-            if (Target->isFloatTy())
-                return Signed ? Builder.CreateSIToFP(Value, Target) : Builder.CreateUIToFP(Value, Target);
-        }
-
-        if (Src->isFloatingPointTy())
-        {
-            if (Target->isIntegerTy())
-                return Signed ? Builder.CreateFPToSI(Value, Target) : Builder.CreateFPToUI(Value, Target);
-
-            if (Target->isFloatingPointTy())
-            {
-                if (Src->getPrimitiveSizeInBits() < Target->getPrimitiveSizeInBits())
-                    return Builder.CreateFPExt(Value, Target);
-                return Builder.CreateFPTrunc(Value, Target);
-            }
-        }
-
-        ERROR("Cannot cast this type")
-    }
-
-    void LLVMCompiler::DeclareVariable(const std::string &Name, llvm::AllocaInst *AllocaInst)
+    void LLVMCompiler::DeclareVariable(const std::string &Name, TypedValue *Var)
     {
         if (auto Iter = std::find_if(ScopeStack.back().begin(), ScopeStack.back().end(),
             [&Name](const ScopeEntry& Entry) -> bool
@@ -803,10 +732,10 @@ namespace Volt
         }
 
         ScopeStack.back().push_back(Entry);
-        SymbolTable[Name] = AllocaInst;
+        SymbolTable[Name] = Var;
     }
 
-    llvm::AllocaInst* LLVMCompiler::GetVariable(const std::string &Name)
+    TypedValue *LLVMCompiler::GetVariable(const std::string &Name)
     {
         if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
             return Iter->second;
@@ -830,17 +759,7 @@ namespace Volt
         }
     }
 
-    llvm::Type* LLVMCompiler::CompileType(const DataTypeNodeBase* Type)
-    {
-        if (const auto PrimitiveType = Cast<const PrimitiveDataTypeNode>(Type))
-            return ToLLVMType(PrimitiveType->PrimitiveType);
-        if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
-            return llvm::PointerType::get(CompileType(PtrType->BaseType)->getContext(), 0);
-
-        ERROR("Unsupported type node: " + Type->GetName());
-    }
-
-    llvm::AllocaInst* LLVMCompiler::GetLValue(const ASTNode* Node)
+    TypedValue *LLVMCompiler::GetLValue(const ASTNode *Node)
     {
         if (const auto Identifier = Cast<const IdentifierNode>(Node))
             return GetVariable(Identifier->Value.ToString());
@@ -849,21 +768,98 @@ namespace Volt
     }
 
     void LLVMCompiler::CreateDefaultFunction(const std::string &Name, llvm::Type *RetType,
-        const llvm::SmallVector<llvm::Type*, 8> &Params)
+        const llvm::SmallVector<llvm::Type*, 8> &Params) const
     {
         llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, Params, false);
         llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Name, Module.get());
     }
 
-    TypedValue LLVMCompiler::ImplicitCast(const TypedValue &Value, DataTypeNodeBase *Target)
+    void LLVMCompiler::CastToJointType(TypedValue *&Left, TypedValue *&Right)
     {
-        // auto SrcType = Cast<PrimitiveDataTypeNode>(Value.Type);
-        // if (!SrcType)
-        //     ERROR("Cannot cast non-primitive type");
-        // auto DstType = Cast<PrimitiveDataTypeNode>(Target);
-        // if (!DstType)
-        //     ERROR("Cannot cast to non-primitive type");
+        DataType* LeftType = Left->GetDataType();
+        DataType* RightType = Right->GetDataType();
 
-        return { };
+        int LeftRank = LeftType->GetPrimitiveTypeRank();
+        int RightRank = RightType->GetPrimitiveTypeRank();
+
+        if (LeftRank == -1 || RightRank == -1)
+            ERROR("Invalid cast");
+
+        if (LeftRank == RightRank)
+            return;
+
+        if (LeftRank > RightRank)
+            Right = ImplicitCast(Right, LeftType);
+        else
+            Left = ImplicitCast(Left, RightType);
+    }
+
+    TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataType *Target)
+    {
+        DataType* SrcType = Value->GetDataType();
+
+        if (SrcType->IsEqual(Target))
+            return Value;
+
+        if (SrcType->IsBooleanType())
+        {
+            if (Target->IsIntegerType())
+                return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
+                            Target->GetLLVMType(Context)), Target);
+
+            if (Target->IsFloatingPointType())
+                return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
+                            Target->GetLLVMType(Context)), Target);
+
+            if (Target->GetPtrType())
+                return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
+                            llvm::ConstantPointerNull::get(
+                            llvm::cast<llvm::PointerType>(
+                            SrcType->GetLLVMType(Context)))), Target);
+        }
+
+        if (SrcType->IsIntegerType())
+        {
+            if (Target->IsBooleanType())
+                return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
+                            llvm::ConstantInt::get(SrcType->GetLLVMType(Context), 0)), Target);
+
+            if (Target->IsIntegerType())
+            {
+                if (SrcType->GetTypeBitWidth() < Target->GetTypeBitWidth())
+                    return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
+                        Target->GetLLVMType(Context)), Target);
+
+                return Create<TypedValue>(Builder.CreateTrunc(Value->GetValue(),
+                    Target->GetLLVMType(Context)), Target);
+            }
+
+            if (Target->IsFloatingPointType())
+                return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
+                    Target->GetLLVMType(Context)), Target);
+        }
+
+        if (SrcType->IsFloatingPointType())
+        {
+            if (Target->IsBooleanType())
+                return Create<TypedValue>(Builder.CreateFCmpONE(Value->GetValue(),
+                            llvm::ConstantFP::get(SrcType->GetLLVMType(Context), 0.0 )), Target);
+
+            if (Target->IsIntegerType())
+                return Create<TypedValue>(Builder.CreateFPToSI(Value->GetValue(),
+                    Target->GetLLVMType(Context)), Target);
+
+            if (Target->IsFloatingPointType())
+            {
+                if (SrcType->GetTypeBitWidth() < Target->GetTypeBitWidth())
+                    return Create<TypedValue>(Builder.CreateFPExt(Value->GetValue(),
+                        Target->GetLLVMType(Context)), Target);
+
+                return Create<TypedValue>(Builder.CreateFPTrunc(Value->GetValue(),
+                    Target->GetLLVMType(Context)), Target);
+            }
+        }
+
+        ERROR("Invalid cast")
     }
 }

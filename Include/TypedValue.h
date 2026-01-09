@@ -5,23 +5,41 @@
 #ifndef CVOLT_TYPEDVALUE_H
 #define CVOLT_TYPEDVALUE_H
 #include <llvm/IR/Value.h>
-#include "ASTNodes.h"
+#include "DataType.h"
 
 namespace Volt
 {
-    class TypedValue
+    class TypedValue : public Object
     {
+        GENERATED_BODY(TypedValue, Object)
     private:
         llvm::Value* Value = nullptr;
-        DataTypeNodeBase* Type = nullptr;
+        DataType* Type = nullptr;
+        bool IsLValue = false;
 
     public:
         TypedValue() = default;
-        TypedValue(llvm::Value* Value, DataTypeNodeBase* Type)
-            : Value(Value), Type(Type) {}
+        TypedValue(llvm::Value* Value, DataType* Type, bool IsLValue = false)
+            : Value(Value), Type(Type), IsLValue(IsLValue) {}
 
         [[nodiscard]] llvm::Value* GetValue() const { return Value; }
-        [[nodiscard]] DataTypeNodeBase* GetType() const { return Type; }
+        [[nodiscard]] DataType* GetDataType() const { return Type; }
+    };
+
+    class TypedFunction : public Object
+    {
+        GENERATED_BODY(TypedValue, Object)
+    private:
+        llvm::Function* Function = nullptr;
+        DataType* ReturnType = nullptr;
+
+    public:
+        TypedFunction() = default;
+        TypedFunction(llvm::Function* Function, DataType* ReturnType)
+            : Function(Function), ReturnType(ReturnType) {}
+
+        [[nodiscard]] llvm::Function* GetFunction() const { return Function; }
+        [[nodiscard]] DataType* GetReturnType() const { return ReturnType; }
     };
 }
 
