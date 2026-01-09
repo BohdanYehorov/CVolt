@@ -168,6 +168,14 @@ namespace Volt
             : BinaryOpNode(Type, Left, Right) {}
     };
 
+    class LogicalNode : public BinaryOpNode
+    {
+        GENERATED_BODY(LogicalNode, BinaryOpNode)
+    public:
+        LogicalNode(Operator::Type Type, ASTNode* Left, ASTNode* Right)
+            : BinaryOpNode(Type, Left, Right) {}
+    };
+
     class AssignmentNode : public BinaryOpNode
     {
         GENERATED_BODY(AssignmentNode, BinaryOpNode)

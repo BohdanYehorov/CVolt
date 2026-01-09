@@ -658,7 +658,8 @@ namespace Volt
             return nullptr;
 
         ASTNode* Body = nullptr;
-        LoopsCount++;
+        bool OldInLoop = InLoop;
+        InLoop = true;
         if (Peek(Token::OP_LBRACE))
             Body = ParseBlock();
         else
@@ -666,7 +667,7 @@ namespace Volt
             Body = ParseExpression();
             LastNodeIsBlock = true;
         }
-        LoopsCount--;
+        InLoop = OldInLoop;
 
         if (!Body)
             return nullptr;
@@ -787,7 +788,7 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<LogicalNode>(OpType, Left, Right);
         }
 
         return Left;
@@ -810,7 +811,7 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<LogicalNode>(OpType, Left, Right);
         }
 
         return Left;

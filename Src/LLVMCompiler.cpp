@@ -99,7 +99,7 @@ namespace Volt
             for (auto Statement : Sequence->Statements)
                 CompileNode(Statement);
 
-            return { };
+            return nullptr;
         }
         if (const auto Block = Cast<BlockNode>(Node))
             return CompileBlock(Block);
@@ -123,6 +123,8 @@ namespace Volt
             return CompileUnary(Unary);
         if (const auto Comparison = Cast<ComparisonNode>(Node))
             return CompileComparison(Comparison);
+        if (const auto Logical = Cast<LogicalNode>(Node))
+            return CompileLogical(Logical);
         if (const auto AssignOp = Cast<AssignmentNode>(Node))
             return CompileAssignment(AssignOp);
         if (const auto BinaryOp = Cast<BinaryOpNode>(Node))
@@ -249,17 +251,15 @@ namespace Volt
         }
 
         ERROR("Cannot resolve symbol: '" + Value + "'")
-
-        //ERROR("Unsupported operation: identifier");
     }
 
     TypedValue *LLVMCompiler::CompileRef(const RefNode *Ref)
     {
-         TypedValue* LValue = GetLValue(Ref->Target);
-         if (!LValue)
-             ERROR("Cannot apply operator '$' to l-value")
+        TypedValue* LValue = GetLValue(Ref->Target);
+        if (!LValue)
+            ERROR("Cannot apply operator '$' to l-value")
 
-        return LValue;
+       return LValue;
     }
 
     TypedValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
@@ -289,26 +289,26 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileSuffix(const SuffixOpNode *Suffix)
     {
-         TypedValue* LValue = GetLValue(Suffix->Operand);
-         if (!LValue)
-             ERROR("Cannot apply suffix operator to r-value")
+        TypedValue* LValue = GetLValue(Suffix->Operand);
+        if (!LValue)
+            ERROR("Cannot apply suffix operator to r-value")
 
-         llvm::Value* Value = LValue->GetValue();
-         Value = Builder.CreateLoad(LValue->GetDataType()->GetLLVMType(Context), Value);
-         llvm::Value* Temp = Value;
-         switch (Suffix->Type)
-         {
-             case Operator::INC:
-                 Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
-                 break;
-             case Operator::DEC:
-                 Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
-                 break;
-             default:
-                 ERROR("Unknown suffix operator")
-         }
+        llvm::Value* Value = LValue->GetValue();
+        Value = Builder.CreateLoad(LValue->GetDataType()->GetLLVMType(Context), Value);
+        llvm::Value* Temp = Value;
+        switch (Suffix->Type)
+        {
+            case Operator::INC:
+                Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
+                break;
+            case Operator::DEC:
+                Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
+                break;
+            default:
+                ERROR("Unknown suffix operator")
+        }
 
-         Builder.CreateStore(Value, LValue->GetValue());
+        Builder.CreateStore(Value, LValue->GetValue());
 
         return Create<TypedValue>(Temp, LValue->GetDataType());
     }
@@ -334,33 +334,98 @@ namespace Volt
         TypedValue* Left = CompileNode(Comparison->Left);
         TypedValue* Right = CompileNode(Comparison->Right);
 
+        CastToJointType(Left, Right);
+        DataType* Type = Left->GetDataType();
+
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
 
-        CastToJointType(Left, Right);
-        DataType* Type = Left->GetDataType();
+        DataType* BoolType = DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena);
 
         if (Type->IsIntegerType())
         {
             switch (Comparison->Type)
             {
                 case Operator::EQ:  return Create<TypedValue>(
-                                    Builder.CreateICmpEQ(LeftVal, RightVal),  Type);
+                                    Builder.CreateICmpEQ(LeftVal, RightVal),  BoolType);
                 case Operator::NEQ: return Create<TypedValue>(
-                                    Builder.CreateICmpNE(LeftVal, RightVal),  Type);
+                                    Builder.CreateICmpNE(LeftVal, RightVal),  BoolType);
                 case Operator::LT:  return Create<TypedValue>(
-                                    Builder.CreateICmpSLT(LeftVal, RightVal), Type);
+                                    Builder.CreateICmpSLT(LeftVal, RightVal), BoolType);
                 case Operator::LTE: return Create<TypedValue>(
-                                    Builder.CreateICmpSLE(LeftVal, RightVal), Type);
+                                    Builder.CreateICmpSLE(LeftVal, RightVal), BoolType);
                 case Operator::GT:  return Create<TypedValue>(
-                                    Builder.CreateICmpSGT(LeftVal, RightVal), Type);
+                                    Builder.CreateICmpSGT(LeftVal, RightVal), BoolType);
                 case Operator::GTE: return Create<TypedValue>(
-                                    Builder.CreateICmpSGE(LeftVal, RightVal), Type);
+                                    Builder.CreateICmpSGE(LeftVal, RightVal), BoolType);
                 default: ERROR("Unknown comparison operator")
             }
         }
 
         ERROR("Unsupported operation with non-integer types");
+    }
+
+    TypedValue *LLVMCompiler::CompileLogical(const LogicalNode *Logical)
+    {
+        TypedValue* Left = CompileNode(Logical->Left);
+
+        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+
+        switch (Logical->Type)
+        {
+            case Operator::LOGICAL_OR:
+            {
+                llvm::BasicBlock* OrRhsBB = llvm::BasicBlock::Create(Context, "or.rhs", Func);
+                llvm::BasicBlock* OrTrueBB = llvm::BasicBlock::Create(Context, "or.true", Func);
+                llvm::BasicBlock* OrEndBB = llvm::BasicBlock::Create(Context, "or.end", Func);
+
+                Builder.CreateCondBr(Left->GetValue(), OrTrueBB, OrRhsBB);
+
+                Builder.SetInsertPoint(OrRhsBB);
+                TypedValue* Right = CompileNode(Logical->Right);
+                Builder.CreateCondBr(Right->GetValue(), OrTrueBB, OrEndBB);
+
+                Builder.SetInsertPoint(OrTrueBB);
+                Builder.CreateBr(OrEndBB);
+
+                Builder.CreateBr(OrEndBB);
+
+                Builder.SetInsertPoint(OrEndBB);
+                llvm::PHINode* Phi = Builder.CreatePHI(llvm::Type::getInt1Ty(Context), 2);
+                Phi->addIncoming(Builder.getTrue(), OrTrueBB);
+                Phi->addIncoming(Builder.getFalse(), OrRhsBB);
+
+                return Create<TypedValue>(
+                      Phi, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+            }
+            case Operator::LOGICAL_AND:
+            {
+                auto* AndRhsBB   = llvm::BasicBlock::Create(Context, "and.rhs", Func);
+                auto* AndFalseBB= llvm::BasicBlock::Create(Context, "and.false", Func);
+                auto* AndEndBB  = llvm::BasicBlock::Create(Context, "and.end", Func);
+
+                Builder.CreateCondBr(Left->GetValue(), AndRhsBB, AndFalseBB);
+
+                Builder.SetInsertPoint(AndRhsBB);
+                TypedValue* Right = CompileNode(Logical->Right);
+                Builder.CreateBr(AndEndBB);
+
+                Builder.SetInsertPoint(AndFalseBB);
+                Builder.CreateBr(AndEndBB);
+
+                Builder.SetInsertPoint(AndEndBB);
+                llvm::PHINode* Phi =
+                    Builder.CreatePHI(Builder.getInt1Ty(), 2);
+
+                Phi->addIncoming(Right->GetValue(), AndRhsBB);
+                Phi->addIncoming(Builder.getFalse(), AndFalseBB);
+
+                return Create<TypedValue>(
+                      Phi, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+            }
+            default:
+                ERROR("Unknown logical operator")
+        }
     }
 
     TypedValue *LLVMCompiler::CompileAssignment(const AssignmentNode *Assignment)
@@ -396,7 +461,7 @@ namespace Volt
                 break;
             case Operator::DIV_ASSIGN:
                 Left = IsFP ? Builder.CreateFDiv(Left, RightVal) :
-                    Builder.CreateSDiv(Left, RightVal);
+                Builder.CreateSDiv(Left, RightVal);
                 break;
             case Operator::MOD_ASSIGN:
                 Left = Builder.CreateSRem(Left, RightVal);
@@ -429,13 +494,19 @@ namespace Volt
             case Operator::MUL:     return Create<TypedValue>(
                                     Builder.CreateMul(LeftVal, RightVal), Type);
             case Operator::DIV:     return Create<TypedValue>(IsFP ? Builder.CreateFDiv(LeftVal, RightVal) :
-                                                  Builder.CreateSDiv(LeftVal, RightVal), Type);
-            // case Operator::MOD:     return { Builder.CreateSRem(LeftVal, RightVal), Type };
-            // case Operator::BIT_AND: return { Builder.CreateAnd(LeftVal, RightVal), Type };
-            // case Operator::BIT_OR:  return { Builder.CreateOr(LeftVal, RightVal), Type };
-            // case Operator::BIT_XOR: return { Builder.CreateXor(LeftVal, RightVal), Type };
-            // case Operator::LSHIFT:  return { Builder.CreateShl(LeftVal, RightVal), Type };
-            // case Operator::RSHIFT:  return { Builder.CreateAShr(LeftVal, RightVal), Type };
+            Builder.CreateSDiv(LeftVal, RightVal), Type);
+            case Operator::MOD:     return Create<TypedValue>(
+                                    Builder.CreateSRem(LeftVal, RightVal), Type);
+            case Operator::BIT_AND: return Create<TypedValue>(
+                                    Builder.CreateAnd(LeftVal, RightVal), Type);
+            case Operator::BIT_OR:  return Create<TypedValue>(
+                                    Builder.CreateOr(LeftVal, RightVal), Type);
+            case Operator::BIT_XOR: return Create<TypedValue>(
+                                    Builder.CreateXor(LeftVal, RightVal), Type);
+            case Operator::LSHIFT:  return  Create<TypedValue>(
+                                    Builder.CreateShl(LeftVal, RightVal), Type);
+            case Operator::RSHIFT:  return Create<TypedValue>(
+                                    Builder.CreateAShr(LeftVal, RightVal), Type);
             default: ERROR("Unknown binary operator")
         }
     }
@@ -644,7 +715,6 @@ namespace Volt
         Builder.CreateBr(ForHeader);
         Builder.SetInsertPoint(ForHeader);
         TypedValue* Cond = CompileNode(For->Condition);
-        //Cond = CastToBool(Cond);
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
         llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
@@ -652,7 +722,7 @@ namespace Volt
         Builder.CreateCondBr(Cond->GetValue(), ThenBB, EndBB);
 
         LoopEndStack.push(EndBB);
-        LoopHeaderStack.push(ForHeader);
+        LoopHeaderStack.push(LatchBB);
 
         Builder.SetInsertPoint(ThenBB);
         CompileNode(For->Body);

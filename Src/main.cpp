@@ -36,6 +36,7 @@ int main()
         for (const auto& Error : ErrorList)
             std::cout << Error.ToString() << std::endl;
 
+        MyParser.PrintASTTree();
         return -1;
     }
 

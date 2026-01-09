@@ -62,6 +62,7 @@ namespace Volt
         TypedValue *CompileSuffix(const SuffixOpNode *Suffix);
         TypedValue *CompileUnary(const UnaryOpNode *Unary);
         TypedValue *CompileComparison(const ComparisonNode *Comparison);
+        TypedValue *CompileLogical(const LogicalNode *Logical);
         TypedValue *CompileAssignment(const AssignmentNode *Assignment);
         TypedValue *CompileBinary(const BinaryOpNode *BinaryOp);
         TypedValue *CompileCall(const CallNode *Call);

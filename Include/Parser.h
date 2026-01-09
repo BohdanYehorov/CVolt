@@ -27,7 +27,6 @@ namespace Volt
         bool LastNodeIsBlock = false;
         bool InFunction = false;
         bool InLoop = false;
-        size_t LoopsCount = 0;
 
     private:
         static void PrintASTTree(ASTNode* Node, int Tabs = 0);
