@@ -18,6 +18,21 @@ extern "C"
     {
         std::cout << Str;
     }
+
+    inline void OutFloat(float Num)
+    {
+        std::cout << Num;
+    }
+
+    inline void OutLong(long Num)
+    {
+        std::cout << Num;
+    }
+
+    inline long Time()
+    {
+        return std::time(nullptr);
+    }
 }
 
 #endif //CVOLT_DEFAULT_FUNCTIONS_H

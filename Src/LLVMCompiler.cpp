@@ -3,9 +3,8 @@
 //
 
 #include "LLVMCompiler.h"
-#include "DefaultFunction.h"
+#include "DefaultFunctions.h"
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
 #define ERROR(Message) throw CompilerError(Message);
 
@@ -13,31 +12,11 @@ namespace Volt
 {
     void LLVMCompiler::Compile()
     {
-        llvm::FunctionType* OutIntTy = llvm::FunctionType::get(
-        llvm::Type::getVoidTy(Context),
-        { llvm::Type::getInt32Ty(Context) },
-        false
-        );
-
-        llvm::FunctionType* OutStrTy = llvm::FunctionType::get(
-            llvm::Type::getVoidTy(Context),
-            { llvm::PointerType::get(Context, 0) },
-            false
-        );
-
-        llvm::Function::Create(
-            OutIntTy,
-            llvm::Function::ExternalLinkage,
-            "OutInt",
-            Module.get()
-        );
-
-        llvm::Function::Create(
-            OutStrTy,
-            llvm::Function::ExternalLinkage,
-            "OutStr",
-            Module.get()
-        );
+        CreateDefaultFunction("OutInt", &OutInt);
+        CreateDefaultFunction("OutStr", &OutStr);
+        CreateDefaultFunction("OutLong", &OutLong);
+        CreateDefaultFunction("OutFloat", &OutFloat);
+        CreateDefaultFunction("Time", &Time);
 
         CompileNode(ASTTree);
     }
@@ -61,24 +40,14 @@ namespace Volt
 
         llvm::orc::SymbolMap Symbols;
 
-        Symbols[JIT->get()->mangleAndIntern("OutInt")] =
-            llvm::orc::ExecutorSymbolDef(
-                llvm::orc::ExecutorAddr::fromPtr(&OutInt),
-                llvm::JITSymbolFlags::Exported
-            );
-
-        Symbols[JIT->get()->mangleAndIntern("OutStr")] =
-            llvm::orc::ExecutorSymbolDef(
-                llvm::orc::ExecutorAddr::fromPtr(&OutStr),
-                    llvm::JITSymbolFlags::Exported
-            );
+        for (const auto& [Name, ExeSymbolDef] : DefaultSymbols)
+            Symbols[JIT->get()->mangleAndIntern(Name)] = ExeSymbolDef;
 
         cantFail(JIT->get()->getMainJITDylib().define(
             llvm::orc::absoluteSymbols(Symbols)
         ));
 
-        llvm::orc::ThreadSafeModule TSM{std::move(Module),
-            std::move(NewContext)};
+        llvm::orc::ThreadSafeModule TSM{std::move(Module), std::move(NewContext)};
 
         if (auto Err = JIT->get()->addIRModule(std::move(TSM)))
             return 1;
@@ -524,11 +493,16 @@ namespace Volt
         {
             const std::string& FuncName = Identifier->Value.ToString();
 
-            if (FuncName == "OutInt" || FuncName == "OutStr")
+            if (DefaultSymbols.contains(FuncName))
             {
+                llvm::SmallVector<llvm::Value*, 8> Args;
+                Args.reserve(Call->Arguments.size());
+
+                for (const auto& Arg : Call->Arguments)
+                    Args.push_back(CompileNode(Call->Arguments[0])->GetValue());
+
                 llvm::Function* OutFunc = Module->getFunction(FuncName);
-                return Create<TypedValue>(Builder.CreateCall(
-                    OutFunc,{ CompileNode(Call->Arguments[0])->GetValue() }),
+                return Create<TypedValue>(Builder.CreateCall(OutFunc,Args),
                     DataType::CreatePrimitive(PrimitiveDataType::VOID, CompilerArena) );
             }
 
@@ -681,7 +655,7 @@ namespace Volt
         Builder.CreateBr(LoopHeader);
         Builder.SetInsertPoint(LoopHeader);
         TypedValue* Cond = CompileNode(While->Condition);
-        //Cond = CastToBool(Cond);
+        Cond = ImplicitCast(Cond, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
         llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
@@ -723,6 +697,7 @@ namespace Volt
         Builder.CreateBr(ForHeader);
         Builder.SetInsertPoint(ForHeader);
         TypedValue* Cond = CompileNode(For->Condition);
+        Cond = ImplicitCast(Cond, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
         llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
@@ -827,12 +802,12 @@ namespace Volt
         return nullptr;
     }
 
-    void LLVMCompiler::CreateDefaultFunction(const std::string &Name, llvm::Type *RetType,
-        const llvm::SmallVector<llvm::Type*, 8> &Params) const
-    {
-        llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, Params, false);
-        llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Name, Module.get());
-    }
+    // void LLVMCompiler::CreateDefaultFunction(const std::string &Name, llvm::Type *RetType,
+    //     const llvm::SmallVector<llvm::Type*, 8> &Params) const
+    // {
+    //     llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, Params, false);
+    //     llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Name, Module.get());
+    // }
 
     void LLVMCompiler::CastToJointType(TypedValue *&Left, TypedValue *&Right)
     {

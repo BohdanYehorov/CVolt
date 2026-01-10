@@ -39,7 +39,9 @@ namespace Volt
         static bool IsEqual(const DataTypeNodeBase* Left, const DataTypeNodeBase* Right);
 
     private:
-        DataTypeNodeBase* Type = nullptr;
+        llvm::LLVMContext* CachedContext = nullptr;
+        llvm::Type* CachedType           = nullptr;
+        DataTypeNodeBase* Type           = nullptr;
 
     public:
         DataType() = default;
@@ -57,7 +59,7 @@ namespace Volt
         [[nodiscard]] PtrDataTypeNode* GetPtrType() const { return Cast<PtrDataTypeNode>(Type); }
         [[nodiscard]] RefDataTypeNode* GetRefType() const { return Cast<RefDataTypeNode>(Type); }
 
-        [[nodiscard]] llvm::Type* GetLLVMType(llvm::LLVMContext& Context) const;
+        [[nodiscard]] llvm::Type* GetLLVMType(llvm::LLVMContext& Context);
         [[nodiscard]] bool IsEqual(const DataType* Other) const { return IsEqual(Type, Other->Type); }
 
         [[nodiscard]] int GetPrimitiveTypeRank() const;

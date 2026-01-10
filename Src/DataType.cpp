@@ -25,16 +25,13 @@ namespace Volt
 
     DataType* DataType::CreatePtr(DataTypeNodeBase *BaseType, Arena &TypesArena)
     {
-        auto PtrDataType = new PtrDataTypeNode(BaseType);
+        PtrDataTypeNode PtrDataType(BaseType);
 
-        if (auto Iter = CachedTypes.find(PtrDataType); Iter != CachedTypes.end())
+        if (auto Iter = CachedTypes.find(&PtrDataType); Iter != CachedTypes.end())
         {
             std::cout << "Cached Ptr\n";
-            delete PtrDataType;
             return Iter->second;
         }
-
-        delete PtrDataType;
 
         auto PtrTypeNode = TypesArena.Create<PtrDataTypeNode>(BaseType);
         auto PtrType = TypesArena.Create<DataType>(PtrTypeNode);
@@ -159,9 +156,20 @@ namespace Volt
         return -1;
     }
 
-    llvm::Type* DataType::GetLLVMType(llvm::LLVMContext& Context) const
+    llvm::Type* DataType::GetLLVMType(llvm::LLVMContext& Context)
     {
-        return GetLLVMType(Type , Context);
+        if (CachedContext != &Context)
+        {
+            CachedContext = &Context;
+            CachedType = GetLLVMType(Type, Context);
+            return CachedType;
+        }
+
+        if (CachedType)
+            return CachedType;
+
+        CachedType = GetLLVMType(Type, Context);
+        return CachedType;
     }
 
     int DataType::GetPrimitiveTypeRank() const

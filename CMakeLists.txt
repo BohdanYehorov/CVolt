@@ -29,7 +29,7 @@ add_executable(CVolt Src/main.cpp
         Include/PrimitiveDataType.h
         Src/LLVMCompiler.cpp
         Include/LLVMCompiler.h
-        Include/DefaultFunction.h
+        Include/DefaultFunctions.h
         Src/Hash.cpp
         Include/Hash.h
         Src/Hash.cpp
