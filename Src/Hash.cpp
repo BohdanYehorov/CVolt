@@ -3,6 +3,7 @@
 //
 
 #include "Hash.h"
+#include "FunctionSignature.h"
 
 namespace Volt
 {

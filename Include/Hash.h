@@ -6,10 +6,11 @@
 #define CVOLT_HASH_H
 
 #include "ASTNodes.h"
-#include "FunctionSignature.h"
 
 namespace Volt
 {
+    class FunctionSignature;
+
     size_t CombineHashes(llvm::ArrayRef<size_t> Hashes);
 
     inline void CombineHashes(size_t& Seed, size_t Hash)

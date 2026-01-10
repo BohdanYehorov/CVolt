@@ -29,7 +29,7 @@ int main()
     Volt::Parser MyParser(MyLexer);
     MyParser.Parse();
 
-    const std::vector<Volt::ParseError> ErrorList = MyParser.GetErrorList();
+    const std::vector<Volt::ParseError>& ErrorList = MyParser.GetErrorList();
     if (!ErrorList.empty())
     {
         std::cout << "Errors:\n";

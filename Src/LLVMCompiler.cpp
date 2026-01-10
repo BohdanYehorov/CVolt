@@ -155,18 +155,22 @@ namespace Volt
     {
         EnterScope();
 
-        // if (CurrentFunction)
-        // {
-        //     for (llvm::Argument& Arg : CurrentFunction->args())
-        //     {
-        //         llvm::Type* ArgType = Arg.getType();
-        //         llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg.getName());
-        //
-        //         Builder.CreateStore(&Arg, Alloca);
-        //         DeclareVariable(Arg.getName().str(), { Alloca, nullptr });
-        //     }
-        //     CurrentFunction = nullptr;
-        // }
+        if (CurrentFunction)
+        {
+            for (size_t i = 0; i < FunctionParams.size(); i++)
+            {
+                llvm::Argument& Arg = *(CurrentFunction->arg_begin() + i);
+                llvm::Type* ArgType = Arg.getType();
+
+                llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg.getName());
+
+                Builder.CreateStore(&Arg, Alloca);
+                DeclareVariable(Arg.getName().str(), Create<TypedValue>(Alloca, Create<DataType>(FunctionParams[i])));
+            }
+            CurrentFunction = nullptr;
+        }
+
+        FunctionParams = {};
 
         for (auto Stmt : Block->Statements)
         {
@@ -319,11 +323,14 @@ namespace Volt
         llvm::Value* Value = TValue->GetValue();
         DataType* Type = TValue->GetDataType();
 
+        DataType* BoolType = DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena);
+
         switch (Unary->Type)
         {
             case Operator::ADD:         return TValue;
             case Operator::SUB:         return Create<TypedValue>(Builder.CreateNeg(Value), Type);
-            case Operator::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(CastToBool(Value)), Type);
+            case Operator::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
+                                               ImplicitCast(TValue, BoolType)->GetValue()), BoolType);
             case Operator::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Type);
             default: ERROR("Unknown unary operator")
         }
@@ -600,6 +607,7 @@ namespace Volt
         }
 
         CurrentFunction = Func;
+        FunctionParams = ParamsTypes;
 
         FunctionSignature Signature{ FuncName, ParamsTypes };
         FunctionSignatures[Signature] = Create<TypedFunction>(Func, Create<DataType>(Function->ReturnType));
@@ -762,24 +770,6 @@ namespace Volt
 
         Builder.CreateBr(LoopHeaderStack.top());
         return nullptr;
-    }
-
-    llvm::Value* LLVMCompiler::CastToBool(llvm::Value* Value)
-    {
-        llvm::Type* Type = Value->getType();
-
-        if (Type == Builder.getInt1Ty())
-            return Value;
-
-        if (Type->isIntegerTy())
-            return Builder.CreateICmpNE(Value, llvm::ConstantInt::get(Type, 0));
-        if (Type->isFloatingPointTy())
-            return Builder.CreateFCmpONE(Value, llvm::ConstantFP::get(Type, 0.0));
-        if (Type->isPointerTy())
-            return Builder.CreateICmpNE(Value, llvm::ConstantPointerNull::get(
-                llvm::cast<llvm::PointerType>(Type)));
-
-        ERROR("Cannot cast to bool")
     }
 
     void LLVMCompiler::DeclareVariable(const std::string &Name, TypedValue *Var)

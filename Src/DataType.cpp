@@ -7,18 +7,41 @@
 
 namespace Volt
 {
+    std::unordered_map<PrimitiveDataType, DataType*> DataType::CachedPrimitiveTypes;
+    std::unordered_map<DataType::DataTypeNodeWrap, DataType*, DataTypeHash> DataType::CachedTypes;
+
     DataType* DataType::CreatePrimitive(PrimitiveDataType Type, Arena& TypesArena)
     {
-        return TypesArena.Create<DataType>(
+        if (auto Iter = CachedPrimitiveTypes.find(Type); Iter != CachedPrimitiveTypes.end())
+            return Iter->second;
+
+        auto DType = TypesArena.Create<DataType>(
                 TypesArena.Create<PrimitiveDataTypeNode>(Type)
             );
+
+        CachedPrimitiveTypes[Type] = DType;
+        return DType;
     }
 
     DataType* DataType::CreatePtr(DataTypeNodeBase *BaseType, Arena &TypesArena)
     {
-        return TypesArena.Create<DataType>(
-                TypesArena.Create<PtrDataTypeNode>(BaseType)
-            );
+        auto PtrDataType = new PtrDataTypeNode(BaseType);
+
+        if (auto Iter = CachedTypes.find(PtrDataType); Iter != CachedTypes.end())
+        {
+            std::cout << "Cached Ptr\n";
+            delete PtrDataType;
+            return Iter->second;
+        }
+
+        delete PtrDataType;
+
+        auto PtrTypeNode = TypesArena.Create<PtrDataTypeNode>(BaseType);
+        auto PtrType = TypesArena.Create<DataType>(PtrTypeNode);
+
+        CachedTypes[PtrTypeNode] = PtrType;
+
+        return PtrType;
     }
 
     llvm::Type* DataType::ToLLVMPrimitiveType(PrimitiveDataType Type, llvm::LLVMContext &Context)

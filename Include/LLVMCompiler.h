@@ -16,6 +16,7 @@
 #include "CompilerTypes.h"
 #include "Arena.h"
 #include "TypedValue.h"
+#include "FunctionSignature.h"
 
 namespace Volt
 {
@@ -38,6 +39,7 @@ namespace Volt
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
         llvm::Function* CurrentFunction = nullptr;
+        llvm::ArrayRef<DataTypeNodeBase*> FunctionParams;
 
     public:
         LLVMCompiler(ASTNode* ASTTree)
@@ -74,8 +76,6 @@ namespace Volt
         TypedValue *CompileFor(const ForNode *For);
         TypedValue *CompileBreak();
         TypedValue *CompileContinue();
-
-        llvm::Value* CastToBool(llvm::Value* Value);
 
         void DeclareVariable(const std::string& Name, TypedValue *Var);
         TypedValue *GetVariable(const std::string &Name);

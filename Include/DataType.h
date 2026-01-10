@@ -9,12 +9,27 @@
 #include <llvm/IR/Type.h>
 #include "Object.h"
 #include "Arena.h"
+#include "Hash.h"
 
 namespace Volt
 {
     class DataType : public Object
     {
         GENERATED_BODY(DataType, Object)
+    private:
+        struct DataTypeNodeWrap
+        {
+            DataTypeNodeBase* Type;
+
+            DataTypeNodeWrap(DataTypeNodeBase* Type) : Type(Type) {}
+            operator DataTypeNodeBase*() const { return Type; }
+
+            bool operator==(const DataTypeNodeWrap& Other) const { return IsEqual(Type, Other.Type); }
+        };
+
+        static std::unordered_map<PrimitiveDataType, DataType*> CachedPrimitiveTypes;
+        static std::unordered_map<DataTypeNodeWrap, DataType*, DataTypeHash> CachedTypes;
+
     public:
         static DataType* CreatePrimitive(PrimitiveDataType Type, Arena& TypesArena);
         static DataType* CreatePtr(DataTypeNodeBase* BaseType, Arena& TypesArena);
