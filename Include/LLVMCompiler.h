@@ -121,6 +121,7 @@ namespace Volt
 
     template <typename>
     llvm::Type* GetLLVMType(llvm::LLVMContext& Context);
+
     template<> inline llvm::Type* GetLLVMType<void>(llvm::LLVMContext& Context)
     {
         return llvm::Type::getVoidTy(Context);

@@ -96,43 +96,10 @@ namespace Volt
             std::cout << "Index:\n";
             PrintASTTree(Subscript->Index, Tabs + 1);
         }
-        else if (auto PrimitiveType = Cast<PrimitiveDataTypeNode>(Node))
-        {
-            std::string TypeStr;
-
-            switch (PrimitiveType->PrimitiveType)
-            {
-                case PrimitiveDataType::VOID:
-                    TypeStr = "VOID";
-                    break;
-                case PrimitiveDataType::BOOL:
-                    TypeStr = "BOOL";
-                    break;
-                case PrimitiveDataType::CHAR:
-                    TypeStr = "CHAR";
-                    break;
-                case PrimitiveDataType::BYTE:
-                    TypeStr = "BYTE";
-                    break;
-                case PrimitiveDataType::INT:
-                    TypeStr = "INT";
-                    break;
-                case PrimitiveDataType::LONG:
-                    TypeStr = "LONG";
-                    break;
-                case PrimitiveDataType::FLOAT:
-                    TypeStr = "FLOAT";
-                    break;
-                case PrimitiveDataType::DOUBLE:
-                    TypeStr = "DOUBLE";
-                    break;
-                default:
-                    TypeStr = "?";
-                    break;
-            }
-
-            std::cout << "Type: " << TypeStr << std::endl;
-        }
+        if (auto IntType = Cast<IntegerTypeNode>(Node))
+            std::cout << "Bit Width: " << IntType->BitWidth;
+        if (auto FloatType = Cast<FPTypeNode>(Node))
+            std::cout << "Bit Width: " << FloatType->BitWidth;
         else if (auto PtrType = Cast<PtrDataTypeNode>(Node))
         {
             std::cout << std::endl;
@@ -412,39 +379,37 @@ namespace Volt
 
         const Token& Tok = CurrentToken();
 
-        PrimitiveDataType PrimitiveType;
+        DataTypeNodeBase* Type;
         switch (Tok.Type)
         {
             case Token::TYPE_VOID:
-                PrimitiveType = PrimitiveDataType::VOID;
+                Type = NodesArena.Create<VoidTypeNode>();
                 break;
             case Token::TYPE_BOOL:
-                PrimitiveType = PrimitiveDataType::BOOL;
+                Type = NodesArena.Create<BoolTypeNode>();
                 break;
             case Token::TYPE_CHAR:
-                PrimitiveType = PrimitiveDataType::CHAR;
+                Type = NodesArena.Create<CharTypeNode>();
                 break;
             case Token::TYPE_BYTE:
-                PrimitiveType = PrimitiveDataType::BYTE;
+                Type = NodesArena.Create<IntegerTypeNode>(8);
                 break;
             case Token::TYPE_INT:
-                PrimitiveType = PrimitiveDataType::INT;
+                Type = NodesArena.Create<IntegerTypeNode>(32);
                 break;
             case Token::TYPE_LONG:
-                PrimitiveType = PrimitiveDataType::LONG;
+                Type = NodesArena.Create<IntegerTypeNode>(64);
                 break;
             case Token::TYPE_FLOAT:
-                PrimitiveType = PrimitiveDataType::FLOAT;
+                Type = NodesArena.Create<FPTypeNode>(32);
                 break;
             case Token::TYPE_DOUBLE:
-                PrimitiveType = PrimitiveDataType::DOUBLE;
+                Type = NodesArena.Create<FPTypeNode>(64);
                 break;
             default:
                 return nullptr;
         }
         Consume();
-
-        DataTypeNodeBase* Type = NodesArena.Create<PrimitiveDataTypeNode>(PrimitiveType);
 
         if (!IsValidIndex()) return Type;
 

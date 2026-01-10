@@ -15,16 +15,6 @@ namespace Volt
         BYTE, INT, LONG,
         FLOAT, DOUBLE
     };
-
-    enum class IntegerType
-    {
-        CHAR, BYTE, INT, LONG
-    };
-
-    enum class FPType
-    {
-        FLOAT, DOUBLE
-    };
 }
 
 #endif //CVOLT_PRIMITIVE_DATAT_YPE_H

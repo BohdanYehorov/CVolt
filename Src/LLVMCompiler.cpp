@@ -161,15 +161,15 @@ namespace Volt
             case IntegerNode::BYTE:
                 return Create<TypedValue>(
                     llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value),
-                    DataType::CreatePrimitive(PrimitiveDataType::BYTE, CompilerArena));
+                    DataType::CreateInteger(8, CompilerArena));
             case IntegerNode::INT:
                 return Create<TypedValue>(
                     llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value),
-                    DataType::CreatePrimitive(PrimitiveDataType::INT, CompilerArena));
+                    DataType::CreateInteger(32, CompilerArena));
             case IntegerNode::LONG:
                 return Create<TypedValue>(
                     llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value),
-                    DataType::CreatePrimitive(PrimitiveDataType::LONG, CompilerArena));
+                    DataType::CreateInteger(64, CompilerArena));
             default:
                 ERROR("Unknown integer type")
         }
@@ -182,11 +182,11 @@ namespace Volt
             case FloatingPointNode::DOUBLE:
                 return Create<TypedValue>(llvm::ConstantFP::get(
                     llvm::Type::getDoubleTy(Context), Float->Value),
-                    DataType::CreatePrimitive(PrimitiveDataType::DOUBLE, CompilerArena));
+                    DataType::CreateFloatingPoint(64, CompilerArena));
             case FloatingPointNode::FLOAT:
                 return Create<TypedValue>(
                     llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value),
-                    DataType::CreatePrimitive(PrimitiveDataType::FLOAT, CompilerArena));
+                    DataType::CreateFloatingPoint(32, CompilerArena));
             default:
                 ERROR("Unknown float type")
         }
@@ -196,20 +196,20 @@ namespace Volt
     {
         return Create<TypedValue>(
             llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value),
-            DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+            DataType::CreateBoolean(CompilerArena));
     }
 
     TypedValue *LLVMCompiler::CompileChar(const CharNode *Char)
     {
         return Create<TypedValue>(
             llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value),
-            DataType::CreatePrimitive(PrimitiveDataType::CHAR, CompilerArena));
+            DataType::CreateChar(CompilerArena));
     }
 
     TypedValue *LLVMCompiler::CompileString(const StringNode *String)
     {
         return Create<TypedValue>(Builder.CreateGlobalString(String->Value.ToString()),
-            DataType::CreatePtr(Create<PrimitiveDataTypeNode>(PrimitiveDataType::CHAR ), CompilerArena));
+            DataType::CreatePtr(DataType::CreateChar(CompilerArena)->GetTypeBase(), CompilerArena));
     }
 
     TypedValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
@@ -292,7 +292,7 @@ namespace Volt
         llvm::Value* Value = TValue->GetValue();
         DataType* Type = TValue->GetDataType();
 
-        DataType* BoolType = DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena);
+        DataType* BoolType = DataType::CreateBoolean(CompilerArena);
 
         switch (Unary->Type)
         {
@@ -316,9 +316,9 @@ namespace Volt
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
 
-        DataType* BoolType = DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena);
+        DataType* BoolType = DataType::CreateBoolean(CompilerArena);
 
-        if (Type->IsIntegerType())
+        if (Type->GetIntegerType())
         {
             switch (Comparison->Type)
             {
@@ -372,7 +372,7 @@ namespace Volt
                 Phi->addIncoming(Builder.getFalse(), OrRhsBB);
 
                 return Create<TypedValue>(
-                      Phi, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+                      Phi, DataType::CreateBoolean(CompilerArena));
             }
             case Operator::LOGICAL_AND:
             {
@@ -397,7 +397,7 @@ namespace Volt
                 Phi->addIncoming(Builder.getFalse(), AndFalseBB);
 
                 return Create<TypedValue>(
-                      Phi, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+                      Phi, DataType::CreateBoolean(CompilerArena));
             }
             default:
                 ERROR("Unknown logical operator")
@@ -422,7 +422,7 @@ namespace Volt
 
         llvm::Value* Left = Builder.CreateLoad(Type->GetLLVMType(Context), Value);
 
-        bool IsFP = Type->IsFloatingPointType();
+        bool IsFP = Type->GetFloatingPointType();
 
         switch (Assignment->Type)
         {
@@ -459,7 +459,7 @@ namespace Volt
 
         CastToJointType(Left, Right);
         DataType* Type = Left->GetDataType();
-        bool IsFP = Type->IsFloatingPointType();
+        bool IsFP = Type->GetFloatingPointType();
 
         switch (BinaryOp->Type)
         {
@@ -503,7 +503,7 @@ namespace Volt
 
                 llvm::Function* OutFunc = Module->getFunction(FuncName);
                 return Create<TypedValue>(Builder.CreateCall(OutFunc,Args),
-                    DataType::CreatePrimitive(PrimitiveDataType::VOID, CompilerArena) );
+                    DataType::CreateVoid(CompilerArena) );
             }
 
             llvm::SmallVector<llvm::Value*, 8> LLVMArgs;
@@ -618,7 +618,7 @@ namespace Volt
     TypedValue *LLVMCompiler::CompileIf(const IfNode *If)
     {
         TypedValue* Cond = CompileNode(If->Condition);
-        Cond = ImplicitCast(Cond,DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+        Cond = ImplicitCast(Cond,DataType::CreateBoolean(CompilerArena));
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -655,7 +655,7 @@ namespace Volt
         Builder.CreateBr(LoopHeader);
         Builder.SetInsertPoint(LoopHeader);
         TypedValue* Cond = CompileNode(While->Condition);
-        Cond = ImplicitCast(Cond, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+        Cond = ImplicitCast(Cond, DataType::CreateBoolean(CompilerArena));
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
         llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
@@ -697,7 +697,7 @@ namespace Volt
         Builder.CreateBr(ForHeader);
         Builder.SetInsertPoint(ForHeader);
         TypedValue* Cond = CompileNode(For->Condition);
-        Cond = ImplicitCast(Cond, DataType::CreatePrimitive(PrimitiveDataType::BOOL, CompilerArena));
+        Cond = ImplicitCast(Cond, DataType::CreateBoolean(CompilerArena));
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
         llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
@@ -836,13 +836,13 @@ namespace Volt
         if (SrcType->IsEqual(Target))
             return Value;
 
-        if (SrcType->IsBooleanType())
+        if (SrcType->GetBooleanType())
         {
-            if (Target->IsIntegerType())
+            if (Target->GetIntegerType())
                 return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
                             Target->GetLLVMType(Context)), Target);
 
-            if (Target->IsFloatingPointType())
+            if (Target->GetFloatingPointType())
                 return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
                             Target->GetLLVMType(Context)), Target);
 
@@ -853,13 +853,13 @@ namespace Volt
                             SrcType->GetLLVMType(Context)))), Target);
         }
 
-        if (SrcType->IsIntegerType())
+        if (SrcType->GetIntegerType())
         {
-            if (Target->IsBooleanType())
+            if (Target->GetBooleanType())
                 return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
                             llvm::ConstantInt::get(SrcType->GetLLVMType(Context), 0)), Target);
 
-            if (Target->IsIntegerType())
+            if (Target->GetIntegerType())
             {
                 if (SrcType->GetTypeBitWidth() < Target->GetTypeBitWidth())
                     return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
@@ -869,22 +869,22 @@ namespace Volt
                     Target->GetLLVMType(Context)), Target);
             }
 
-            if (Target->IsFloatingPointType())
+            if (Target->GetFloatingPointType())
                 return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
                     Target->GetLLVMType(Context)), Target);
         }
 
-        if (SrcType->IsFloatingPointType())
+        if (SrcType->GetFloatingPointType())
         {
-            if (Target->IsBooleanType())
+            if (Target->GetBooleanType())
                 return Create<TypedValue>(Builder.CreateFCmpONE(Value->GetValue(),
                             llvm::ConstantFP::get(SrcType->GetLLVMType(Context), 0.0 )), Target);
 
-            if (Target->IsIntegerType())
+            if (Target->GetIntegerType())
                 return Create<TypedValue>(Builder.CreateFPToSI(Value->GetValue(),
                     Target->GetLLVMType(Context)), Target);
 
-            if (Target->IsFloatingPointType())
+            if (Target->GetFloatingPointType())
             {
                 if (SrcType->GetTypeBitWidth() < Target->GetTypeBitWidth())
                     return Create<TypedValue>(Builder.CreateFPExt(Value->GetValue(),

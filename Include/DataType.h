@@ -27,42 +27,54 @@ namespace Volt
             bool operator==(const DataTypeNodeWrap& Other) const { return IsEqual(Type, Other.Type); }
         };
 
-        static std::unordered_map<PrimitiveDataType, DataType*> CachedPrimitiveTypes;
         static std::unordered_map<DataTypeNodeWrap, DataType*, DataTypeHash> CachedTypes;
 
-    public:
-        static DataType* CreatePrimitive(PrimitiveDataType Type, Arena& TypesArena);
-        static DataType* CreatePtr(DataTypeNodeBase* BaseType, Arena& TypesArena);
+        static DataType *CachedVoidType;
+        static DataType *CachedBoolType;
+        static DataType *CachedCharType;
+        static DataType *CachedIntegerTypes[4];
+        static DataType *CachedFPTypes[4];
 
-        static llvm::Type* ToLLVMPrimitiveType(PrimitiveDataType Type, llvm::LLVMContext& Context);
-        static llvm::Type* GetLLVMType(const DataTypeNodeBase *Type, llvm::LLVMContext& Context);
-        static bool IsEqual(const DataTypeNodeBase* Left, const DataTypeNodeBase* Right);
+    public:
+        static DataType *CreateVoid(Arena &TypesArena);
+        static DataType *CreateBoolean(Arena &TypesArena);
+        static DataType *CreateChar(Arena &TypesArena);
+        static DataType *CreateInteger(size_t BitWidth, Arena &TypesArena);
+        static DataType *CreateFloatingPoint(size_t BitWidth, Arena &TypesArena);
+
+        static DataType *CreatePtr(DataTypeNodeBase* BaseType, Arena& TypesArena);
+
+        static llvm::Type *ToLLVMPrimitiveType(PrimitiveDataType Type, llvm::LLVMContext &Context);
+        static llvm::Type *GetLLVMType(const DataTypeNodeBase *Type, llvm::LLVMContext &Context);
+        static bool IsEqual(const DataTypeNodeBase *Left, const DataTypeNodeBase *Right);
+        static int GetPrimitiveTypeRank(const PrimitiveDataTypeNode *Type);
 
     private:
-        llvm::LLVMContext* CachedContext = nullptr;
-        llvm::Type* CachedType           = nullptr;
-        DataTypeNodeBase* Type           = nullptr;
+        llvm::LLVMContext *CachedContext = nullptr;
+        llvm::Type *CachedType = nullptr;
+        DataTypeNodeBase *Type = nullptr;
 
     public:
         DataType() = default;
-        DataType(DataTypeNodeBase* Type) : Type(Type) {}
+        DataType(DataTypeNodeBase *Type) : Type(Type) {}
 
-        [[nodiscard]] bool IsVoidType() const;
-        [[nodiscard]] bool IsBooleanType() const;
-        [[nodiscard]] bool IsIntegerType() const;
-        [[nodiscard]] bool IsFloatingPointType() const;
+        [[nodiscard]] VoidTypeNode *GetVoidType() const { return Cast<VoidTypeNode>(Type); }
+        [[nodiscard]] BoolTypeNode *GetBooleanType() const { return Cast<BoolTypeNode>(Type); }
+        [[nodiscard]] CharTypeNode *GetCharType() const { return Cast<CharTypeNode>(Type); }
+        [[nodiscard]] IntegerTypeNode *GetIntegerType() const { return Cast<IntegerTypeNode>(Type); }
+        [[nodiscard]] FPTypeNode *GetFloatingPointType() const { return Cast<FPTypeNode>(Type); }
 
         [[nodiscard]] int GetTypeBitWidth() const;
 
-        [[nodiscard]] DataTypeNodeBase* GetTypeBase() const { return Type; }
-        [[nodiscard]] PrimitiveDataTypeNode* GetPrimitiveType() const { return Cast<PrimitiveDataTypeNode>(Type); }
-        [[nodiscard]] PtrDataTypeNode* GetPtrType() const { return Cast<PtrDataTypeNode>(Type); }
-        [[nodiscard]] RefDataTypeNode* GetRefType() const { return Cast<RefDataTypeNode>(Type); }
+        [[nodiscard]] DataTypeNodeBase *GetTypeBase() const { return Type; }
+        [[nodiscard]] PrimitiveDataTypeNode *GetPrimitiveType() const { return Cast<PrimitiveDataTypeNode>(Type); }
+        [[nodiscard]] PtrDataTypeNode *GetPtrType() const { return Cast<PtrDataTypeNode>(Type); }
+        [[nodiscard]] RefDataTypeNode *GetRefType() const { return Cast<RefDataTypeNode>(Type); }
 
-        [[nodiscard]] llvm::Type* GetLLVMType(llvm::LLVMContext& Context);
-        [[nodiscard]] bool IsEqual(const DataType* Other) const { return IsEqual(Type, Other->Type); }
+        [[nodiscard]] llvm::Type *GetLLVMType(llvm::LLVMContext& Context);
+        [[nodiscard]] bool IsEqual(const DataType *Other) const { return IsEqual(Type, Other->Type); }
 
-        [[nodiscard]] int GetPrimitiveTypeRank() const;
+        [[nodiscard]] int GetPrimitiveTypeRank() const {return GetPrimitiveTypeRank(GetPrimitiveType()); }
     };
 }
 

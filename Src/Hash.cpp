@@ -20,7 +20,7 @@ namespace Volt
     size_t DataTypeHash::operator()(const DataTypeNodeBase *Type) const
     {
         if (const auto PrimitiveType = Cast<const PrimitiveDataTypeNode>(Type))
-            return std::hash<int>{}(static_cast<int>(PrimitiveType->PrimitiveType));
+            return std::hash<int>{}(DataType::GetPrimitiveTypeRank(PrimitiveType));
 
         if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
         {

@@ -4,7 +4,7 @@
 
 #include "Lexer.h"
 
-#include <complex.h>
+#include <complex>
 #include <sstream>
 
 #define GEN_CASE_TO_STRING(Op) case Op: TypeStr = #Op; break;
@@ -209,6 +209,9 @@ namespace Volt
 		while (IsValidPos())
 		{
 			SkipSpaces();
+
+			if (!IsValidPos())
+				break;
 
 			if (GetIdentifierToken(Tok))
 				Tokens.push_back(Tok);

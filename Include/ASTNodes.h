@@ -216,9 +216,40 @@ namespace Volt
     {
         GENERATED_BODY(PrimitiveDataTypeNode, DataTypeNodeBase)
     public:
-        PrimitiveDataType PrimitiveType;
-        PrimitiveDataTypeNode(PrimitiveDataType PrimitiveType)
-            : PrimitiveType(PrimitiveType) {}
+        // PrimitiveDataType PrimitiveType;
+        // PrimitiveDataTypeNode(PrimitiveDataType PrimitiveType)
+        //     : PrimitiveType(PrimitiveType) {}
+    };
+
+    class VoidTypeNode : public PrimitiveDataTypeNode
+    {
+        GENERATED_BODY(VoidTypeNode, PrimitiveDataTypeNode)
+    };
+
+    class BoolTypeNode : public PrimitiveDataTypeNode
+    {
+        GENERATED_BODY(BoolTypeNode, PrimitiveDataTypeNode)
+    };
+
+    class CharTypeNode : public PrimitiveDataTypeNode
+    {
+        GENERATED_BODY(CharTypeNode, PrimitiveDataTypeNode)
+    };
+
+    class IntegerTypeNode : public PrimitiveDataTypeNode
+    {
+        GENERATED_BODY(IntegerTypeNode, PrimitiveDataTypeNode)
+    public:
+        size_t BitWidth;
+        IntegerTypeNode(size_t BitWidth) : BitWidth(BitWidth) {}
+    };
+
+    class FPTypeNode : public PrimitiveDataTypeNode
+    {
+        GENERATED_BODY(FPTypeNode, PrimitiveDataTypeNode)
+    public:
+        size_t BitWidth;
+        FPTypeNode(size_t BitWidth) : BitWidth(BitWidth) {}
     };
 
     class PtrDataTypeNode : public DataTypeNodeBase
