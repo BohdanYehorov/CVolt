@@ -36,6 +36,7 @@ namespace Volt
         static DataType *CachedFPTypes[4];
 
     public:
+        static DataType *Create(DataTypeNodeBase *Base, Arena &TypesArena);
         static DataType *CreateVoid(Arena &TypesArena);
         static DataType *CreateBoolean(Arena &TypesArena);
         static DataType *CreateChar(Arena &TypesArena);

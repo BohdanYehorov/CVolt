@@ -147,13 +147,7 @@ namespace Volt
 
     public:
         Lexer() = default;
-        Lexer(const std::string& Expr)
-        {
-            TokensArena.SetAutoReallocate(true);
-            ExprRef = TokensArena.Write(Expr);
-            StringStoragePtr = TokensArena.GetWritePtr();
-            std::cout << TokensArena.GetWritePtr() << std::endl;
-        }
+        Lexer(const std::string& Expr);
         Lexer(const Lexer&) = delete;
         Lexer& operator=(const Lexer&) = delete;
 

@@ -96,10 +96,10 @@ namespace Volt
             std::cout << "Index:\n";
             PrintASTTree(Subscript->Index, Tabs + 1);
         }
-        if (auto IntType = Cast<IntegerTypeNode>(Node))
-            std::cout << "Bit Width: " << IntType->BitWidth;
-        if (auto FloatType = Cast<FPTypeNode>(Node))
-            std::cout << "Bit Width: " << FloatType->BitWidth;
+        else if (auto IntType = Cast<IntegerTypeNode>(Node))
+            std::cout << "Bit Width: " << IntType->BitWidth << std::endl;
+        else if (auto FloatType = Cast<FPTypeNode>(Node))
+            std::cout << "Bit Width: " << FloatType->BitWidth << std::endl;
         else if (auto PtrType = Cast<PtrDataTypeNode>(Node))
         {
             std::cout << std::endl;

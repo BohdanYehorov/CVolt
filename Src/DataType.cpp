@@ -17,6 +17,19 @@ namespace Volt
     DataType* DataType::CachedIntegerTypes[] = { nullptr, nullptr, nullptr, nullptr };
     DataType* DataType::CachedFPTypes[] = { nullptr, nullptr, nullptr, nullptr };
 
+    DataType *DataType::Create(DataTypeNodeBase *Base, Arena &TypesArena)
+    {
+        if (auto Iter = CachedTypes.find(Base); Iter != CachedTypes.end())
+        {
+            std::cout << "Cached Type\n";
+            return Iter->second;
+        }
+
+        DataType* Type = TypesArena.Create<DataType>(Base);
+        CachedTypes[Base] = Type;
+        return Type;
+    }
+
     DataType *DataType::CreateVoid(Arena &TypesArena)
     {
         if (CachedVoidType)

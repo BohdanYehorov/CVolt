@@ -1,7 +1,14 @@
+void Hello(int Num)
+{
+    Out("Int");
+}
+
+void Hello(float Num)
+{
+    Out("Float");
+}
+
 int Main()
 {
-    float a = 5.f;
-    int b = 2;
-    OutFloat(a + b);
     return 0;
 }

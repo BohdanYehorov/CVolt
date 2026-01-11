@@ -203,6 +203,14 @@ namespace Volt
 		return "";
 	}
 
+	Lexer::Lexer(const std::string &Expr)
+	{
+		TokensArena.SetAutoReallocate(true);
+		ExprRef = TokensArena.Write(Expr);
+		StringStoragePtr = TokensArena.GetWritePtr();
+		std::cout << TokensArena.GetWritePtr() << std::endl;
+	}
+
 	void Lexer::Lex()
 	{
 		Token Tok;

@@ -12,11 +12,18 @@ namespace Volt
 {
     void LLVMCompiler::Compile()
     {
-        CreateDefaultFunction("OutInt", &OutInt);
-        CreateDefaultFunction("OutStr", &OutStr);
-        CreateDefaultFunction("OutLong", &OutLong);
-        CreateDefaultFunction("OutFloat", &OutFloat);
-        CreateDefaultFunction("Time", &Time);
+        CreateDefaultFunction("Out", "OutBool", &OutBool);
+        CreateDefaultFunction("Out", "OutChar", &OutChar);
+        CreateDefaultFunction("Out", "OutByte", &OutByte);
+        CreateDefaultFunction("Out", "OutInt", &OutInt);
+        CreateDefaultFunction("Out", "OutLong", &OutLong);
+        CreateDefaultFunction("Out", "OutStr", &OutStr);
+        CreateDefaultFunction("Out", "OutFloat", &OutFloat);
+        CreateDefaultFunction("Out", "OutDouble", &OutDouble);
+        CreateDefaultFunction("Time", "Time", &Time);
+        CreateDefaultFunction("Sin", "Sin", &Sin);
+        CreateDefaultFunction("Cos", "Cos", &Cos);
+        CreateDefaultFunction("Tan", "Tan", &Tan);
 
         CompileNode(ASTTree);
     }
@@ -72,6 +79,8 @@ namespace Volt
         }
         if (const auto Block = Cast<BlockNode>(Node))
             return CompileBlock(Block);
+        if (const auto Char = Cast<CharNode>(Node))
+            return CompileChar(Char);
         if (const auto Int = Cast<IntegerNode>(Node))
             return CompileInt(Int);
         if (const auto Bool = Cast<BoolNode>(Node))
@@ -135,7 +144,7 @@ namespace Volt
 
                 Builder.CreateStore(&Arg, Alloca);
                 DeclareVariable(Arg.getName().str(),
-                    Create<TypedValue>(Alloca, Create<DataType>(FunctionParams[i])));
+                    Create<TypedValue>(Alloca, DataType::Create(FunctionParams[i], CompilerArena)));
             }
             CurrentFunction = nullptr;
         }
@@ -534,25 +543,14 @@ namespace Volt
         {
             const std::string& FuncName = Identifier->Value.ToString();
 
-            if (DefaultSymbols.contains(FuncName))
-            {
-                llvm::SmallVector<llvm::Value*, 8> Args;
-                Args.reserve(Call->Arguments.size());
-
-                for (const auto& Arg : Call->Arguments)
-                    Args.push_back(CompileNode(Call->Arguments[0])->GetValue());
-
-                llvm::Function* OutFunc = Module->getFunction(FuncName);
-                return Create<TypedValue>(Builder.CreateCall(OutFunc,Args),
-                    DataType::CreateVoid(CompilerArena) );
-            }
-
             llvm::SmallVector<llvm::Value*, 8> LLVMArgs;
             llvm::SmallVector<DataTypeNodeBase*, 8> ArgTypes;
+            llvm::SmallVector<TypedValue*> ArgValues;
 
             const auto& Args = Call->Arguments;
             LLVMArgs.reserve(Args.size());
             ArgTypes.reserve(Args.size());
+            ArgValues.reserve(Args.size());
 
             for (const auto Arg : Args)
             {
@@ -560,6 +558,7 @@ namespace Volt
 
                 LLVMArgs.push_back(ArgValue->GetValue());
                 ArgTypes.push_back(ArgValue->GetDataType()->GetTypeBase());
+                ArgValues.push_back(ArgValue);
             }
 
             FunctionSignature Signature{ FuncName, ArgTypes };
@@ -567,6 +566,75 @@ namespace Volt
             if (auto Iter = FunctionSignatures.find(Signature); Iter != FunctionSignatures.end())
                 return Create<TypedValue>(Builder.CreateCall(
                             Iter->second->GetFunction(), LLVMArgs), Iter->second->GetReturnType());
+
+            if (auto Iter = DefaultFunctionSignatures.find(Signature); Iter != DefaultFunctionSignatures.end())
+            {
+                llvm::Function* OutFunc = Module->getFunction(Iter->second.first);
+                return Create<TypedValue>(Builder.CreateCall(OutFunc,LLVMArgs),
+                Iter->second.second );
+            }
+
+            int MinDiffRank = std::numeric_limits<int>::max();
+            TypedFunction* Function = nullptr;
+            const FunctionSignature* BestFunctionSignature = nullptr;
+            for (const auto& [FuncSignature, Func] : FunctionSignatures)
+            {
+                if (FuncSignature.Name != Signature.Name)
+                    continue;
+
+                if (FuncSignature.Params.size() != Signature.Params.size())
+                    continue;
+
+                int DiffRank = 0;
+                bool HasNonImplicitCastTypes = false;
+                for (size_t i = 0; i < FuncSignature.Params.size(); i++)
+                {
+                    DataType* ParamType1 = DataType::Create(FuncSignature.Params[i], CompilerArena);
+                    DataType* ParamType2 = DataType::Create(Signature.Params[i], CompilerArena);
+                    if (!CanImplicitCast(ParamType1, ParamType2))
+                    {
+                        HasNonImplicitCastTypes = true;
+                        break;
+                    }
+
+                    int Rank1 = ParamType1->GetPrimitiveTypeRank();
+                    int Rank2 = ParamType2->GetPrimitiveTypeRank();
+
+                    if (Rank1 == -1 || Rank2 == -1)
+                    {
+                        HasNonImplicitCastTypes = true;
+                        break;
+                    }
+
+                    DiffRank += std::abs(Rank1 - Rank2);
+                }
+
+                if (HasNonImplicitCastTypes)
+                    continue;
+
+                if (MinDiffRank > DiffRank)
+                {
+                    Function = Func;
+                    MinDiffRank = DiffRank;
+                    BestFunctionSignature = &FuncSignature;
+                }
+            }
+
+            if (BestFunctionSignature && Function)
+            {
+                for (size_t i = 0; i < BestFunctionSignature->Params.size(); i++)
+                {
+                    DataType* ParamType = DataType::Create(BestFunctionSignature->Params[i], CompilerArena);
+
+                    TypedValue* Value = ArgValues[i];
+                    Value = ImplicitCast(Value, ParamType);
+
+                    LLVMArgs[i] = Value->GetValue();
+                }
+
+                return Create<TypedValue>(Builder.CreateCall(
+                           Function->GetFunction(), LLVMArgs), Function->GetReturnType());
+            }
 
             ERROR("Function '" + FuncName + "' not found");
         }
@@ -583,12 +651,12 @@ namespace Volt
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type, nullptr, Var->Name.ToString());
 
         DeclareVariable(Var->Name.ToString(),
-            Create<TypedValue>(Alloca, Create<DataType>(Var->Type), true));
+            Create<TypedValue>(Alloca, DataType::Create(Var->Type, CompilerArena), true));
 
         if (Var->Value)
         {
             TypedValue* Value = CompileNode(Var->Value);
-            Value = ImplicitCast(Value, CompilerArena.Create<DataType>(Var->Type));
+            Value = ImplicitCast(Value, DataType::Create(Var->Type, CompilerArena));
             Builder.CreateStore(Value->GetValue(), Alloca);
         }
 
@@ -626,7 +694,8 @@ namespace Volt
         FunctionParams = ParamsTypes;
 
         FunctionSignature Signature{ FuncName, ParamsTypes };
-        FunctionSignatures[Signature] = Create<TypedFunction>(Func, Create<DataType>(Function->ReturnType));
+        FunctionSignatures[Signature] = Create<TypedFunction>(Func,
+                                        DataType::Create(Function->ReturnType, CompilerArena));
 
         llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
         Builder.SetInsertPoint(Entry);
@@ -931,5 +1000,11 @@ namespace Volt
         }
 
         ERROR("Invalid cast")
+    }
+
+    bool LLVMCompiler::CanImplicitCast(DataType *Src, DataType *Dst)
+    {
+        return Src->GetPrimitiveType() && !Src->GetVoidType() &&
+               Dst->GetPrimitiveType() && !Dst->GetVoidType();
     }
 }

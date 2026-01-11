@@ -96,7 +96,7 @@ namespace Volt
         switch (Op)
         {
             GEN_CASE(MUL)
-            GEN_CASE(SUB)
+            GEN_CASE(DIV)
             GEN_CASE(MOD)
             default: return UNKNOWN;
         }
