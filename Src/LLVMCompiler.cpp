@@ -294,10 +294,14 @@ namespace Volt
 
         DataType* BoolType = DataType::CreateBoolean(CompilerArena);
 
+        bool IsFP = Type->GetFloatingPointType();
+
         switch (Unary->Type)
         {
             case Operator::ADD:         return TValue;
-            case Operator::SUB:         return Create<TypedValue>(Builder.CreateNeg(Value), Type);
+            case Operator::SUB:         return Create<TypedValue>(IsFP ?
+                                        Builder.CreateNeg(Value) :
+                                        Builder.CreateFNeg(Value), Type);
             case Operator::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
                                                ImplicitCast(TValue, BoolType)->GetValue()), BoolType);
             case Operator::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Type);
@@ -318,32 +322,45 @@ namespace Volt
 
         DataType* BoolType = DataType::CreateBoolean(CompilerArena);
 
-        if (Type->GetIntegerType())
-        {
-            switch (Comparison->Type)
-            {
-                case Operator::EQ:  return Create<TypedValue>(
-                                    Builder.CreateICmpEQ(LeftVal, RightVal),  BoolType);
-                case Operator::NEQ: return Create<TypedValue>(
-                                    Builder.CreateICmpNE(LeftVal, RightVal),  BoolType);
-                case Operator::LT:  return Create<TypedValue>(
-                                    Builder.CreateICmpSLT(LeftVal, RightVal), BoolType);
-                case Operator::LTE: return Create<TypedValue>(
-                                    Builder.CreateICmpSLE(LeftVal, RightVal), BoolType);
-                case Operator::GT:  return Create<TypedValue>(
-                                    Builder.CreateICmpSGT(LeftVal, RightVal), BoolType);
-                case Operator::GTE: return Create<TypedValue>(
-                                    Builder.CreateICmpSGE(LeftVal, RightVal), BoolType);
-                default: ERROR("Unknown comparison operator")
-            }
-        }
+        bool IsFP = Type->GetFloatingPointType();
 
-        ERROR("Unsupported operation with non-integer types");
+        bool IsSigned = false;
+        if (!IsFP)
+            if (auto IntType = Type->GetIntegerType())
+                IsSigned = IntType->IsSigned;
+
+        switch (Comparison->Type)
+        {
+            case Operator::EQ:  return Create<TypedValue>(IsFP ?
+                                Builder.CreateFCmpOEQ(LeftVal, RightVal) :
+                                Builder.CreateICmpEQ(LeftVal, RightVal), BoolType);
+            case Operator::NEQ: return Create<TypedValue>(IsFP ?
+                                Builder.CreateFCmpONE(LeftVal, RightVal) :
+                                Builder.CreateICmpNE(LeftVal, RightVal), BoolType);
+            case Operator::LT:  return Create<TypedValue>(IsFP ?
+                                Builder.CreateFCmpOLT(LeftVal, RightVal) : IsSigned ?
+                                Builder.CreateICmpSLT(LeftVal, RightVal) :
+                                Builder.CreateICmpULT(LeftVal, RightVal), BoolType);
+            case Operator::LTE: return Create<TypedValue>( IsFP ?
+                                Builder.CreateFCmpOLE(LeftVal, RightVal) : IsSigned ?
+                                Builder.CreateICmpSLE(LeftVal, RightVal) :
+                                Builder.CreateICmpULE(LeftVal, RightVal), BoolType);
+            case Operator::GT:  return Create<TypedValue>(IsFP ?
+                                Builder.CreateFCmpOGT(LeftVal, RightVal) : IsSigned ?
+                                Builder.CreateICmpSGT(LeftVal, RightVal) :
+                                Builder.CreateICmpUGT(LeftVal, RightVal), BoolType);
+            case Operator::GTE: return Create<TypedValue>(IsFP ?
+                                Builder.CreateFCmpOGE(LeftVal, RightVal) : IsSigned ?
+                                Builder.CreateICmpSGE(LeftVal, RightVal) :
+                                Builder.CreateICmpUGE(LeftVal, RightVal), BoolType);
+            default: ERROR("Unknown comparison operator")
+        }
     }
 
     TypedValue *LLVMCompiler::CompileLogical(const LogicalNode *Logical)
     {
         TypedValue* Left = CompileNode(Logical->Left);
+        Left = ImplicitCast(Left, DataType::CreateBoolean(CompilerArena));
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -359,6 +376,7 @@ namespace Volt
 
                 Builder.SetInsertPoint(OrRhsBB);
                 TypedValue* Right = CompileNode(Logical->Right);
+                Right = ImplicitCast(Right, DataType::CreateBoolean(CompilerArena));
                 Builder.CreateCondBr(Right->GetValue(), OrTrueBB, OrEndBB);
 
                 Builder.SetInsertPoint(OrTrueBB);
@@ -384,6 +402,7 @@ namespace Volt
 
                 Builder.SetInsertPoint(AndRhsBB);
                 TypedValue* Right = CompileNode(Logical->Right);
+                Right = ImplicitCast(Right, DataType::CreateBoolean(CompilerArena));
                 Builder.CreateBr(AndEndBB);
 
                 Builder.SetInsertPoint(AndFalseBB);
@@ -424,23 +443,33 @@ namespace Volt
 
         bool IsFP = Type->GetFloatingPointType();
 
+        bool IsSigned = false;
+        if (!IsFP)
+            if (auto IntType = Type->GetIntegerType())
+                IsSigned = IntType->IsSigned;
+
         switch (Assignment->Type)
         {
             case Operator::ADD_ASSIGN:
-                Left = Builder.CreateAdd(Left, RightVal);
+                Left = IsFP ? Builder.CreateFAdd(Left, RightVal) :
+                              Builder.CreateAdd(Left, RightVal);
                 break;
             case Operator::SUB_ASSIGN:
-                Left = Builder.CreateSub(Left, RightVal);
+                Left = IsFP ? Builder.CreateFSub(Left, RightVal) :
+                              Builder.CreateSub(Left, RightVal);
                 break;
             case Operator::MUL_ASSIGN:
-                Left = Builder.CreateMul(Left, RightVal);
+                Left = IsFP ? Builder.CreateFMul(Left, RightVal) :
+                              Builder.CreateMul(Left, RightVal);
                 break;
             case Operator::DIV_ASSIGN:
-                Left = IsFP ? Builder.CreateFDiv(Left, RightVal) :
-                Builder.CreateSDiv(Left, RightVal);
+                Left = IsFP     ? Builder.CreateFDiv(Left, RightVal) :
+                       IsSigned ? Builder.CreateSDiv(Left, RightVal) :
+                                  Builder.CreateUDiv(Left, RightVal);
                 break;
             case Operator::MOD_ASSIGN:
-                Left = Builder.CreateSRem(Left, RightVal);
+                Left = IsSigned ? Builder.CreateSRem(Left, RightVal) :
+                                  Builder.CreateURem(Left, RightVal);
                 break;
             default:
                 ERROR("Unknown assignment operator")
@@ -454,25 +483,35 @@ namespace Volt
         TypedValue* Left = CompileNode(BinaryOp->Left);
         TypedValue* Right = CompileNode(BinaryOp->Right);
 
+        CastToJointType(Left, Right);
+        DataType* Type = Left->GetDataType();
+
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
 
-        CastToJointType(Left, Right);
-        DataType* Type = Left->GetDataType();
         bool IsFP = Type->GetFloatingPointType();
+        bool IsSigned = false;
+        if (auto IntType = Type->GetIntegerType())
+            IsSigned = IntType->IsSigned;
 
         switch (BinaryOp->Type)
         {
-            case Operator::ADD:     return Create<TypedValue>(
+            case Operator::ADD:     return Create<TypedValue>(IsFP ?
+                                    Builder.CreateFAdd(LeftVal, RightVal) :
                                     Builder.CreateAdd(LeftVal, RightVal), Type);
-            case Operator::SUB:     return Create<TypedValue>(
+            case Operator::SUB:     return Create<TypedValue>(IsFP ?
+                                    Builder.CreateFSub(LeftVal, RightVal) :
                                     Builder.CreateSub(LeftVal, RightVal), Type);
-            case Operator::MUL:     return Create<TypedValue>(
+            case Operator::MUL:     return Create<TypedValue>(IsFP ?
+                                    Builder.CreateFMul(LeftVal, RightVal) :
                                     Builder.CreateMul(LeftVal, RightVal), Type);
-            case Operator::DIV:     return Create<TypedValue>(IsFP ? Builder.CreateFDiv(LeftVal, RightVal) :
-            Builder.CreateSDiv(LeftVal, RightVal), Type);
-            case Operator::MOD:     return Create<TypedValue>(
-                                    Builder.CreateSRem(LeftVal, RightVal), Type);
+            case Operator::DIV:     return Create<TypedValue>(IsFP ?
+                                    Builder.CreateFDiv(LeftVal, RightVal) : IsSigned ?
+                                    Builder.CreateSDiv(LeftVal, RightVal) :
+                                    Builder.CreateUDiv(LeftVal, RightVal), Type);
+            case Operator::MOD:     return Create<TypedValue>(IsSigned ?
+                                    Builder.CreateSRem(LeftVal, RightVal) :
+                                    Builder.CreateURem(LeftVal, RightVal), Type);
             case Operator::BIT_AND: return Create<TypedValue>(
                                     Builder.CreateAnd(LeftVal, RightVal), Type);
             case Operator::BIT_OR:  return Create<TypedValue>(
@@ -481,8 +520,9 @@ namespace Volt
                                     Builder.CreateXor(LeftVal, RightVal), Type);
             case Operator::LSHIFT:  return  Create<TypedValue>(
                                     Builder.CreateShl(LeftVal, RightVal), Type);
-            case Operator::RSHIFT:  return Create<TypedValue>(
-                                    Builder.CreateAShr(LeftVal, RightVal), Type);
+            case Operator::RSHIFT:  return Create<TypedValue>(IsSigned ?
+                                    Builder.CreateAShr(LeftVal, RightVal) :
+                                    Builder.CreateLShr(LeftVal, RightVal), Type);
             default: ERROR("Unknown binary operator")
         }
     }
@@ -547,6 +587,7 @@ namespace Volt
         if (Var->Value)
         {
             TypedValue* Value = CompileNode(Var->Value);
+            Value = ImplicitCast(Value, CompilerArena.Create<DataType>(Var->Type));
             Builder.CreateStore(Value->GetValue(), Alloca);
         }
 
@@ -801,13 +842,6 @@ namespace Volt
 
         return nullptr;
     }
-
-    // void LLVMCompiler::CreateDefaultFunction(const std::string &Name, llvm::Type *RetType,
-    //     const llvm::SmallVector<llvm::Type*, 8> &Params) const
-    // {
-    //     llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, Params, false);
-    //     llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Name, Module.get());
-    // }
 
     void LLVMCompiler::CastToJointType(TypedValue *&Left, TypedValue *&Right)
     {

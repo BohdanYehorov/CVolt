@@ -215,10 +215,6 @@ namespace Volt
     class PrimitiveDataTypeNode : public DataTypeNodeBase
     {
         GENERATED_BODY(PrimitiveDataTypeNode, DataTypeNodeBase)
-    public:
-        // PrimitiveDataType PrimitiveType;
-        // PrimitiveDataTypeNode(PrimitiveDataType PrimitiveType)
-        //     : PrimitiveType(PrimitiveType) {}
     };
 
     class VoidTypeNode : public PrimitiveDataTypeNode
@@ -241,7 +237,9 @@ namespace Volt
         GENERATED_BODY(IntegerTypeNode, PrimitiveDataTypeNode)
     public:
         size_t BitWidth;
-        IntegerTypeNode(size_t BitWidth) : BitWidth(BitWidth) {}
+        bool IsSigned;
+        IntegerTypeNode(size_t BitWidth, bool IsSigned = false)
+            : BitWidth(BitWidth), IsSigned(IsSigned) {}
     };
 
     class FPTypeNode : public PrimitiveDataTypeNode
