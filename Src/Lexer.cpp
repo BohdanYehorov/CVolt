@@ -209,6 +209,8 @@ namespace Volt
 		while (IsValidPos())
 		{
 			SkipSpaces();
+			SkipComments();
+			SkipSpaces();
 
 			if (!IsValidPos())
 				break;
@@ -262,6 +264,35 @@ namespace Volt
 	{
 		while (IsValidPos() && std::isspace(CurrentUChar()))
 			MovePos();
+	}
+
+	void Lexer::SkipComments()
+	{
+		if (CurrentChar() == '/' && IsValidNextPos() && NextChar() == '/')
+		{
+			do
+				MovePos();
+			while (IsValidPos() && CurrentChar() != '\n');
+		}
+		else if (CurrentChar() == '/' && IsValidNextPos() && NextChar() == '*')
+		{
+			while (true)
+			{
+				if (IsValidPos() && CurrentChar() == '*' && IsValidNextPos() && NextChar() == '/')
+				{
+					MovePos(2);
+					break;
+				}
+
+				if (!IsValidPos())
+				{
+					SendError(LexErrorType::UnterminatedBlockComment, Line, Column);
+					break;
+				}
+
+				MovePos();
+			}
+		}
 	}
 
 	bool Lexer::GetIdentifierToken(Token &Tok)

@@ -171,13 +171,15 @@ namespace Volt
     private:
         [[nodiscard]] char CurrentChar() const { return *TokensArena.GetArenaAllocator().Read<char>(Pos); }
         [[nodiscard]] UChar CurrentUChar() const { return static_cast<UChar>(CurrentChar()); }
-        [[nodiscard]] UChar NextUChar() const { return static_cast<UChar>(*TokensArena.GetArenaAllocator().Read<char>(Pos + 1)); }
+        [[nodiscard]] char NextChar() const { return *TokensArena.GetArenaAllocator().Read<char>(Pos + 1); }
+        [[nodiscard]] UChar NextUChar() const { return static_cast<UChar>(NextChar()); }
         [[nodiscard]] bool IsValidPos() const { return Pos < ExprRef.Length; }
         [[nodiscard]] bool IsValidNextPos() const { return Pos + 1 < ExprRef.Length; }
 
         void MovePos();
         void MovePos(size_t Chars);
         void SkipSpaces();
+        void SkipComments();
 
         bool GetIdentifierToken(Token& Tok);
         bool GetNumberToken(Token& Tok);

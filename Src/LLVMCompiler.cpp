@@ -134,7 +134,8 @@ namespace Volt
                 llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg.getName());
 
                 Builder.CreateStore(&Arg, Alloca);
-                DeclareVariable(Arg.getName().str(), Create<TypedValue>(Alloca, Create<DataType>(FunctionParams[i])));
+                DeclareVariable(Arg.getName().str(),
+                    Create<TypedValue>(Alloca, Create<DataType>(FunctionParams[i])));
             }
             CurrentFunction = nullptr;
         }
