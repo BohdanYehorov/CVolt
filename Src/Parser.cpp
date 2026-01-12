@@ -1040,6 +1040,7 @@ namespace Volt
                         return nullptr;
 
                     Operand = NodesArena.Create<SubscriptNode>(Operand, Index);
+                    break;
                 }
                 default:
                 {

@@ -89,6 +89,8 @@ namespace Volt
             return CompileFloat(Float);
         if (const auto String = Cast<StringNode>(Node))
             return CompileString(String);
+        if (const auto Array = Cast<ArrayNode>(Node))
+            return CompileArray(Array);
         if (const auto Identifier = Cast<IdentifierNode>(Node))
             return CompileIdentifier(Identifier);
         if (const auto Ref = Cast<RefNode>(Node))
@@ -109,6 +111,8 @@ namespace Volt
             return CompileBinary(BinaryOp);
         if (const auto Call = Cast<CallNode>(Node))
             return CompileCall(Call);
+        if (const auto Subscript = Cast<SubscriptNode>(Node))
+            return CompileSubscript(Subscript);
         if (const auto Var = Cast<VariableNode>(Node))
             return CompileVariable(Var);
         if (const auto Function = Cast<FunctionNode>(Node))
@@ -222,6 +226,45 @@ namespace Volt
             DataType::CreatePtr(DataType::CreateChar(CompilerArena)->GetTypeBase(), CompilerArena));
     }
 
+    TypedValue *LLVMCompiler::CompileArray(const ArrayNode *Array)
+    {
+        if (Array->Elements.empty())
+            ERROR("Array empty")
+
+        TypedValue* FirstEl = nullptr;
+        llvm::ArrayType* ArrType = nullptr;
+        llvm::AllocaInst* Arr = nullptr;
+        llvm::Value* FirstElPtr = nullptr;
+
+        for (size_t i = 0; i < Array->Elements.size(); i++)
+        {
+            TypedValue* El = CompileNode(Array->Elements[i]);
+            if (!FirstEl)
+            {
+                FirstEl = El;
+                ArrType = llvm::ArrayType::get(
+                    FirstEl->GetDataType()->GetLLVMType(Context), Array->Elements.size());
+                Arr = Builder.CreateAlloca(ArrType);
+            }
+            else if (!El->GetDataType()->IsEqual(FirstEl->GetDataType()))
+                ERROR("Cannot init array with different types")
+
+            llvm::Value* Idx[2] = {
+                Builder.getInt32(0),
+                Builder.getInt32(i)
+            };
+
+            llvm::Value* ElPtr = Builder.CreateGEP(Arr->getAllocatedType(), Arr, Idx);
+            if (!FirstElPtr)
+                FirstElPtr = ElPtr;
+
+            Builder.CreateStore(El->GetValue(), ElPtr);
+        }
+
+        return Create<TypedValue>(FirstElPtr, DataType::CreatePtr(
+            FirstEl->GetDataType()->GetTypeBase(), CompilerArena));
+    }
+
     TypedValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
     {
         const std::string Value = Identifier->Value.ToString();
@@ -229,7 +272,7 @@ namespace Volt
         if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
         {
             TypedValue* Var = Iter->second;
-            return  Create<TypedValue>(Builder.CreateLoad(Var->GetDataType()->GetLLVMType(Context),
+            return Create<TypedValue>(Builder.CreateLoad(Var->GetDataType()->GetLLVMType(Context),
                         Var->GetValue(), Value + "_val"), Var->GetDataType());
         }
 
@@ -642,6 +685,22 @@ namespace Volt
         ERROR("Called object is not a function")
     }
 
+    TypedValue *LLVMCompiler::CompileSubscript(const SubscriptNode *Subscript)
+    {
+        TypedValue* Ptr = CompileNode(Subscript->Target);
+        PtrDataTypeNode* ElPtrType = Ptr->GetDataType()->GetPtrType();
+        if (!ElPtrType)
+            ERROR("Cannot apply subscript to non-pointer type");
+
+
+        llvm::Type* ElType = DataType::GetLLVMType(ElPtrType->BaseType, Context);
+        TypedValue* Index = CompileNode(Subscript->Index);
+
+        llvm::Value* ElPtr = Builder.CreateGEP( ElType, Ptr->GetValue(), Index->GetValue());
+        llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
+        return Create<TypedValue>(El, DataType::Create(ElPtrType->BaseType, CompilerArena));
+    }
+
     TypedValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
     {
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
@@ -799,7 +858,8 @@ namespace Volt
 
         EnterScope();
 
-        llvm::BasicBlock* InitializationBB = llvm::BasicBlock::Create(Context, "for.initialization", Func);
+        llvm::BasicBlock* InitializationBB = llvm::BasicBlock::Create(
+            Context, "for.initialization", Func);
         Builder.CreateBr(InitializationBB);
         Builder.SetInsertPoint(InitializationBB);
         CompileNode(For->Initialization);
@@ -872,10 +932,7 @@ namespace Volt
         Entry.Name = Name;
 
         if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
-        {
-            Entry.HadPrevious = true;
             Entry.Previous = Iter->second;
-        }
 
         ScopeStack.back().push_back(Entry);
         SymbolTable[Name] = Var;
@@ -898,17 +955,34 @@ namespace Volt
     {
         for (const auto& Entry : ScopeStack.back())
         {
-            if (Entry.HadPrevious)
+            if (Entry.Previous)
                 SymbolTable[Entry.Name] = Entry.Previous;
             else
                 SymbolTable.erase(Entry.Name);
         }
+
+        ScopeStack.pop_back();
     }
 
     TypedValue *LLVMCompiler::GetLValue(const ASTNode *Node)
     {
         if (const auto Identifier = Cast<const IdentifierNode>(Node))
             return GetVariable(Identifier->Value.ToString());
+
+        if (const auto Subscript = Cast<const SubscriptNode>(Node))
+        {
+            TypedValue* Ptr = CompileNode(Subscript->Target);
+            PtrDataTypeNode* ElPtrType = Ptr->GetDataType()->GetPtrType();
+            if (!ElPtrType)
+                ERROR("Cannot apply subscript to non-pointer type");
+
+
+            llvm::Type* ElType = DataType::GetLLVMType(ElPtrType->BaseType, Context);
+            TypedValue* Index = CompileNode(Subscript->Index);
+
+            llvm::Value* ElPtr = Builder.CreateGEP( ElType, Ptr->GetValue(), Index->GetValue());
+            return Create<TypedValue>(ElPtr, DataType::Create(ElPtrType->BaseType, CompilerArena), true);
+        }
 
         return nullptr;
     }

@@ -13,8 +13,7 @@ namespace Volt
     struct ScopeEntry
     {
         std::string Name;
-        bool HadPrevious;
-        TypedValue* Previous;
+        TypedValue* Previous = nullptr;
     };
 
     struct CompilerError : std::exception
