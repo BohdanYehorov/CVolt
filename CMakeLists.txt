@@ -27,8 +27,8 @@ add_executable(CVolt Src/main.cpp
         Src/BufferView.cpp
         Include/CompilerTypes.h
         Include/PrimitiveDataType.h
-        Src/LLVMCompiler.cpp
-        Include/LLVMCompiler.h
+        #Src/LLVMCompiler.cpp
+        #Include/LLVMCompiler.h
         Include/DefaultFunctions.h
         Src/Hash.cpp
         Include/Hash.h

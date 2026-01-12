@@ -161,6 +161,7 @@ namespace Volt
         [[nodiscard]] const ArenaStream& GetTokensArena() const { return TokensArena; }
         std::vector<LexError> GetErrors() { return Errors; }
         [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
+        bool PrintErrors() const;
 
     private:
         [[nodiscard]] char CurrentChar() const { return *TokensArena.GetArenaAllocator().Read<char>(Pos); }

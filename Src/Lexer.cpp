@@ -235,7 +235,8 @@ namespace Volt
 				Tokens.push_back(Tok);
 			else
 			{
-				SendError(LexErrorType::InvalidCharacter, Line, Column, { std::string(CurrentChar(), 1) });
+				SendError(LexErrorType::InvalidCharacter, Line, Column,
+					{ std::string(1, CurrentChar()) });
 				MovePos();
 			}
 		}
@@ -247,6 +248,15 @@ namespace Volt
 	{
 		for (const Token& Tok : Tokens)
 			std::cout << Tok.ToString(TokensArena) << std::endl;
+	}
+
+	bool Lexer::PrintErrors() const
+	{
+		for (const LexError& Error : Errors)
+			std::cout << "LexError: " << Error.ToString() <<
+				" At position: [" << Error.Line << ":" << Error.Column << "]\n";
+
+		return HasErrors();
 	}
 
 	void Lexer::MovePos()
@@ -394,10 +404,7 @@ namespace Volt
 				if (HasDot || HasExponent)
 				{
 					if (!IsInvalidToken)
-					{
 						IsInvalidToken = true;
-						SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
-					}
 				}
 				else
 					HasDot = true;
@@ -407,10 +414,7 @@ namespace Volt
 				if (!HasDigit || HasExponent)
 				{
 					if (!IsInvalidToken)
-					{
 						IsInvalidToken = true;
-						SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
-					}
 				}
 				else
 					HasExponent = true;
@@ -423,22 +427,13 @@ namespace Volt
 				if (HasExponentDigits || HasExponentSign)
 				{
 					if (!IsInvalidToken)
-					{
 						IsInvalidToken = true;
-						SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
-					}
 				}
 				else
 					HasExponentSign = true;
 			}
 			else if (isalpha(Ch) || Ch == '_')
 			{
-				// if (!InvalidToken)
-				// {
-				// 	InvalidToken = true;
-				// 	SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
-				// }
-
 				if (Suffix.Length == 0)
 					Suffix.Ptr = ExprRef.Ptr + Pos;
 
@@ -453,6 +448,7 @@ namespace Volt
 		if (StartPos == Pos)
 			return false;
 
+		StringRef Lexeme(ExprRef.Ptr + StartPos, Pos - StartPos);
 		if (HasExponent && !HasExponentDigits)
 		{
 			if (!IsInvalidToken)
@@ -461,20 +457,19 @@ namespace Volt
 				SendError(LexErrorType::UnterminatedNumber, StartLine, StartCol);
 			}
 		}
-
-		StringRef Lexeme(ExprRef.Ptr + StartPos, Pos - StartPos);
-		Token::TokenType TokenType = Token::INT_NUMBER;
-
-		BufferStringView SuffixStr = TokensArena.Read(Suffix);
-
-		if (IsInvalidToken)
+		else if (IsInvalidToken)
 		{
+			SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
+					{ TokensArena.Read(Lexeme).ToString() });
 			Tok = Token(Token::INVALID, Lexeme,
 						StartPos, StartLine, StartCol);
 
 			return true;
 		}
 
+		Token::TokenType TokenType;
+
+		BufferStringView SuffixStr = TokensArena.Read(Suffix);
 		if (HasDot || HasExponent)
 		{
 			if (Suffix.Length == 0)
@@ -483,7 +478,8 @@ namespace Volt
 				TokenType = Token::FLOAT_NUMBER;
 			else
 			{
-				SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
+				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
+					{ TokensArena.Read(Lexeme).ToString() });
 				Tok = InvalidToken(StartPos, StartLine, StartCol);
 				return true;
 			}
@@ -498,7 +494,8 @@ namespace Volt
 				TokenType = Token::LONG_NUMBER;
 			else
 			{
-				SendError(LexErrorType::InvalidNumber, StartLine, StartCol);
+				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
+					{ TokensArena.Read(Lexeme).ToString() });
 				Tok = InvalidToken(StartPos, StartLine, StartCol);
 				return true;
 			}
@@ -573,9 +570,10 @@ namespace Volt
 			return true;
 		}
 
+		bool InvalidEscape = false;
 		if (Ch == '\\')
 		{
-			GetEscape(CurrentChar(), Ch);
+			InvalidEscape = !GetEscape(CurrentChar(), Ch);
 			MovePos();
 		}
 
@@ -595,7 +593,7 @@ namespace Volt
 
 		MovePos();
 
-		Tok = Token(Token::CHAR, TokensArena.Write(std::string(1, Ch)), StartPos, StartLine, StartCol);
+		Tok = Token(InvalidEscape ? Token::INVALID : Token::CHAR, TokensArena.Write(std::string(1, Ch)), StartPos, StartLine, StartCol);
 		return true;
 	}
 
@@ -687,7 +685,7 @@ namespace Volt
 				Escape = '\v';
 				break;
 			default:
-				SendError(LexErrorType::InvalidEscape, Line, Column, { std::string(Escape, 1) });
+				SendError(LexErrorType::InvalidEscape, Line, Column, { std::string(1, Ch) });
 				return false;
 		}
 

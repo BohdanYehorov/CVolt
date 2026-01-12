@@ -25,7 +25,8 @@ namespace Volt
             return;
         }
 
-        std::cout << Node->GetName() << " ";
+        std::cout << Node->GetName() <<
+            " [" << Node->Pos << ":" << Node->Line << ":" << Node->Column << "] ";
 
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
@@ -53,7 +54,7 @@ namespace Volt
             std::cout << String->Value.ToString() << std::endl;
         else if (auto Array = Cast<ArrayNode>(Node))
         {
-            std::cout << "\bElements:\n";
+            std::cout << "Elements:\n";
             for (auto El : Array->Elements)
                 PrintASTTree(El, Tabs + 1);
         }
@@ -100,16 +101,6 @@ namespace Volt
             std::cout << "Bit Width: " << IntType->BitWidth << std::endl;
         else if (auto FloatType = Cast<FPTypeNode>(Node))
             std::cout << "Bit Width: " << FloatType->BitWidth << std::endl;
-        else if (auto PtrType = Cast<PtrDataTypeNode>(Node))
-        {
-            std::cout << std::endl;
-            PrintASTTree(PtrType->BaseType, Tabs + 1);
-        }
-        else if (auto RefType = Cast<RefDataTypeNode>(Node))
-        {
-            std::cout << std::endl;
-            PrintASTTree(RefType->BaseType, Tabs + 1);
-        }
         else if (auto Variable = Cast<VariableNode>(Node))
         {
             std::cout << std::endl;
@@ -153,7 +144,7 @@ namespace Volt
         }
         else if (auto Return = Cast<ReturnNode>(Node))
         {
-            std::cout << "\b; Return Value:\n";
+            std::cout << "Return Value:\n";
             PrintASTTree(Return->ReturnValue, Tabs + 1);
         }
         else if (auto If = Cast<IfNode>(Node))
@@ -334,7 +325,15 @@ namespace Volt
         while (IsValidIndex())
         {
             if (ASTNode* Expr = ParseExpression())
+            {
+                if (Sequence->Statements.empty())
+                {
+                    Sequence->Pos    = Expr->Pos;
+                    Sequence->Line   = Expr->Line;
+                    Sequence->Column = Expr->Column;
+                }
                 Sequence->Statements.push_back(Expr);
+            }
         }
 
         return Sequence;
@@ -342,15 +341,16 @@ namespace Volt
 
     ASTNode* Parser::ParseBlock()
     {
-        auto Block = NodesArena.Create<BlockNode>();
-
-        if (!Expect(Token::OP_LBRACE))
+        const Token* TokPtr;
+        if (!ConsumeIf(Token::OP_LBRACE, TokPtr))
         {
             while (IsValidIndex() && CurrentToken().Type != Token::OP_RBRACE)
                 Consume();
             Consume();
             return nullptr;
         }
+
+        auto Block = NodesArena.Create<BlockNode>(TokPtr->Pos, TokPtr->Line, TokPtr->Column);
 
         while (IsValidIndex())
         {
@@ -372,7 +372,7 @@ namespace Volt
         return nullptr;
     }
 
-    DataTypeNodeBase* Parser::ParseDataType()
+    DataTypeNode* Parser::ParseDataType()
     {
         if (!IsValidIndex())
             return nullptr;
@@ -411,7 +411,8 @@ namespace Volt
         }
         Consume();
 
-        if (!IsValidIndex()) return Type;
+        if (!IsValidIndex())
+            return NodesArena.Create<DataTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
 
         while (true)
         {
@@ -424,7 +425,7 @@ namespace Volt
                     Type = NodesArena.Create<RefDataTypeNode>(Type);
                     break;
                 default:
-                    return Type;
+                    return NodesArena.Create<DataTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
             }
 
             Consume();
@@ -434,7 +435,7 @@ namespace Volt
     ASTNode* Parser::ParseParameter()
     {
         const Token* TokPtr;
-        DataTypeNodeBase* DataType = ParseDataType();
+        DataTypeNode* DataType = ParseDataType();
         if (!DataType)
             return nullptr;
 
@@ -447,19 +448,23 @@ namespace Volt
         BufferStringView Name = GetTokenLexeme(*TokPtr);
 
         if (!ConsumeIf(Token::OP_ASSIGN))
-            return NodesArena.Create<ParamNode>(DataType, Name, nullptr);
+            return NodesArena.Create<ParamNode>(
+                DataType, Name, nullptr,
+                DataType->Pos,DataType->Line, DataType->Column);
 
-        return NodesArena.Create<ParamNode>(DataType, Name, ParseBitwiseOR());
+        return NodesArena.Create<ParamNode>(
+            DataType, Name, ParseBitwiseOR(),
+            DataType->Pos, DataType->Line, DataType->Column);
     }
 
     ASTNode* Parser::ParseFunction()
     {
         size_t StartIndex = Index;
-        const Token* TokPtr;
-        DataTypeNodeBase* DataType = ParseDataType();
+        DataTypeNode* DataType = ParseDataType();
         if (!DataType)
             return nullptr;
 
+        const Token* TokPtr;
         if (!ConsumeIf(Token::IDENTIFIER, TokPtr))
         {
             Index = StartIndex;
@@ -473,7 +478,9 @@ namespace Volt
             return nullptr;
         }
 
-        auto Function = NodesArena.Create<FunctionNode>(DataType, Name);
+        auto Function = NodesArena.Create<FunctionNode>(DataType, Name,
+            DataType->Pos, DataType->Line, DataType->Column);
+
         while (IsValidIndex())
         {
             if (CurrentToken().Type == Token::OP_RPAREN)
@@ -501,12 +508,11 @@ namespace Volt
     ASTNode* Parser::ParseVariable()
     {
         size_t StartIndex = Index;
-        const Token* TokPtr;
-
-        DataTypeNodeBase* DataType = ParseDataType();
+        DataTypeNode* DataType = ParseDataType();
         if (!DataType)
             return nullptr;
 
+        const Token* TokPtr;
         if (!ConsumeIf(Token::IDENTIFIER, TokPtr))
         {
             Index = StartIndex;
@@ -515,14 +521,19 @@ namespace Volt
         BufferStringView Name = GetTokenLexeme(*TokPtr);
 
         if (ConsumeIf(Token::OP_ASSIGN))
-            return NodesArena.Create<VariableNode>(DataType, Name, ParseAssignment());
+            return NodesArena.Create<VariableNode>(
+                DataType, Name, ParseAssignment(),
+                DataType->Pos, DataType->Line, DataType->Column);
 
-        return NodesArena.Create<VariableNode>(DataType, Name, nullptr);
+        return NodesArena.Create<VariableNode>(
+            DataType, Name, nullptr,
+            DataType->Pos, DataType->Line, DataType->Column);
     }
 
     ASTNode* Parser::ParseIf()
     {
-        if (!ConsumeIf(Token::KW_IF))
+        const Token* TokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_IF, TokPtr))
             return nullptr;
 
         if (!Expect(Token::OP_LPAREN))
@@ -547,7 +558,8 @@ namespace Volt
         if (!Branch)
             return nullptr;
 
-        auto If = NodesArena.Create<IfNode>(Condition, Branch);
+        auto If = NodesArena.Create<IfNode>(
+            Condition, Branch, nullptr, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
         if (!ConsumeIf(Token::KW_ELSE))
             return If;
 
@@ -570,7 +582,8 @@ namespace Volt
 
     ASTNode* Parser::ParseWhile()
     {
-        if (!ConsumeIf(Token::KW_WHILE))
+        const Token* TokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_WHILE, TokPtr))
             return nullptr;
 
         if (!Expect(Token::OP_LPAREN))
@@ -599,12 +612,14 @@ namespace Volt
         if (!Branch)
             return nullptr;
 
-        return NodesArena.Create<WhileNode>(Condition, Branch);
+        return NodesArena.Create<WhileNode>(
+            Condition, Branch, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
     ASTNode* Parser::ParseFor()
     {
-        if (!ConsumeIf(Token::KW_FOR))
+        const Token* TokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_FOR, TokPtr))
             return nullptr;
 
         if (!Expect(Token::OP_LPAREN))
@@ -637,7 +652,9 @@ namespace Volt
         if (!Body)
             return nullptr;
 
-        return NodesArena.Create<ForNode>(Initialization, Condition, Iteration, Body);
+        return NodesArena.Create<ForNode>(
+            Initialization, Condition, Iteration,
+            Body, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
     ASTNode* Parser::ParseReturn()
@@ -645,13 +662,16 @@ namespace Volt
         if (!InFunction)
             return nullptr;
 
-        if (!ConsumeIf(Token::KW_RETURN))
+        const Token* TokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_RETURN, TokPtr))
             return nullptr;
 
         if (Peek(Token::OP_SEMICOLON))
-            return NodesArena.Create<ReturnNode>(nullptr);
+            return NodesArena.Create<ReturnNode>(
+                nullptr, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
 
-        return NodesArena.Create<ReturnNode>(ParseAssignment());
+        return NodesArena.Create<ReturnNode>(
+            ParseAssignment(), TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
     ASTNode* Parser::ParseBreak()
@@ -659,10 +679,11 @@ namespace Volt
         if (!InLoop)
             return nullptr;
 
-        if (!ConsumeIf(Token::KW_BREAK))
+        const Token* TokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_BREAK ,TokPtr))
             return nullptr;
 
-        return NodesArena.Create<BreakNode>();
+        return NodesArena.Create<BreakNode>(TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
     ASTNode* Parser::ParseContinue()
@@ -670,10 +691,11 @@ namespace Volt
         if (!InLoop)
             return nullptr;
 
-        if (!ConsumeIf(Token::KW_CONTINUE))
+        const Token* TokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_CONTINUE, TokPtr))
             return nullptr;
 
-        return NodesArena.Create<ContinueNode>();
+        return NodesArena.Create<ContinueNode>(TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
     ASTNode* Parser::ParseExpression()
@@ -730,7 +752,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<AssignmentNode>(OpType, Left, Right);
+            Left = NodesArena.Create<AssignmentNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -753,7 +776,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<LogicalNode>(OpType, Left, Right);
+            Left = NodesArena.Create<LogicalNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -776,7 +800,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<LogicalNode>(OpType, Left, Right);
+            Left = NodesArena.Create<LogicalNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -799,7 +824,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<BinaryOpNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -822,7 +848,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<BinaryOpNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -844,7 +871,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<BinaryOpNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -867,7 +895,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<ComparisonNode>(OpType, Left, Right);
+            Left = NodesArena.Create<ComparisonNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -890,7 +919,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<ComparisonNode>(OpType, Left, Right);
+            Left = NodesArena.Create<ComparisonNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -913,7 +943,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<BinaryOpNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -936,7 +967,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<BinaryOpNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -959,7 +991,8 @@ namespace Volt
             if (!Right)
                 return nullptr;
 
-            Left = NodesArena.Create<BinaryOpNode>(OpType, Left, Right);
+            Left = NodesArena.Create<BinaryOpNode>(
+                OpType, Left, Right, Left->Pos, Left->Line, Left->Column);
         }
 
         return Left;
@@ -980,9 +1013,11 @@ namespace Volt
                 return nullptr;
 
             if (OpType == Operator::INC || OpType == Operator::DEC)
-                return NodesArena.Create<PrefixOpNode>(OpType, Operand);
+                return NodesArena.Create<PrefixOpNode>(
+                    OpType, Operand, Tok.Pos, Tok.Line, Tok.Column);
 
-            return NodesArena.Create<UnaryOpNode>(OpType, Operand);
+            return NodesArena.Create<UnaryOpNode>(
+                OpType, Operand, Tok.Pos, Tok.Line, Tok.Column);
         }
 
         if (Tok.Type == Token::OP_REFERENCE)
@@ -992,7 +1027,7 @@ namespace Volt
             if (!Target)
                 return nullptr;
 
-            return NodesArena.Create<RefNode>(Target);
+            return NodesArena.Create<RefNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
         }
 
         return ParsePostfix();
@@ -1002,6 +1037,7 @@ namespace Volt
     {
         ASTNode* Operand = ParsePrimary();
         if (!Operand) return nullptr;
+
         while (IsValidIndex())
         {
             const Token& Tok = CurrentToken();
@@ -1010,7 +1046,8 @@ namespace Volt
             {
                 case Token::OP_LPAREN:
                 {
-                    auto Call = NodesArena.Create<CallNode>(Operand);
+                    auto Call = NodesArena.Create<CallNode>(
+                        Operand, Operand->Pos, Operand->Line, Operand->Column);
                     Consume();
                     while (IsValidIndex())
                     {
@@ -1039,7 +1076,8 @@ namespace Volt
                     if (!Expect(Token::OP_RBRACKET))
                         return nullptr;
 
-                    Operand = NodesArena.Create<SubscriptNode>(Operand, Index);
+                    Operand = NodesArena.Create<SubscriptNode>(
+                        Operand, Index, Operand->Pos, Operand->Line, Operand->Column);
                     break;
                 }
                 default:
@@ -1050,10 +1088,11 @@ namespace Volt
                     Consume();
 
                     if (OpType == Operator::INC || OpType == Operator::DEC)
-                        Operand = NodesArena.Create<SuffixOpNode>(OpType, Operand);
+                        Operand = NodesArena.Create<SuffixOpNode>(
+                            OpType, Operand, Operand->Pos, Operand->Line, Operand->Column);
                     else
-                        Operand = NodesArena.Create<UnaryOpNode>(OpType, Operand);
-
+                        Operand = NodesArena.Create<UnaryOpNode>(
+                            OpType, Operand, Operand->Pos, Operand->Line, Operand->Column);
                     break;
                 }
             }
@@ -1073,45 +1112,58 @@ namespace Volt
         switch (Tok.Type)
         {
             case Token::IDENTIFIER:
-                return NodesArena.Create<IdentifierNode>(GetTokenLexeme(Tok));
+                return NodesArena.Create<IdentifierNode>(
+                    GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
             case Token::BYTE_NUMBER:
             {
                 UInt8 Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
-                return NodesArena.Create<IntegerNode>(IntegerNode::BYTE, Value);
+                std::from_chars(GetTokenLexeme(Tok).CBegin(),
+                    GetTokenLexeme(Tok).CEnd(), Value);
+                return NodesArena.Create<IntegerNode>(
+                    IntegerNode::BYTE, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::INT_NUMBER:
             {
                 UInt32 Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
-                return NodesArena.Create<IntegerNode>(IntegerNode::INT, Value);
+                std::from_chars(GetTokenLexeme(Tok).CBegin(),
+                    GetTokenLexeme(Tok).CEnd(), Value);
+                return NodesArena.Create<IntegerNode>(
+                    IntegerNode::INT, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::LONG_NUMBER:
             {
                 UInt64 Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
-                return NodesArena.Create<IntegerNode>(IntegerNode::LONG, Value);
+                std::from_chars(GetTokenLexeme(Tok).CBegin(),
+                    GetTokenLexeme(Tok).CEnd(), Value);
+                return NodesArena.Create<IntegerNode>(
+                    IntegerNode::LONG, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::FLOAT_NUMBER:
             {
                 float Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
-                return NodesArena.Create<FloatingPointNode>(FloatingPointNode::FLOAT, Value);
+                std::from_chars(GetTokenLexeme(Tok).CBegin(),
+                    GetTokenLexeme(Tok).CEnd(), Value);
+                return NodesArena.Create<FloatingPointNode>(
+                    FloatingPointNode::FLOAT, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::DOUBLE_NUMBER:
             {
                 double Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(), GetTokenLexeme(Tok).CEnd(), Value);
-                return NodesArena.Create<FloatingPointNode>(FloatingPointNode::DOUBLE, Value);
+                std::from_chars(GetTokenLexeme(Tok).CBegin(),
+                    GetTokenLexeme(Tok).CEnd(), Value);
+                return NodesArena.Create<FloatingPointNode>(
+                    FloatingPointNode::DOUBLE, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::BOOL_TRUE:
-                return NodesArena.Create<BoolNode>(true);
+                return NodesArena.Create<BoolNode>(true, Tok.Pos, Tok.Line, Tok.Column);
             case Token::BOOL_FALSE:
-                return NodesArena.Create<BoolNode>(false);
+                return NodesArena.Create<BoolNode>(false, Tok.Pos, Tok.Line, Tok.Column);
             case Token::CHAR:
-                return NodesArena.Create<CharNode>(GetTokenLexeme(Tok)[0]);
+                return NodesArena.Create<CharNode>(
+                    GetTokenLexeme(Tok)[0], Tok.Pos, Tok.Line, Tok.Column);
             case Token::STRING:
-                return NodesArena.Create<StringNode>(GetTokenLexeme(Tok));
+                return NodesArena.Create<StringNode>(
+                    GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
             case Token::OP_LPAREN:
             {
                 ASTNode* Node = ParseAssignment();
@@ -1121,7 +1173,7 @@ namespace Volt
             }
             case Token::OP_LBRACKET:
             {
-                auto Array = NodesArena.Create<ArrayNode>();
+                auto Array = NodesArena.Create<ArrayNode>(Tok.Pos, Tok.Line, Tok.Column);
                 while (IsValidIndex())
                 {
                     if (CurrentToken().Type == Token::OP_RBRACKET)
@@ -1144,7 +1196,8 @@ namespace Volt
                 break;
         }
 
-        ErrorList.emplace_back(ErrorCode::UnexpectedToken, Tok.Pos, std::vector{ std::string(GetTokenLexeme(Tok).ToString()) });
+        ErrorList.emplace_back(ErrorCode::UnexpectedToken, Tok.Pos,
+            std::vector{ std::string(GetTokenLexeme(Tok).ToString()) });
         return nullptr;
     }
 }

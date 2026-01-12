@@ -16,7 +16,7 @@ namespace Volt
                 return std::format("Invalid character '{}'.", Context[0]);
 
             case InvalidNumber:
-                return "Invalid numeric literal.";
+                return std::format("Invalid numeric literal: '{}'.", Context[0]);
 
             case UnterminatedNumber:
                 return "Unterminated numeric literal.";

@@ -3,7 +3,7 @@
 #include "Parser.h"
 #include <fstream>
 #include <sstream>
-#include "LLVMCompiler.h"
+//#include "LLVMCompiler.h"
 
 int main()
 {
@@ -18,13 +18,8 @@ int main()
     MyLexer.Lex();
     MyLexer.PrintTokens();
 
-    if (MyLexer.HasErrors())
-    {
-        for (const auto& Err : MyLexer.GetErrors())
-            std::cout << Err.ToString() << std::endl;
-
+    if (MyLexer.PrintErrors())
         return -1;
-    }
 
     Volt::Parser MyParser(MyLexer);
     MyParser.Parse();
@@ -41,17 +36,17 @@ int main()
     }
 
     MyParser.PrintASTTree();
-
-    Volt::LLVMCompiler MyCompiler(MyParser.GetASTTree());
-    MyCompiler.Compile();
-    MyCompiler.Print();
-
-    std::cout << "=======================Output=======================\n\n";
-
-    int Res = MyCompiler.Run();
-
-    std::cout << "\n====================================================\n";
-    std::cout << "Exited With Code: " << Res << std::endl;
+    //
+    // Volt::LLVMCompiler MyCompiler(MyParser.GetASTTree());
+    // MyCompiler.Compile();
+    // MyCompiler.Print();
+    //
+    // std::cout << "=======================Output=======================\n\n";
+    //
+    // int Res = MyCompiler.Run();
+    //
+    // std::cout << "\n====================================================\n";
+    // std::cout << "Exited With Code: " << Res << std::endl;
 
     return 0;
 }
