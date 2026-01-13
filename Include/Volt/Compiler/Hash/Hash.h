@@ -5,7 +5,7 @@
 #ifndef CVOLT_HASH_H
 #define CVOLT_HASH_H
 
-#include "ASTNodes.h"
+#include <llvm/ADT/SmallVector.h>
 
 namespace Volt
 {
@@ -17,18 +17,6 @@ namespace Volt
     {
         Seed ^= Hash + 0x9e3779b9 + (Seed << 6) + (Seed >> 2);
     }
-
-    class DataTypeHash
-    {
-    public:
-        size_t operator()(const DataTypeNodeBase* Type) const;
-    };
-
-    class FunctionSignatureHash
-    {
-    public:
-        size_t operator()(const FunctionSignature& FuncSign) const;
-    };
 }
 
 #endif //CVOLT_HASH_H

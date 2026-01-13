@@ -1,9 +1,7 @@
-#include <iostream>
-#include "Object.h"
-#include "Parser.h"
+#include "Volt/Core/Parser/Parser.h"
+#include "Volt/Compiler/LLVMCompiler.h"
 #include <fstream>
 #include <sstream>
-//#include "LLVMCompiler.h"
 
 int main()
 {
@@ -23,22 +21,21 @@ int main()
 
     Volt::Parser MyParser(MyLexer);
     MyParser.Parse();
+    MyParser.PrintASTTree();
 
     if (MyParser.PrintErrors())
-    {}
+        return -1;
 
-    MyParser.PrintASTTree();
-    //
-    // Volt::LLVMCompiler MyCompiler(MyParser.GetASTTree());
-    // MyCompiler.Compile();
-    // MyCompiler.Print();
-    //
-    // std::cout << "=======================Output=======================\n\n";
-    //
-    // int Res = MyCompiler.Run();
-    //
-    // std::cout << "\n====================================================\n";
-    // std::cout << "Exited With Code: " << Res << std::endl;
+    Volt::LLVMCompiler MyCompiler(MyParser.GetASTTree());
+    MyCompiler.Compile();
+    MyCompiler.Print();
+
+    std::cout << "=======================Output=======================\n\n";
+
+    int Res = MyCompiler.Run();
+
+    std::cout << "\n====================================================\n";
+    std::cout << "Exited With Code: " << Res << std::endl;
 
     return 0;
 }

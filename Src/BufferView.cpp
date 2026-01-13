@@ -2,7 +2,7 @@
 // Created by bohdan on 22.12.25.
 //
 
-#include "BufferView.h"
+#include "Volt/Core/Memory/BufferView.h"
 #include <cstring>
 
 namespace Volt

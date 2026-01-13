@@ -5,11 +5,11 @@
 #ifndef CVOLT_ARENA_H
 #define CVOLT_ARENA_H
 
+#include "Volt/Core/Object/Object.h"
+#include "Volt/Core/Types/TypeDefs.h"
+#include "Volt/Core/Memory/BufferView.h"
 #include <vector>
-#include "Object.h"
 #include <stdexcept>
-#include "TypeDefs.h"
-#include "BufferView.h"
 #include <iostream>
 
 namespace Volt

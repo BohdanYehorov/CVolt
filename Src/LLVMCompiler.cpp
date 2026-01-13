@@ -2,8 +2,8 @@
 // Created by bohdan on 03.01.26.
 //
 
-#include "LLVMCompiler.h"
-#include "DefaultFunctions.h"
+#include "Volt/Compiler/LLVMCompiler.h"
+#include "Volt/Compiler/Functions/DefaultFunctions.h"
 #include <llvm/Support/TargetSelect.h>
 
 #define ERROR(Message) throw CompilerError(Message);
@@ -587,7 +587,7 @@ namespace Volt
             const std::string& FuncName = Identifier->Value.ToString();
 
             llvm::SmallVector<llvm::Value*, 8> LLVMArgs;
-            llvm::SmallVector<DataTypeNodeBase*, 8> ArgTypes;
+            llvm::SmallVector<DataTypeBase*, 8> ArgTypes;
             llvm::SmallVector<TypedValue*> ArgValues;
 
             const auto& Args = Call->Arguments;
@@ -688,7 +688,7 @@ namespace Volt
     TypedValue *LLVMCompiler::CompileSubscript(const SubscriptNode *Subscript)
     {
         TypedValue* Ptr = CompileNode(Subscript->Target);
-        PtrDataTypeNode* ElPtrType = Ptr->GetDataType()->GetPtrType();
+        PointerType* ElPtrType = Ptr->GetDataType()->GetPtrType();
         if (!ElPtrType)
             ERROR("Cannot apply subscript to non-pointer type");
 
@@ -704,18 +704,18 @@ namespace Volt
     TypedValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
     {
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        llvm::Type* Type = DataType::GetLLVMType(Var->Type, Context);
+        llvm::Type* Type = DataType::GetLLVMType(Var->Type->Type, Context);
 
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type, nullptr, Var->Name.ToString());
 
         DeclareVariable(Var->Name.ToString(),
-            Create<TypedValue>(Alloca, DataType::Create(Var->Type, CompilerArena), true));
+            Create<TypedValue>(Alloca, DataType::Create(Var->Type->Type, CompilerArena), true));
 
         if (Var->Value)
         {
             TypedValue* Value = CompileNode(Var->Value);
-            Value = ImplicitCast(Value, DataType::Create(Var->Type, CompilerArena));
+            Value = ImplicitCast(Value, DataType::Create(Var->Type->Type, CompilerArena));
             Builder.CreateStore(Value->GetValue(), Alloca);
         }
 
@@ -728,9 +728,9 @@ namespace Volt
         Params.reserve(Function->Params.size());
 
         for (const auto Param : Function->Params)
-            Params.push_back(DataType::GetLLVMType(Param->Type, Context));
+            Params.push_back(DataType::GetLLVMType(Param->Type->Type, Context));
 
-        llvm::Type* RetType = DataType::GetLLVMType(Function->ReturnType, Context);
+        llvm::Type* RetType = DataType::GetLLVMType(Function->ReturnType->Type, Context);
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
 
@@ -738,7 +738,7 @@ namespace Volt
         llvm::Function* Func = llvm::Function::Create(
             FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
 
-        llvm::SmallVector<DataTypeNodeBase*, 8> ParamsTypes;
+        llvm::SmallVector<DataTypeBase*, 8> ParamsTypes;
 
         const auto& FuncParams = Function->Params;
         ParamsTypes.reserve(FuncParams.size());
@@ -746,7 +746,7 @@ namespace Volt
         {
             auto Arg = Func->args().begin() + i;
             Arg->setName(FuncParams[i]->Name.ToString());
-            ParamsTypes.push_back(FuncParams[i]->Type);
+            ParamsTypes.push_back(FuncParams[i]->Type->Type);
         }
 
         CurrentFunction = Func;
@@ -754,7 +754,7 @@ namespace Volt
 
         FunctionSignature Signature{ FuncName, ParamsTypes };
         FunctionSignatures[Signature] = Create<TypedFunction>(Func,
-                                        DataType::Create(Function->ReturnType, CompilerArena));
+                                        DataType::Create(Function->ReturnType->Type, CompilerArena));
 
         llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
         Builder.SetInsertPoint(Entry);
@@ -972,7 +972,7 @@ namespace Volt
         if (const auto Subscript = Cast<const SubscriptNode>(Node))
         {
             TypedValue* Ptr = CompileNode(Subscript->Target);
-            PtrDataTypeNode* ElPtrType = Ptr->GetDataType()->GetPtrType();
+            PointerType* ElPtrType = Ptr->GetDataType()->GetPtrType();
             if (!ElPtrType)
                 ERROR("Cannot apply subscript to non-pointer type");
 

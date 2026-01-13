@@ -2,11 +2,10 @@
 // Created by bohdan on 08.01.26.
 //
 
-#include "DataType.h"
-
+#include "Volt/Compiler/Types/DataType.h"
+#include "Volt/Compiler/Types/CompilerTypes.h"
 #include <complex>
 #include <llvm/IR/DerivedTypes.h>
-#include "CompilerTypes.h"
 
 namespace Volt
 {
@@ -17,7 +16,7 @@ namespace Volt
     DataType* DataType::CachedIntegerTypes[] = { nullptr, nullptr, nullptr, nullptr };
     DataType* DataType::CachedFPTypes[] = { nullptr, nullptr, nullptr, nullptr };
 
-    DataType *DataType::Create(DataTypeNodeBase *Base, Arena &TypesArena)
+    DataType *DataType::Create(DataTypeBase *Base, Arena &TypesArena)
     {
         if (auto Iter = CachedTypes.find(Base); Iter != CachedTypes.end())
         {
@@ -35,7 +34,7 @@ namespace Volt
         if (CachedVoidType)
             return CachedVoidType;
 
-        CachedVoidType = TypesArena.Create<DataType>(TypesArena.Create<VoidTypeNode>());
+        CachedVoidType = TypesArena.Create<DataType>(TypesArena.Create<VoidType>());
         return CachedVoidType;
     }
 
@@ -44,7 +43,7 @@ namespace Volt
         if (CachedBoolType)
             return CachedBoolType;
 
-        CachedBoolType = TypesArena.Create<DataType>(TypesArena.Create<BoolTypeNode>());
+        CachedBoolType = TypesArena.Create<DataType>(TypesArena.Create<BoolType>());
         return CachedBoolType;
     }
 
@@ -53,7 +52,7 @@ namespace Volt
         if (CachedCharType)
             return CachedCharType;
 
-        CachedCharType = TypesArena.Create<DataType>(TypesArena.Create<CharTypeNode>());
+        CachedCharType = TypesArena.Create<DataType>(TypesArena.Create<CharType>());
         return CachedCharType;
     }
 
@@ -70,7 +69,7 @@ namespace Volt
         if (CachedIntegerTypes[Index])
             return CachedIntegerTypes[Index];
 
-        CachedIntegerTypes[Index] = TypesArena.Create<DataType>(TypesArena.Create<IntegerTypeNode>(BitWidth));
+        CachedIntegerTypes[Index] = TypesArena.Create<DataType>(TypesArena.Create<IntegerType>(BitWidth));
         return CachedIntegerTypes[Index];
     }
 
@@ -86,13 +85,13 @@ namespace Volt
         if (CachedFPTypes[Index])
             return CachedFPTypes[Index];
 
-        CachedFPTypes[Index] = TypesArena.Create<DataType>(TypesArena.Create<FPTypeNode>(BitWidth));
+        CachedFPTypes[Index] = TypesArena.Create<DataType>(TypesArena.Create<FloatingPointType>(BitWidth));
         return CachedFPTypes[Index];
     }
 
-    DataType* DataType::CreatePtr(DataTypeNodeBase *BaseType, Arena &TypesArena)
+    DataType* DataType::CreatePtr(DataTypeBase *BaseType, Arena &TypesArena)
     {
-        PtrDataTypeNode PtrDataType(BaseType);
+        PointerType PtrDataType(BaseType);
 
         if (auto Iter = CachedTypes.find(&PtrDataType); Iter != CachedTypes.end())
         {
@@ -100,7 +99,7 @@ namespace Volt
             return Iter->second;
         }
 
-        auto PtrTypeNode = TypesArena.Create<PtrDataTypeNode>(BaseType);
+        auto PtrTypeNode = TypesArena.Create<PointerType>(BaseType);
         auto PtrType = TypesArena.Create<DataType>(PtrTypeNode);
 
         CachedTypes[PtrTypeNode] = PtrType;
@@ -108,41 +107,17 @@ namespace Volt
         return PtrType;
     }
 
-    llvm::Type* DataType::ToLLVMPrimitiveType(PrimitiveDataType Type, llvm::LLVMContext &Context)
+    llvm::Type* DataType::GetLLVMType(const DataTypeBase* Type, llvm::LLVMContext &Context)
     {
-        switch (Type)
-        {
-            case PrimitiveDataType::VOID:
-                return llvm::Type::getVoidTy(Context);
-            case PrimitiveDataType::BOOL:
-                return llvm::Type::getInt1Ty(Context);
-            case PrimitiveDataType::CHAR:
-            case PrimitiveDataType::BYTE:
-                return llvm::Type::getInt8Ty(Context);
-            case PrimitiveDataType::INT:
-                return llvm::Type::getInt32Ty(Context);
-            case PrimitiveDataType::LONG:
-                return llvm::Type::getInt64Ty(Context);
-            case PrimitiveDataType::FLOAT:
-                return llvm::Type::getFloatTy(Context);
-            case PrimitiveDataType::DOUBLE:
-                return llvm::Type::getDoubleTy(Context);
-            default:
-                return nullptr;
-        }
-    }
-
-    llvm::Type* DataType::GetLLVMType(const DataTypeNodeBase* Type, llvm::LLVMContext &Context)
-    {
-        if (Cast<const VoidTypeNode>(Type))
+        if (Cast<const VoidType>(Type))
             return llvm::Type::getVoidTy(Context);
-        if (Cast<const BoolTypeNode>(Type))
+        if (Cast<const BoolType>(Type))
             return llvm::Type::getInt1Ty(Context);
-        if (Cast<const CharTypeNode>(Type))
+        if (Cast<const CharType>(Type))
             return llvm::Type::getInt8Ty(Context);
-        if (const auto Integer = Cast<const IntegerTypeNode>(Type))
+        if (const auto Integer = Cast<const IntegerType>(Type))
             return llvm::Type::getIntNTy(Context, Integer->BitWidth);
-        if (const auto Float = Cast<const FPTypeNode>(Type))
+        if (const auto Float = Cast<const FloatingPointType>(Type))
         {
             switch (Float->BitWidth) {
                 case 16: return llvm::Type::getHalfTy(Context);
@@ -152,61 +127,61 @@ namespace Volt
                 default: throw std::runtime_error("Unsupported FP size");
             }
         }
-        if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
+        if (const auto PtrType = Cast<const PointerType>(Type))
             return llvm::PointerType::get(
                 GetLLVMType(PtrType->BaseType, Context)->getContext(), 0);
-        if (const auto RefType = Cast<const RefDataTypeNode>(Type))
+        if (const auto RefType = Cast<const ReferenceType>(Type))
             return llvm::PointerType::get(
                 GetLLVMType(RefType->BaseType, Context)->getContext(), 0);
 
         return nullptr;
     }
 
-    bool DataType::IsEqual(const DataTypeNodeBase *Left, const DataTypeNodeBase *Right)
+    bool DataType::IsEqual(const DataTypeBase *Left, const DataTypeBase *Right)
     {
         if (Left == Right) return true;
         if (!Left || !Right) return false;
 
-        if (Cast<const VoidTypeNode>(Left) && Cast<const VoidTypeNode>(Right))
+        if (Cast<const VoidType>(Left) && Cast<const VoidType>(Right))
             return true;
 
-        if (Cast<const BoolTypeNode>(Left) && Cast<const BoolTypeNode>(Right))
+        if (Cast<const BoolType>(Left) && Cast<const BoolType>(Right))
             return true;
 
-        if (Cast<const CharTypeNode>(Left) && Cast<const CharTypeNode>(Right))
+        if (Cast<const CharType>(Left) && Cast<const CharType>(Right))
             return true;
 
-        if (const auto LeftIntType = Cast<const IntegerTypeNode>(Left))
-            if (const auto RightIntType = Cast<const IntegerTypeNode>(Right))
+        if (const auto LeftIntType = Cast<const IntegerType>(Left))
+            if (const auto RightIntType = Cast<const IntegerType>(Right))
                 return LeftIntType->BitWidth == RightIntType->BitWidth;
 
-        if (const auto LeftFloatType = Cast<const FPTypeNode>(Left))
-            if (const auto RightFloatType = Cast<const FPTypeNode>(Right))
+        if (const auto LeftFloatType = Cast<const FloatingPointType>(Left))
+            if (const auto RightFloatType = Cast<const FloatingPointType>(Right))
                 return LeftFloatType->BitWidth == RightFloatType->BitWidth;
 
-        if (const auto LeftPtrType = Cast<const PtrDataTypeNode>(Left))
-            if (const auto RightPtrType = Cast<const PtrDataTypeNode>(Right))
+        if (const auto LeftPtrType = Cast<const PointerType>(Left))
+            if (const auto RightPtrType = Cast<const PointerType>(Right))
                 return IsEqual(LeftPtrType->BaseType, RightPtrType->BaseType);
 
-        if (const auto LeftRefType = Cast<const RefDataTypeNode>(Left))
-            if (const auto RightRefType = Cast<const RefDataTypeNode>(Right))
+        if (const auto LeftRefType = Cast<const ReferenceType>(Left))
+            if (const auto RightRefType = Cast<const ReferenceType>(Right))
                 return IsEqual(LeftRefType->BaseType, RightRefType->BaseType);
 
         return false;
     }
 
-    int DataType::GetPrimitiveTypeRank(const PrimitiveDataTypeNode *Type)
+    int DataType::GetPrimitiveTypeRank(const PrimitiveDataType *Type)
     {
-        if (Cast<const VoidTypeNode>(Type))
+        if (Cast<const VoidType>(Type))
             return 0;
 
-        if (Cast<const BoolTypeNode>(Type))
+        if (Cast<const BoolType>(Type))
             return 1;
 
         if (Cast<const CharNode>(Type))
             return 2;
 
-        if (const auto IntType = Cast<const IntegerTypeNode>(Type))
+        if (const auto IntType = Cast<const IntegerType>(Type))
         {
             switch (IntType->BitWidth)
             {
@@ -218,7 +193,7 @@ namespace Volt
             }
         }
 
-        if (const auto FloatType = Cast<const FPTypeNode>(Type))
+        if (const auto FloatType = Cast<const FloatingPointType>(Type))
         {
             switch (FloatType->BitWidth)
             {
@@ -235,19 +210,19 @@ namespace Volt
 
     int DataType::GetTypeBitWidth() const
     {
-        if (Cast<VoidTypeNode>(Type))
+        if (Cast<VoidType>(Type))
             return 0;
 
-        if (Cast<BoolTypeNode>(Type))
+        if (Cast<BoolType>(Type))
             return 1;
 
         if (Cast<CharNode>(Type))
             return 8;
 
-        if (const auto IntType = Cast<IntegerTypeNode>(Type))
+        if (const auto IntType = Cast<IntegerType>(Type))
             return static_cast<int>(IntType->BitWidth);
 
-        if (const auto FloatType = Cast<FPTypeNode>(Type))
+        if (const auto FloatType = Cast<FloatingPointType>(Type))
             return static_cast<int>(FloatType->BitWidth);
 
         return -1;

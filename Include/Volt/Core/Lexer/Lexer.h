@@ -5,13 +5,12 @@
 #ifndef CVOLT_LEXER_H
 #define CVOLT_LEXER_H
 
+#include "Volt/Core/Errors/Errors.h"
+#include "Volt/Core/Memory/Arena.h"
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
-#include "Errors.h"
-#include "Arena.h"
-#include <iostream>
 
 namespace Volt
 {

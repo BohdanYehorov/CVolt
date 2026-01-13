@@ -2,7 +2,7 @@
 // Created by bohdan on 13.12.25.
 //
 
-#include "Lexer.h"
+#include "Volt/Core/Lexer/Lexer.h"
 
 #include <complex>
 #include <sstream>

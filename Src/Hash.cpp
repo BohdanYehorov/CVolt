@@ -2,8 +2,8 @@
 // Created by bohdan on 08.01.26.
 //
 
-#include "Hash.h"
-#include "FunctionSignature.h"
+#include "Volt/Compiler/Hash/Hash.h"
+#include "Volt/Compiler/Functions/FunctionSignature.h"
 
 namespace Volt
 {
@@ -15,28 +15,5 @@ namespace Volt
             Res ^= Hash + 0x9e3779b9 + (Res << 6) + (Res >> 2);
 
         return Res;
-    }
-
-    size_t DataTypeHash::operator()(const DataTypeNodeBase *Type) const
-    {
-        if (const auto PrimitiveType = Cast<const PrimitiveDataTypeNode>(Type))
-            return std::hash<int>{}(DataType::GetPrimitiveTypeRank(PrimitiveType));
-
-        if (const auto PtrType = Cast<const PtrDataTypeNode>(Type))
-        {
-            size_t Res = operator()(PtrType->BaseType);
-            return Res + 0x9e3779b9 + (Res << 6) + (Res >> 2);
-        }
-
-        return 0;
-    }
-
-    size_t FunctionSignatureHash::operator()(const FunctionSignature &FuncSign) const
-    {
-        size_t Seed =  std::hash<std::string>{}(FuncSign.Name);
-        for (auto Param : FuncSign.Params)
-            CombineHashes(Seed, DataTypeHash{}(Param));
-
-        return Seed;
     }
 }

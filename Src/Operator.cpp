@@ -2,7 +2,7 @@
 // Created by bohdan on 15.12.25.
 //
 
-#include "Operator.h"
+#include "Volt/Core/Parser/Operators/Operator.h"
 
 #define GEN_CASE(Op) case Token::OP_##Op: return Op;
 #define GEN_CASE_TO_STRING(Op) case Op: return #Op;

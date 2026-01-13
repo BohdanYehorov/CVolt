@@ -5,14 +5,14 @@
 #ifndef CVOLT_ASTNODES_H
 #define CVOLT_ASTNODES_H
 
-#include "Object.h"
+#include "Volt/Core/Object/Object.h"
+#include "Volt/Core/Parser/Operators/Operator.h"
+#include "Volt/Core/Memory/BufferView.h"
+#include "Volt/Compiler/Types/DataTypeBase.h"
+#include <llvm/ADT/TinyPtrVector.h>
 #include <string>
 #include <vector>
-#include "Operator.h"
 #include <algorithm>
-#include "BufferView.h"
-#include "PrimitiveDataType.h"
-#include <llvm/ADT/TinyPtrVector.h>
 
 namespace Volt
 {
@@ -234,73 +234,12 @@ namespace Volt
             : ASTNode(Pos, Line, Column), Target(Target), Index(Index) {}
     };
 
-    class DataTypeNodeBase : public Object
-    {
-        GENERATED_BODY(DataTypeNodeBase, Object)
-    };
-
-    class PrimitiveDataTypeNode : public DataTypeNodeBase
-    {
-        GENERATED_BODY(PrimitiveDataTypeNode, DataTypeNodeBase)
-    };
-
-    class VoidTypeNode : public PrimitiveDataTypeNode
-    {
-        GENERATED_BODY(VoidTypeNode, PrimitiveDataTypeNode)
-    };
-
-    class BoolTypeNode : public PrimitiveDataTypeNode
-    {
-        GENERATED_BODY(BoolTypeNode, PrimitiveDataTypeNode)
-    };
-
-    class CharTypeNode : public PrimitiveDataTypeNode
-    {
-        GENERATED_BODY(CharTypeNode, PrimitiveDataTypeNode)
-    };
-
-    class IntegerTypeNode : public PrimitiveDataTypeNode
-    {
-        GENERATED_BODY(IntegerTypeNode, PrimitiveDataTypeNode)
-    public:
-        size_t BitWidth;
-        bool IsSigned;
-        IntegerTypeNode(size_t BitWidth, bool IsSigned = false)
-            : BitWidth(BitWidth), IsSigned(IsSigned) {}
-    };
-
-    class FPTypeNode : public PrimitiveDataTypeNode
-    {
-        GENERATED_BODY(FPTypeNode, PrimitiveDataTypeNode)
-    public:
-        size_t BitWidth;
-        FPTypeNode(size_t BitWidth) : BitWidth(BitWidth) {}
-    };
-
-    class PtrDataTypeNode : public DataTypeNodeBase
-    {
-        GENERATED_BODY(PtrDataTypeNode, DataTypeNodeBase)
-    public:
-        DataTypeNodeBase* BaseType;
-        PtrDataTypeNode(DataTypeNodeBase* BaseType)
-            : BaseType(BaseType) {}
-    };
-
-    class RefDataTypeNode : public DataTypeNodeBase
-    {
-        GENERATED_BODY(RefDataTypeNode, DataTypeNodeBase)
-    public:
-        DataTypeNodeBase* BaseType;
-        RefDataTypeNode(DataTypeNodeBase* BaseType)
-            : BaseType(BaseType) {}
-    };
-
     class DataTypeNode : public ASTNode
     {
         GENERATED_BODY(DataTypeNode, ASTNode)
     public:
-        DataTypeNodeBase* Type;
-        DataTypeNode(DataTypeNodeBase* Type, size_t Pos, size_t Line, size_t Column)
+        DataTypeBase* Type;
+        DataTypeNode(DataTypeBase* Type, size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Type(Type) {}
     };
 

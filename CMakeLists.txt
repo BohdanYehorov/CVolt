@@ -6,45 +6,46 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(LLVM_DIR "/home/bohdan/llvm/lib/cmake/llvm")
 find_package(LLVM REQUIRED CONFIG)
-find_package(wxWidgets REQUIRED COMPONENTS core base)
 
 include_directories(${CMAKE_SOURCE_DIR}/Include)
 
 add_executable(CVolt Src/main.cpp
         Src/Lexer.cpp
-        Include/Lexer.h
-        Include/ASTNodes.h
-        Include/Object.h
+        Include/Volt/Core/Lexer/Lexer.h
+        Include/Volt/Core/AST/ASTNodes.h
+        Include/Volt/Core/Object/Object.h
         Src/Arena.cpp
-        Include/Arena.h
+        Include/Volt/Core/Memory/Arena.h
         Src/Parser.cpp
-        Include/Parser.h
+        Include/Volt/Core/Parser/Parser.h
         Src/Operator.cpp
-        Include/Operator.h
+        Include/Volt/Core/Parser/Operators/Operator.h
         Src/Errors.cpp
-        Include/Errors.h
-        Include/TypeDefs.h
-        Include/BufferView.h
+        Include/Volt/Core/Errors/Errors.h
+        Include/Volt/Core/Types/TypeDefs.h
+        Include/Volt/Core/Memory/BufferView.h
         Src/BufferView.cpp
-        Include/CompilerTypes.h
-        Include/PrimitiveDataType.h
-        #Src/LLVMCompiler.cpp
-        #Include/LLVMCompiler.h
-        Include/DefaultFunctions.h
+        Include/Volt/Compiler/Types/CompilerTypes.h
+        Src/LLVMCompiler.cpp
+        Include/Volt/Compiler/LLVMCompiler.h
+        Include/Volt/Compiler/Functions/DefaultFunctions.h
         Src/Hash.cpp
-        Include/Hash.h
+        Include/Volt/Compiler/Hash/Hash.h
         Src/Hash.cpp
-        Include/Hash.h
-        Include/FunctionSignature.h
-        Src/TypedValue.cpp
-        Include/TypedValue.h
+        Include/Volt/Compiler/Hash/Hash.h
+        Include/Volt/Compiler/Functions/FunctionSignature.h
+        Include/Volt/Compiler/Types/TypedValue.h
         Src/DataType.cpp
-        Include/DataType.h
+        Include/Volt/Compiler/Types/DataType.h
+        Include/Volt/Compiler/Types/DataTypeBase.h
+        Include/Volt/Compiler/Hash/DataTypeHash.h
+        Include/Volt/Compiler/Hash/FunctionSignatureHash.h
+        Src/DataTypeHash.cpp
+        Src/FunctionSignatureHash.cpp
 )
 
-target_link_libraries(CVolt PRIVATE LLVM ${wxWidgets_LIBRARIES} edit xml2)
+target_link_libraries(CVolt PRIVATE LLVM edit xml2)
 include_directories(${LLVM_INCLUDE_DIRS})
-include(${wxWidgets_USE_FILE})
 
 set_target_properties(CVolt PROPERTIES
         BUILD_RPATH "/home/bohdan/llvm/lib"

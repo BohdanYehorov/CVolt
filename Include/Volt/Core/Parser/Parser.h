@@ -5,10 +5,9 @@
 #ifndef CVOLT_PARSER_H
 #define CVOLT_PARSER_H
 
-#include "Lexer.h"
-#include "ASTNodes.h"
-#include "Arena.h"
-#include "Errors.h"
+#include "Volt/Core/Lexer/Lexer.h"
+#include "Volt/Core/AST/ASTNodes.h"
+#include "Volt/Core/Errors/Errors.h"
 
 namespace Volt
 {

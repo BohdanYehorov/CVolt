@@ -5,7 +5,7 @@
 #ifndef CVOLT_OPERATOR_H
 #define CVOLT_OPERATOR_H
 
-#include "Lexer.h"
+#include "Volt/Core/Lexer/Lexer.h"
 
 namespace Volt
 {

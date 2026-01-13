@@ -2,7 +2,7 @@
 // Created by bohdan on 17.12.25.
 //
 
-#include "Errors.h"
+#include "Volt/Core/Errors/Errors.h"
 
 namespace Volt
 {

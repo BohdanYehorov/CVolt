@@ -4,8 +4,6 @@
 
 #ifndef CVOLT_OBJECT_H
 #define CVOLT_OBJECT_H
-
-#include <cstddef>
 #include <string>
 
 namespace Volt
@@ -26,6 +24,7 @@ namespace Volt
 
     #define GENERATED_BODY(Object, Base) \
     public:\
+        using Super = Base; \
         static size_t StaticType() { static size_t Id = GenerateType(); return Id; } \
         size_t GetType() const override { return StaticType(); } \
         bool IsA(size_t Type_) const override { return Type_ == StaticType() || Base::IsA(Type_); } \

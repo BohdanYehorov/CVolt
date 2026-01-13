@@ -5,19 +5,20 @@
 #ifndef CVOLT_LLVMCOMPILER_H
 #define CVOLT_LLVMCOMPILER_H
 
+#include "Volt/Core/AST/ASTNodes.h"
+#include "Volt/Compiler/Hash/Hash.h"
+#include "Types/CompilerTypes.h"
+#include "Volt/Core/Memory/Arena.h"
+#include "Types/TypedValue.h"
+#include "Functions/FunctionSignature.h"
+#include "Hash/FunctionSignatureHash.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include "ASTNodes.h"
 #include <unordered_map>
 #include <stack>
-#include "Hash.h"
-#include "CompilerTypes.h"
-#include "Arena.h"
-#include "TypedValue.h"
-#include "FunctionSignature.h"
 
 namespace Volt
 {
@@ -43,7 +44,7 @@ namespace Volt
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
         llvm::Function* CurrentFunction = nullptr;
-        llvm::ArrayRef<DataTypeNodeBase*> FunctionParams;
+        llvm::ArrayRef<DataTypeBase*> FunctionParams;
 
     public:
         LLVMCompiler(ASTNode* ASTTree)
@@ -197,7 +198,7 @@ namespace Volt
         FillParams<Args...>(Params);
 
         llvm::SmallVector<llvm::Type*, 8> LLVMParams;
-        llvm::SmallVector<DataTypeNodeBase*, 8> BaseParams;
+        llvm::SmallVector<DataTypeBase*, 8> BaseParams;
 
         LLVMParams.reserve(Params.size());
         BaseParams.reserve(Params.size());

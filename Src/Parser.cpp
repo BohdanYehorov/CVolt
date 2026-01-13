@@ -2,7 +2,7 @@
 // Created by bohdan on 14.12.25.
 //
 
-#include "Parser.h"
+#include "Volt/Core/Parser/Parser.h"
 
 #include <charconv>
 #include <complex>
@@ -99,9 +99,9 @@ namespace Volt
             std::cout << "Index:\n";
             PrintASTTree(Subscript->Index, Tabs + 1);
         }
-        else if (auto IntType = Cast<IntegerTypeNode>(Node))
+        else if (auto IntType = Cast<IntegerType>(Node))
             std::cout << "Bit Width: " << IntType->BitWidth << std::endl;
-        else if (auto FloatType = Cast<FPTypeNode>(Node))
+        else if (auto FloatType = Cast<FloatingPointType>(Node))
             std::cout << "Bit Width: " << FloatType->BitWidth << std::endl;
         else if (auto Variable = Cast<VariableNode>(Node))
         {
@@ -509,32 +509,32 @@ namespace Volt
 
         const Token& Tok = CurrentToken();
 
-        DataTypeNodeBase* Type;
+        DataTypeBase* Type;
         switch (Tok.Type)
         {
             case Token::TYPE_VOID:
-                Type = NodesArena.Create<VoidTypeNode>();
+                Type = NodesArena.Create<VoidType>();
                 break;
             case Token::TYPE_BOOL:
-                Type = NodesArena.Create<BoolTypeNode>();
+                Type = NodesArena.Create<BoolType>();
                 break;
             case Token::TYPE_CHAR:
-                Type = NodesArena.Create<CharTypeNode>();
+                Type = NodesArena.Create<CharType>();
                 break;
             case Token::TYPE_BYTE:
-                Type = NodesArena.Create<IntegerTypeNode>(8);
+                Type = NodesArena.Create<IntegerType>(8);
                 break;
             case Token::TYPE_INT:
-                Type = NodesArena.Create<IntegerTypeNode>(32);
+                Type = NodesArena.Create<IntegerType>(32);
                 break;
             case Token::TYPE_LONG:
-                Type = NodesArena.Create<IntegerTypeNode>(64);
+                Type = NodesArena.Create<IntegerType>(64);
                 break;
             case Token::TYPE_FLOAT:
-                Type = NodesArena.Create<FPTypeNode>(32);
+                Type = NodesArena.Create<FloatingPointType>(32);
                 break;
             case Token::TYPE_DOUBLE:
-                Type = NodesArena.Create<FPTypeNode>(64);
+                Type = NodesArena.Create<FloatingPointType>(64);
                 break;
             default:
                 return nullptr;
@@ -549,10 +549,10 @@ namespace Volt
             switch (CurrentToken().Type)
             {
                 case Token::OP_MUL:
-                    Type = NodesArena.Create<PtrDataTypeNode>(Type);
+                    Type = NodesArena.Create<PointerType>(Type);
                     break;
                 case Token::OP_REFERENCE:
-                    Type = NodesArena.Create<RefDataTypeNode>(Type);
+                    Type = NodesArena.Create<ReferenceType>(Type);
                     break;
                 default:
                     return NodesArena.Create<DataTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
