@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(LLVM_DIR "/home/bohdan/llvm/lib/cmake/llvm")
 find_package(LLVM REQUIRED CONFIG)
+find_package(wxWidgets REQUIRED COMPONENTS core base)
 
 include_directories(${CMAKE_SOURCE_DIR}/Include)
 
@@ -41,8 +42,9 @@ add_executable(CVolt Src/main.cpp
         Include/DataType.h
 )
 
-target_link_libraries(CVolt PRIVATE LLVM edit xml2)
+target_link_libraries(CVolt PRIVATE LLVM ${wxWidgets_LIBRARIES} edit xml2)
 include_directories(${LLVM_INCLUDE_DIRS})
+include(${wxWidgets_USE_FILE})
 
 set_target_properties(CVolt PROPERTIES
         BUILD_RPATH "/home/bohdan/llvm/lib"

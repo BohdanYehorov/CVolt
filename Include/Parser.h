@@ -15,18 +15,37 @@ namespace Volt
     class Parser
     {
     private:
+        struct DepthIncScope
+        {
+            size_t& Depth;
+            DepthIncScope(size_t& Depth) : Depth(Depth)
+            {
+                if (++Depth > 10000)
+                    throw std::runtime_error("Big depth");
+            }
+
+            ~DepthIncScope()
+            {
+                --Depth;
+            }
+        };
+
+    private:
         Arena NodesArena;
         const ArenaStream& TokensArena;
 
         const std::vector<Token>& Tokens;
-        std::vector<ParseError> ErrorList;
+        std::vector<ParseError> Errors;
 
         size_t Index = 0;
         ASTNode* Root = nullptr;
 
         bool LastNodeIsBlock = false;
+        bool InBlock = false;
         bool InFunction = false;
         bool InLoop = false;
+
+        size_t Depth = 0;
 
     private:
         static void PrintASTTree(ASTNode* Node, int Tabs = 0);
@@ -36,15 +55,19 @@ namespace Volt
 
         void Parse();
         [[nodiscard]] ASTNode* GetASTTree() const { return Root; }
-        [[nodiscard]] const std::vector<ParseError>& GetErrorList() const { return ErrorList; }
+        [[nodiscard]] const std::vector<ParseError>& GetErrorList() const { return Errors; }
+        [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
+        bool PrintErrors() const;
         void PrintASTTree() const;
 
     private:
         [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.size(); }
         [[nodiscard]] const Token& CurrentToken() const { return Tokens[Index]; }
+        [[nodiscard]] const Token& PrevToken() const { return Tokens[Index - 1]; }
         bool Consume();
         void SkipSemicolons();
         void Synchronize();
+        void JumpToNextGlobalDeclaration();
         bool GetTokenIf(size_t Index, Token::TokenType Type, const Token*& TokPtr) const;
         bool GetNextTokenIf(Token::TokenType Type, const Token*& TokPtr, size_t NextIndexOffset = 1) const;
         bool Peek(Token::TokenType Type, const Token*& TokPtr) const;
@@ -53,6 +76,10 @@ namespace Volt
         bool ConsumeIf(Token::TokenType Type);
         bool Expect(Token::TokenType Type);
         [[nodiscard]] BufferStringView GetTokenLexeme(const Token& Tok) const { return TokensArena.Read(Tok.Lexeme); }
+        void SendError(ParseErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context = {});
+        void SendError(ParseErrorType Type, std::vector<std::string>&& Context = {});
+
+        [[nodiscard]] bool CanBeDataType() const;
 
     private:
         ASTNode* ParseSequence();

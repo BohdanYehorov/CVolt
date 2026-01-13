@@ -11,25 +11,6 @@
 
 namespace Volt
 {
-    enum class ErrorCode
-    {
-        InvalidCharacter,
-        InvalidNumber,
-        UnterminatedString,
-        InvalidEscape,
-        UnterminatedComment,
-        InvalidIdentifier,
-        UnknownOperator,
-        InternalError,
-
-        UnexpectedToken,
-        ExpectedToken,
-        ExpectedExpression,
-        ExpectedIdentifier,
-        ExpectedType,
-        DuplicateParameter
-    };
-
     enum class LexErrorType
     {
         InvalidCharacter,
@@ -64,6 +45,24 @@ namespace Volt
         InfiniteLoop
     };
 
+    enum class ParseErrorType
+    {
+        UnexpectedToken,
+        ExpectedToken,
+        UnexpectedEOF,
+        ExpectedExpression,
+        ExpectedInitializerExpression,
+        ExpectedDeclaratorName,
+        ExpectedFunctionBody,
+        ExpectedStatement,
+        ExpectedDataType,
+        ExpectedDeclaration,
+        ReturnOutsideFunction,
+        BreakOutsideLoop,
+        ContinueOutsideLoop,
+        FunctionDefinitionNotAllowed
+    };
+
     struct LexError
     {
         LexErrorType Type;
@@ -79,12 +78,13 @@ namespace Volt
 
     struct ParseError
     {
-        ErrorCode Code;
-        size_t Pos;
+        ParseErrorType Type;
+        size_t Line;
+        size_t Column;
         std::vector<std::string> Context;
 
-        ParseError(ErrorCode Code, size_t Pos, const std::vector<std::string>& Context)
-            : Code(Code), Pos(Pos), Context(Context) {}
+        ParseError(ParseErrorType Type, size_t Line, size_t Column, const std::vector<std::string>& Context)
+            : Type(Type), Line(Line), Column(Column), Context(Context) {}
         [[nodiscard]] std::string ToString() const;
     };
 }

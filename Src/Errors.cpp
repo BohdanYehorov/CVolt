@@ -84,12 +84,37 @@ namespace Volt
 
     std::string ParseError::ToString() const
     {
-        switch (Code)
+        using enum ParseErrorType;
+        switch (Type)
         {
-            case ErrorCode::ExpectedToken:
-                return "Expected '" + Context.at(0) + "'";
-            case ErrorCode::UnexpectedToken:
-                return "Unexpected '" + Context.at(0) + "'";
+            case ExpectedToken:
+                return std::format("Expected '{}', but got '{}'.", Context.at(0), Context.at(1));
+            case UnexpectedToken:
+                return std::format("Unexpected '{}'.", Context.at(0));
+            case UnexpectedEOF:
+                return "Unexpected end of file.";
+            case ExpectedExpression:
+                return "Expected expression.";
+            case ExpectedInitializerExpression:
+                return "Expected initializer expression after '='.";
+            case ExpectedDeclaratorName:
+                return "Expected declarator name.";
+            case ExpectedFunctionBody:
+                return "Expected function body.";
+            case ExpectedStatement:
+                return "Expected statement.";
+            case ExpectedDataType:
+                return "Expected data type.";
+            case ReturnOutsideFunction:
+                return "'return' cannot be used outside of a function.";
+            case BreakOutsideLoop:
+                return "'break' cannot be used outside of a loop.";
+            case ContinueOutsideLoop:
+                return "'continue' cannot be used outside of a loop.";
+            case FunctionDefinitionNotAllowed:
+                return "Function definition is not allowed here.";
+            case ExpectedDeclaration:
+                return "Expected a declaration.";
             default:
                 break;
         }

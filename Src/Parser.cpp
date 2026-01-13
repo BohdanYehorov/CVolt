@@ -5,7 +5,9 @@
 #include "Parser.h"
 
 #include <charconv>
+#include <complex>
 #include <iostream>
+#include <stdexcept>
 
 namespace Volt
 {
@@ -198,6 +200,16 @@ namespace Volt
         Root = ParseSequence();
     }
 
+    bool Parser::PrintErrors() const
+    {
+        for (const auto& Err : Errors)
+        {
+            std::cout << "ParseError: " << Err.ToString() <<
+                " At position: [" << Err.Line << ":" << Err.Column << "]\n";
+        }
+        return HasErrors();
+    }
+
     void Parser::PrintASTTree() const
     {
         PrintASTTree(Root);
@@ -225,28 +237,75 @@ namespace Volt
 
     void Parser::Synchronize()
     {
+        if (!InBlock)
+        {
+            JumpToNextGlobalDeclaration();
+            return;
+        }
+
         while (IsValidIndex())
         {
             const Token& Tok = CurrentToken();
-
-            if (Tok.Type == Token::OP_SEMICOLON)
-            {
-                Consume();
-                return;
-            }
-
             switch (Tok.Type)
             {
-                case Token::IDENTIFIER:
-                case Token::INT_NUMBER:
-                case Token::FLOAT_NUMBER:
-                case Token::STRING:
+                case Token::OP_SEMICOLON:
+                    Consume();
+                    return;
+                case Token::KW_LET:
+                case Token::KW_IF:
+                case Token::KW_WHILE:
+                case Token::KW_FOR:
+                case Token::KW_RETURN:
+                case Token::KW_BREAK:
+                case Token::KW_CONTINUE:
+                case Token::OP_LBRACE:
+                case Token::OP_RBRACE:
                     return;
                 default:
                     break;
             }
 
             Consume();
+        }
+    }
+
+    void Parser::JumpToNextGlobalDeclaration()
+    {
+        size_t BlocksCount = 0;
+        while (IsValidIndex())
+        {
+            const Token Tok = CurrentToken();
+            if (Tok.Type == Token::OP_LBRACE)
+            {
+                Consume();
+                BlocksCount++;
+                while (IsValidIndex())
+                {
+                    if (BlocksCount == 0)
+                        break;
+
+                    if (Peek(Token::OP_LBRACE))
+                        BlocksCount++;
+                    if (Peek(Token::OP_RBRACE))
+                        BlocksCount--;
+
+                    Consume();
+                }
+
+                if (BlocksCount != 0)
+                    SendError(ParseErrorType::UnexpectedEOF, PrevToken().Line, PrevToken().Column);
+
+                break;
+            }
+
+            switch (Tok.Type)
+            {
+                case Token::KW_FUN:
+                case Token::KW_LET:
+                    return;
+                default:
+                    Consume();
+            }
         }
     }
 
@@ -310,18 +369,72 @@ namespace Volt
     {
         if (!ConsumeIf(Type))
         {
-            ErrorList.emplace_back(
-               ErrorCode::ExpectedToken, 0, std::vector{ Lexer::GetOperatorLexeme(Type) });
+            if (IsValidIndex())
+            {
+                const Token& Tok = CurrentToken();
+
+                SendError(ParseErrorType::ExpectedToken, Tok.Line, Tok.Column,
+                    { Lexer::GetOperatorLexeme(Type), GetTokenLexeme(Tok).ToString() });
+
+                return false;
+            }
+
+            const Token& Tok = PrevToken();
+            SendError(ParseErrorType::UnexpectedEOF, Tok.Line, Tok.Column);
             return false;
         }
 
         return true;
     }
 
+    void Parser::SendError(ParseErrorType Type, size_t Line, size_t Column, std::vector<std::string> &&Context)
+    {
+        if (Errors.size() >= 100000)
+            throw std::runtime_error("Error list Overload");
+        Errors.emplace_back(Type, Line, Column, Context);
+    }
+
+    void Parser::SendError(ParseErrorType Type, std::vector<std::string> &&Context)
+    {
+        if (IsValidIndex())
+        {
+            const Token& Tok = CurrentToken();
+            SendError(Type, Tok.Line, Tok.Column, std::move(Context));
+            return;
+        }
+
+        const Token& Tok = Tokens.back();
+        SendError(Type, Tok.Line, Tok.Column, std::move(Context));
+    }
+
+    bool Parser::CanBeDataType() const
+    {
+        if (!IsValidIndex())
+            return false;
+
+        const Token& Tok = CurrentToken();
+        switch (Tok.Type)
+        {
+            case Token::TYPE_VOID:
+            case Token::TYPE_BOOL:
+            case Token::TYPE_CHAR:
+            case Token::TYPE_BYTE:
+            case Token::TYPE_INT:
+            case Token::TYPE_LONG:
+            case Token::TYPE_FLOAT:
+            case Token::TYPE_DOUBLE:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     ASTNode* Parser::ParseSequence()
     {
+        DepthIncScope DScope(Depth);
         auto Sequence = NodesArena.Create<SequenceNode>();
 
+        size_t StartIndex = Index;
         while (IsValidIndex())
         {
             if (ASTNode* Expr = ParseExpression())
@@ -334,6 +447,11 @@ namespace Volt
                 }
                 Sequence->Statements.push_back(Expr);
             }
+
+            if (StartIndex == Index)
+                throw std::runtime_error("Infinity loop\n");
+
+            StartIndex = Index;
         }
 
         return Sequence;
@@ -341,6 +459,8 @@ namespace Volt
 
     ASTNode* Parser::ParseBlock()
     {
+        DepthIncScope DScope(Depth);
+
         const Token* TokPtr;
         if (!ConsumeIf(Token::OP_LBRACE, TokPtr))
         {
@@ -352,11 +472,15 @@ namespace Volt
 
         auto Block = NodesArena.Create<BlockNode>(TokPtr->Pos, TokPtr->Line, TokPtr->Column);
 
+        bool OldInBlock = InBlock;
+        InBlock = true;
+        size_t StartIndex = Index;
         while (IsValidIndex())
         {
             if (ConsumeIf(Token::OP_RBRACE))
             {
                 LastNodeIsBlock = true;
+                InBlock = OldInBlock;
                 return Block;
             }
 
@@ -366,14 +490,20 @@ namespace Volt
                 if (LastNodeIsBlock)
                     LastNodeIsBlock = false;
             }
-        }
 
+            if (StartIndex == Index)
+                throw std::runtime_error("Infinity loop");
+
+            StartIndex = Index;
+        }
         Expect(Token::OP_RBRACE);
         return nullptr;
     }
 
     DataTypeNode* Parser::ParseDataType()
     {
+        DepthIncScope DScope(Depth);
+
         if (!IsValidIndex())
             return nullptr;
 
@@ -431,9 +561,10 @@ namespace Volt
             Consume();
         }
     }
-
     ASTNode* Parser::ParseParameter()
     {
+        DepthIncScope DScope(Depth);
+
         const Token* TokPtr;
         DataTypeNode* DataType = ParseDataType();
         if (!DataType)
@@ -441,6 +572,7 @@ namespace Volt
 
         if (!ConsumeIf(Token::IDENTIFIER, TokPtr))
         {
+            SendError(ParseErrorType::ExpectedDeclaratorName);
             Synchronize();
             return nullptr;
         }
@@ -459,27 +591,43 @@ namespace Volt
 
     ASTNode* Parser::ParseFunction()
     {
-        size_t StartIndex = Index;
+        DepthIncScope DScope(Depth);
+
+        const Token* FirstTokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_FUN, FirstTokPtr))
+            return nullptr;
+
+        if (!Expect(Token::OP_COLON))
+        {
+            JumpToNextGlobalDeclaration();
+            return nullptr;
+        }
+
         DataTypeNode* DataType = ParseDataType();
         if (!DataType)
+        {
+            SendError(ParseErrorType::ExpectedDataType);
+            JumpToNextGlobalDeclaration();
             return nullptr;
+        }
 
         const Token* TokPtr;
         if (!ConsumeIf(Token::IDENTIFIER, TokPtr))
         {
-            Index = StartIndex;
+            SendError(ParseErrorType::ExpectedDeclaratorName, TokPtr->Line, TokPtr->Column);
+            JumpToNextGlobalDeclaration();
             return nullptr;
         }
         BufferStringView Name = GetTokenLexeme(*TokPtr);
 
-        if (!ConsumeIf(Token::OP_LPAREN))
+        if (!Expect(Token::OP_LPAREN))
         {
-            Index = StartIndex;
+            JumpToNextGlobalDeclaration();
             return nullptr;
         }
 
         auto Function = NodesArena.Create<FunctionNode>(DataType, Name,
-            DataType->Pos, DataType->Line, DataType->Column);
+            FirstTokPtr->Pos, FirstTokPtr->Line, FirstTokPtr->Column);
 
         while (IsValidIndex())
         {
@@ -490,9 +638,10 @@ namespace Volt
             else if (!ConsumeIf(Token::OP_COMMA))
                 break;
         }
+
         if (!Expect(Token::OP_RPAREN))
         {
-            Synchronize();
+            JumpToNextGlobalDeclaration();
             return nullptr;
         }
 
@@ -507,23 +656,50 @@ namespace Volt
 
     ASTNode* Parser::ParseVariable()
     {
+        DepthIncScope DScope(Depth);
+
+        const Token* FirstTokPtr = nullptr;
+        if (!ConsumeIf(Token::KW_LET, FirstTokPtr))
+            return nullptr;
+
+        if (!Expect(Token::OP_COLON))
+        {
+            Synchronize();
+            return nullptr;
+        }
+
         size_t StartIndex = Index;
         DataTypeNode* DataType = ParseDataType();
         if (!DataType)
+        {
+            SendError(ParseErrorType::ExpectedDataType);
+            Synchronize();
             return nullptr;
+        }
 
         const Token* TokPtr;
         if (!ConsumeIf(Token::IDENTIFIER, TokPtr))
         {
-            Index = StartIndex;
+            SendError(ParseErrorType::ExpectedDeclaratorName);
+            Synchronize();
             return nullptr;
         }
         BufferStringView Name = GetTokenLexeme(*TokPtr);
 
         if (ConsumeIf(Token::OP_ASSIGN))
+        {
+            ASTNode* Assign = ParseAssignment();
+            if (!Assign)
+            {
+                SendError(ParseErrorType::ExpectedInitializerExpression);
+                Synchronize();
+                return nullptr;
+            }
+
             return NodesArena.Create<VariableNode>(
-                DataType, Name, ParseAssignment(),
-                DataType->Pos, DataType->Line, DataType->Column);
+               DataType, Name, Assign,
+               DataType->Pos, DataType->Line, DataType->Column);
+        }
 
         return NodesArena.Create<VariableNode>(
             DataType, Name, nullptr,
@@ -532,19 +708,34 @@ namespace Volt
 
     ASTNode* Parser::ParseIf()
     {
+        DepthIncScope DScope(Depth);
+
         const Token* TokPtr = nullptr;
         if (!ConsumeIf(Token::KW_IF, TokPtr))
             return nullptr;
 
         if (!Expect(Token::OP_LPAREN))
+        {
+            Synchronize();
             return nullptr;
+        }
+
+        if (ConsumeIf(Token::OP_RPAREN))
+        {
+            SendError(ParseErrorType::ExpectedExpression);
+            Synchronize();
+            return nullptr;
+        }
 
         ASTNode* Condition = ParseAssignment();
         if (!Condition)
             return nullptr;
 
         if (!Expect(Token::OP_RPAREN))
+        {
+            Synchronize();
             return nullptr;
+        }
 
         ASTNode* Branch = nullptr;
         if (CurrentToken().Type == Token::OP_LBRACE)
@@ -556,7 +747,11 @@ namespace Volt
         }
 
         if (!Branch)
+        {
+            SendError(ParseErrorType::ExpectedStatement);
+            Synchronize();
             return nullptr;
+        }
 
         auto If = NodesArena.Create<IfNode>(
             Condition, Branch, nullptr, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
@@ -573,7 +768,11 @@ namespace Volt
         }
 
         if (!ElseBranch)
+        {
+            SendError(ParseErrorType::ExpectedStatement);
+            Synchronize();
             return nullptr;
+        }
 
         If->ElseBranch = ElseBranch;
 
@@ -582,19 +781,31 @@ namespace Volt
 
     ASTNode* Parser::ParseWhile()
     {
+        DepthIncScope DScope(Depth);
+
         const Token* TokPtr = nullptr;
         if (!ConsumeIf(Token::KW_WHILE, TokPtr))
             return nullptr;
 
         if (!Expect(Token::OP_LPAREN))
+        {
+            Synchronize();
             return nullptr;
+        }
 
         ASTNode* Condition = ParseAssignment();
         if (!Condition)
+        {
+            SendError(ParseErrorType::ExpectedExpression);
+            Synchronize();
             return nullptr;
+        }
 
         if (!Expect(Token::OP_RPAREN))
+        {
+            Synchronize();
             return nullptr;
+        }
 
         ASTNode* Branch = nullptr;
 
@@ -610,7 +821,11 @@ namespace Volt
         InLoop = OldInLoop;
 
         if (!Branch)
+        {
+            SendError(ParseErrorType::ExpectedStatement);
+            Synchronize();
             return nullptr;
+        }
 
         return NodesArena.Create<WhileNode>(
             Condition, Branch, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
@@ -618,24 +833,59 @@ namespace Volt
 
     ASTNode* Parser::ParseFor()
     {
+        DepthIncScope DScope(Depth);
+
         const Token* TokPtr = nullptr;
         if (!ConsumeIf(Token::KW_FOR, TokPtr))
             return nullptr;
 
         if (!Expect(Token::OP_LPAREN))
+        {
+            Synchronize();
             return nullptr;
+        }
 
         ASTNode* Initialization = ParseStatement();
-        if (!Expect(Token::OP_SEMICOLON))
+        if (!Initialization)
+        {
+            SendError(ParseErrorType::ExpectedExpression);
+            Synchronize();
             return nullptr;
+        }
+
+        if (!Expect(Token::OP_SEMICOLON))
+        {
+            Synchronize();
+            return nullptr;
+        }
 
         ASTNode* Condition = ParseAssignment();
-        if (!Expect(Token::OP_SEMICOLON))
+        if (!Condition)
+        {
+            SendError(ParseErrorType::ExpectedExpression);
+            Synchronize();
             return nullptr;
+        }
+
+        if (!Expect(Token::OP_SEMICOLON))
+        {
+            Synchronize();
+            return nullptr;
+        }
 
         ASTNode* Iteration = ParseAssignment();
-        if (!Expect(Token::OP_RPAREN))
+        if (!Iteration)
+        {
+            SendError(ParseErrorType::ExpectedExpression);
+            Synchronize();
             return nullptr;
+        }
+
+        if (!Expect(Token::OP_RPAREN))
+        {
+            Synchronize();
+            return nullptr;
+        }
 
         ASTNode* Body = nullptr;
         bool OldInLoop = InLoop;
@@ -650,7 +900,11 @@ namespace Volt
         InLoop = OldInLoop;
 
         if (!Body)
+        {
+            SendError(ParseErrorType::ExpectedStatement);
+            Synchronize();
             return nullptr;
+        }
 
         return NodesArena.Create<ForNode>(
             Initialization, Condition, Iteration,
@@ -659,12 +913,18 @@ namespace Volt
 
     ASTNode* Parser::ParseReturn()
     {
-        if (!InFunction)
-            return nullptr;
+        DepthIncScope DScope(Depth);
 
         const Token* TokPtr = nullptr;
         if (!ConsumeIf(Token::KW_RETURN, TokPtr))
             return nullptr;
+
+        if (!InFunction)
+        {
+            SendError(ParseErrorType::ReturnOutsideFunction, TokPtr->Line, TokPtr->Column);
+            Synchronize();
+            return nullptr;
+        }
 
         if (Peek(Token::OP_SEMICOLON))
             return NodesArena.Create<ReturnNode>(
@@ -676,31 +936,45 @@ namespace Volt
 
     ASTNode* Parser::ParseBreak()
     {
-        if (!InLoop)
-            return nullptr;
+        DepthIncScope DScope(Depth);
 
         const Token* TokPtr = nullptr;
         if (!ConsumeIf(Token::KW_BREAK ,TokPtr))
             return nullptr;
+
+        if (!InLoop)
+        {
+            SendError(ParseErrorType::BreakOutsideLoop, TokPtr->Pos, TokPtr->Line);
+            return nullptr;
+        }
 
         return NodesArena.Create<BreakNode>(TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
     ASTNode* Parser::ParseContinue()
     {
-        if (!InLoop)
-            return nullptr;
+        DepthIncScope DScope(Depth);
 
         const Token* TokPtr = nullptr;
         if (!ConsumeIf(Token::KW_CONTINUE, TokPtr))
             return nullptr;
+
+        if (!InLoop)
+        {
+            SendError(ParseErrorType::ContinueOutsideLoop, TokPtr->Pos, TokPtr->Line);
+            return nullptr;
+        }
 
         return NodesArena.Create<ContinueNode>(TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
     ASTNode* Parser::ParseExpression()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Node = ParseStatement();
+        if (!Node)
+            return nullptr;
 
         if (LastNodeIsBlock)
         {
@@ -715,28 +989,53 @@ namespace Volt
 
     ASTNode* Parser::ParseStatement()
     {
-        if (auto Function = Cast<FunctionNode>(ParseFunction()))
-            return Function;
+        DepthIncScope DScope(Depth);
+
+        if (IsValidIndex() && CurrentToken().Type == Token::KW_FUN)
+        {
+            if (InBlock)
+            {
+                SendError(ParseErrorType::FunctionDefinitionNotAllowed);
+                Synchronize();
+                return nullptr;
+            }
+
+            return ParseFunction();
+        }
+
         if (auto Variable = Cast<VariableNode>(ParseVariable()))
             return Variable;
-        if (auto If = Cast<IfNode>(ParseIf()))
-            return If;
-        if (auto While = Cast<WhileNode>(ParseWhile()))
-            return While;
-        if (auto For = Cast<ForNode>(ParseFor()))
-            return For;
-        if (auto Return = Cast<ReturnNode>(ParseReturn()))
-            return Return;
-        if (auto Break = Cast<BreakNode>(ParseBreak()))
-            return Break;
-        if (auto Continue = Cast<ContinueNode>(ParseContinue()))
-            return Continue;
 
-        return ParseAssignment();
+        if (InBlock)
+        {
+            switch (CurrentToken().Type)
+            {
+                case Token::KW_IF:
+                    return ParseIf();
+                case Token::KW_WHILE:
+                    return ParseWhile();
+                case Token::KW_FOR:
+                    return ParseFor();
+                case Token::KW_RETURN:
+                    return ParseReturn();
+                case Token::KW_BREAK:
+                    return ParseBreak();
+                case Token::KW_CONTINUE:
+                    return ParseContinue();
+                default:
+                    return ParseAssignment();
+            }
+        }
+
+        SendError(ParseErrorType::ExpectedDeclaration);
+        JumpToNextGlobalDeclaration();
+        return nullptr;
     }
 
     ASTNode* Parser::ParseAssignment()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseLogicalOR();
         if (!Left)
             return nullptr;
@@ -761,6 +1060,8 @@ namespace Volt
 
     ASTNode* Parser::ParseLogicalOR()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseLogicalAND();
         if (!Left)
             return nullptr;
@@ -785,6 +1086,8 @@ namespace Volt
 
     ASTNode* Parser::ParseLogicalAND()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseBitwiseOR();
         if (!Left)
             return nullptr;
@@ -809,6 +1112,8 @@ namespace Volt
 
     ASTNode* Parser::ParseBitwiseOR()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseBitwiseXOR();
         if (!Left)
             return nullptr;
@@ -833,6 +1138,8 @@ namespace Volt
 
     ASTNode* Parser::ParseBitwiseXOR()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseBitwiseAND();
         if (!Left)
             return nullptr;
@@ -857,6 +1164,8 @@ namespace Volt
 
     ASTNode* Parser::ParseBitwiseAND()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseEquality();
         if (!Left)
             return nullptr;
@@ -880,6 +1189,8 @@ namespace Volt
 
     ASTNode* Parser::ParseEquality()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseRelational();
         if (!Left)
             return nullptr;
@@ -904,6 +1215,8 @@ namespace Volt
 
     ASTNode* Parser::ParseRelational()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseShift();
         if (!Left)
             return nullptr;
@@ -928,6 +1241,8 @@ namespace Volt
 
     ASTNode* Parser::ParseShift()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseAdditive();
         if (!Left)
             return nullptr;
@@ -952,6 +1267,8 @@ namespace Volt
 
     ASTNode* Parser::ParseAdditive()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseMultiplicative();
         if (!Left)
             return nullptr;
@@ -976,6 +1293,8 @@ namespace Volt
 
     ASTNode* Parser::ParseMultiplicative()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Left = ParseUnary();
         if (!Left)
             return nullptr;
@@ -1000,6 +1319,8 @@ namespace Volt
 
     ASTNode* Parser::ParseUnary()
     {
+        DepthIncScope DScope(Depth);
+
         if (!IsValidIndex())
             return nullptr;
 
@@ -1035,6 +1356,8 @@ namespace Volt
 
     ASTNode* Parser::ParsePostfix()
     {
+        DepthIncScope DScope(Depth);
+
         ASTNode* Operand = ParsePrimary();
         if (!Operand) return nullptr;
 
@@ -1103,6 +1426,8 @@ namespace Volt
 
     ASTNode* Parser::ParsePrimary()
     {
+        DepthIncScope DScope(Depth);
+
         if (!IsValidIndex())
             return nullptr;
 
@@ -1196,8 +1521,8 @@ namespace Volt
                 break;
         }
 
-        ErrorList.emplace_back(ErrorCode::UnexpectedToken, Tok.Pos,
-            std::vector{ std::string(GetTokenLexeme(Tok).ToString()) });
+        SendError(ParseErrorType::UnexpectedToken, Tok.Line, Tok.Column,
+            { std::string(GetTokenLexeme(Tok).ToString()) });
         return nullptr;
     }
 }

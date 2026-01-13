@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include "TypeDefs.h"
 #include "BufferView.h"
+#include <iostream>
 
 namespace Volt
 {

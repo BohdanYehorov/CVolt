@@ -78,6 +78,8 @@ namespace Volt
 			GEN_CASE_TO_STRING(KW_ELSE)
 			GEN_CASE_TO_STRING(KW_WHILE)
 			GEN_CASE_TO_STRING(KW_FOR)
+			GEN_CASE_TO_STRING(KW_FUN)
+			GEN_CASE_TO_STRING(KW_LET)
 			GEN_CASE_TO_STRING(KW_RETURN)
 			GEN_CASE_TO_STRING(KW_BREAK)
 			GEN_CASE_TO_STRING(KW_CONTINUE)
@@ -170,6 +172,8 @@ namespace Volt
 		{ "else", Token::KW_ELSE },
 		{ "while", Token::KW_WHILE },
 		{ "for", Token::KW_FOR },
+		{ "fun", Token::KW_FUN },
+		{ "let", Token::KW_LET },
 		{ "return", Token::KW_RETURN },
 		{ "break", Token::KW_BREAK },
 		{ "continue", Token::KW_CONTINUE }
@@ -208,7 +212,6 @@ namespace Volt
 		TokensArena.SetAutoReallocate(true);
 		ExprRef = TokensArena.Write(Expr);
 		StringStoragePtr = TokensArena.GetWritePtr();
-		std::cout << TokensArena.GetWritePtr() << std::endl;
 	}
 
 	void Lexer::Lex()
@@ -286,30 +289,36 @@ namespace Volt
 
 	void Lexer::SkipComments()
 	{
-		if (CurrentChar() == '/' && IsValidNextPos() && NextChar() == '/')
+		while (true)
 		{
-			do
-				MovePos();
-			while (IsValidPos() && CurrentChar() != '\n');
-		}
-		else if (CurrentChar() == '/' && IsValidNextPos() && NextChar() == '*')
-		{
-			while (true)
+			SkipSpaces();
+			if (CurrentChar() == '/' && IsValidNextPos() && NextChar() == '/')
 			{
-				if (IsValidPos() && CurrentChar() == '*' && IsValidNextPos() && NextChar() == '/')
-				{
-					MovePos(2);
-					break;
-				}
-
-				if (!IsValidPos())
-				{
-					SendError(LexErrorType::UnterminatedBlockComment, Line, Column);
-					break;
-				}
-
-				MovePos();
+				do
+					MovePos();
+				while (IsValidPos() && CurrentChar() != '\n');
 			}
+			else if (CurrentChar() == '/' && IsValidNextPos() && NextChar() == '*')
+			{
+				while (true)
+				{
+					if (IsValidPos() && CurrentChar() == '*' && IsValidNextPos() && NextChar() == '/')
+					{
+						MovePos(2);
+						break;
+					}
+
+					if (!IsValidPos())
+					{
+						SendError(LexErrorType::UnterminatedBlockComment, Line, Column);
+						break;
+					}
+
+					MovePos();
+				}
+			}
+			else
+				break;
 		}
 	}
 

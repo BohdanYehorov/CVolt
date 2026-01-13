@@ -24,16 +24,8 @@ int main()
     Volt::Parser MyParser(MyLexer);
     MyParser.Parse();
 
-    const std::vector<Volt::ParseError>& ErrorList = MyParser.GetErrorList();
-    if (!ErrorList.empty())
-    {
-        std::cout << "Errors:\n";
-        for (const auto& Error : ErrorList)
-            std::cout << Error.ToString() << std::endl;
-
-        MyParser.PrintASTTree();
-        return -1;
-    }
+    if (MyParser.PrintErrors())
+    {}
 
     MyParser.PrintASTTree();
     //

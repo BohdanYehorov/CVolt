@@ -93,6 +93,8 @@ namespace Volt
             KW_ELSE,
             KW_WHILE,
             KW_FOR,
+            KW_FUN,
+            KW_LET,
             KW_RETURN,
             KW_BREAK,
             KW_CONTINUE,
@@ -191,8 +193,9 @@ namespace Volt
         { return InvalidToken(StringRef(ExprRef.Ptr + StartPos, Pos - StartPos),
             StartPos, StartLine, StartCol); }
 
-        void SendError(LexErrorType Type, size_t ErrLine, size_t ErrColumn, std::vector<std::string>&& Context = {})
-        { Errors.emplace_back(Type, ErrLine, ErrColumn, std::move(Context)); }
+        void SendError(LexErrorType Type, size_t ErrLine, size_t ErrColumn,
+            std::vector<std::string>&& Context = {})
+                { Errors.emplace_back(Type, ErrLine, ErrColumn, std::move(Context)); }
     };
 }
 #endif //CVOLT_LEXER_H
