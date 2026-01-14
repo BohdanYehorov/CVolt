@@ -21,7 +21,9 @@ namespace Volt
 
     public:
         template <typename T, typename ...Args_>
-        T* Create(Args_&&... Args);
+        [[nodiscard]] T* Create(Args_&&... Args);
+        [[nodiscard]] size_t Size() const { return Objects.size(); }
+
         ~Arena()
         {
             for (Object* Obj : Objects)

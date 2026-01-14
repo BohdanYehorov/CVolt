@@ -26,6 +26,8 @@ namespace Volt
         CreateDefaultFunction("Tan", "Tan", &Tan);
 
         CompileNode(ASTTree);
+
+        std::cout << "Arena Size: " << CompilerArena.Size() << std::endl;
     }
 
     int LLVMCompiler::Run()

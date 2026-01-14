@@ -42,6 +42,8 @@ add_executable(CVolt Src/main.cpp
         Include/Volt/Compiler/Hash/FunctionSignatureHash.h
         Src/DataTypeHash.cpp
         Src/FunctionSignatureHash.cpp
+        Include/Volt/Tests/Fuzzer/ParserFuzzer.h
+        Src/ParserFuzzer.cpp
 )
 
 target_link_libraries(CVolt PRIVATE LLVM edit xml2)

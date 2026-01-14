@@ -11,32 +11,32 @@ namespace Volt
 {
     class DataTypeBase : public Object
     {
-        GENERATED_BODY(DataTypeNodeBase, Object)
+        GENERATED_BODY(DataTypeBase, Object)
     };
 
     class PrimitiveDataType : public DataTypeBase
     {
-        GENERATED_BODY(PrimitiveDataTypeNode, DataTypeBase)
+        GENERATED_BODY(PrimitiveDataType, DataTypeBase)
     };
 
     class VoidType : public PrimitiveDataType
     {
-        GENERATED_BODY(VoidTypeNode, PrimitiveDataType)
+        GENERATED_BODY(VoidType, PrimitiveDataType)
     };
 
     class BoolType : public PrimitiveDataType
     {
-        GENERATED_BODY(BoolTypeNode, PrimitiveDataType)
+        GENERATED_BODY(BoolType, PrimitiveDataType)
     };
 
     class CharType : public PrimitiveDataType
     {
-        GENERATED_BODY(CharTypeNode, PrimitiveDataType)
+        GENERATED_BODY(CharType, PrimitiveDataType)
     };
 
     class IntegerType : public PrimitiveDataType
     {
-        GENERATED_BODY(IntegerTypeNode, PrimitiveDataType)
+        GENERATED_BODY(IntegerType, PrimitiveDataType)
     public:
         size_t BitWidth;
         bool IsSigned;
@@ -46,7 +46,7 @@ namespace Volt
 
     class FloatingPointType : public PrimitiveDataType
     {
-        GENERATED_BODY(FPTypeNode, PrimitiveDataType)
+        GENERATED_BODY(FloatingPointType, PrimitiveDataType)
     public:
         size_t BitWidth;
         FloatingPointType(size_t BitWidth) : BitWidth(BitWidth) {}
@@ -54,7 +54,7 @@ namespace Volt
 
     class PointerType : public DataTypeBase
     {
-        GENERATED_BODY(PtrDataTypeNode, DataTypeBase)
+        GENERATED_BODY(PointerType, DataTypeBase)
     public:
         DataTypeBase* BaseType;
         PointerType(DataTypeBase* BaseType)
@@ -63,7 +63,7 @@ namespace Volt
 
     class ReferenceType : public DataTypeBase
     {
-        GENERATED_BODY(RefDataTypeNode, DataTypeBase)
+        GENERATED_BODY(ReferenceType, DataTypeBase)
     public:
         DataTypeBase* BaseType;
         ReferenceType(DataTypeBase* BaseType)

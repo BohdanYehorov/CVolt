@@ -5,6 +5,7 @@
 #ifndef CVOLT_OBJECT_H
 #define CVOLT_OBJECT_H
 #include <string>
+#include <type_traits>
 
 namespace Volt
 {

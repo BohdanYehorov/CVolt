@@ -8,6 +8,7 @@
 #include "Volt/Core/Lexer/Lexer.h"
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/Core/Errors/Errors.h"
+#include <ostream>
 
 namespace Volt
 {
@@ -47,7 +48,7 @@ namespace Volt
         size_t Depth = 0;
 
     private:
-        static void PrintASTTree(ASTNode* Node, int Tabs = 0);
+        static void PrintASTTree(std::ostream& Os, ASTNode* Node, int Tabs = 0);
 
     public:
         Parser(const Lexer& L) : TokensArena(L.GetTokensArena()), Tokens(L.GetTokens()) {}
@@ -57,7 +58,7 @@ namespace Volt
         [[nodiscard]] const std::vector<ParseError>& GetErrorList() const { return Errors; }
         [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
         bool PrintErrors() const;
-        void PrintASTTree() const;
+        void PrintASTTree(std::ostream& Os) const;
 
     private:
         [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.size(); }
