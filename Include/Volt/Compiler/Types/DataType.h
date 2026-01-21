@@ -103,6 +103,11 @@ namespace Volt
         [[nodiscard]] int GetPrimitiveTypeRank() const {return GetPrimitiveTypeRank(GetPrimitiveType()); }
         [[nodiscard]] int GetTypeRank(Arena& TypesArena) const { return GetTypeRank(Type, TypesArena); }
 
+        std::string ToString() const;
+
+    private:
+        static std::string TypeToString(DataTypeBase* Type);
+
         friend class LLVMContextScope;
     };
 

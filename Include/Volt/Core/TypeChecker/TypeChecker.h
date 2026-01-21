@@ -9,6 +9,8 @@
 #include "Volt/Compiler/Types/DataType.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Compiler/Hash/FunctionSignatureHash.h"
+#include "Volt/Core/Errors/Errors.h"
+#include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 
@@ -28,6 +30,9 @@ namespace Volt
     private:
         ASTNode* ASTTree;
         Arena& MainArena;
+        BuiltinFunctionTable& BuiltinFuncTable;
+
+        std::vector<TypeError> Errors;
 
         std::unordered_map<FunctionSignature, DataType, FunctionSignatureHash> Functions;
         std::unordered_map<std::string, DataType> Variables;
@@ -37,11 +42,29 @@ namespace Volt
         DataType FunctionReturnType = nullptr;
 
     public:
-        TypeChecker(const Parser& Psr, Arena& MainArena)
-            : ASTTree(Psr.GetASTTree()), MainArena(MainArena) {}
+        TypeChecker(const Parser& Psr, Arena& MainArena, BuiltinFunctionTable& BuiltinFuncTable)
+            : ASTTree(Psr.GetASTTree()), MainArena(MainArena), BuiltinFuncTable(BuiltinFuncTable) {}
 
         void Check() { VisitNode(ASTTree); }
+        [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
+        void WriteErrors(std::ostream& Os) const;
+        bool PrintErrors() const
+        {
+            WriteErrors(std::cout);
+            return HasErrors();
+        }
+
     private:
+        void SendError(TypeErrorKind Kind, size_t Line, size_t Column, std::vector<std::string>&& Context = {})
+        {
+            Errors.emplace_back(Kind, Line, Column, std::move(Context));
+        }
+
+        void SendError(TypeErrorKind Kind, ASTNode* Node, std::vector<std::string>&& Context = {})
+        {
+            Errors.emplace_back(Kind, Node->Line, Node->Column, std::move(Context));
+        }
+
         DataType VisitNode(ASTNode* Node);
 
         void VisitSequence(SequenceNode* Sequence);
@@ -74,8 +97,9 @@ namespace Volt
         [[nodiscard]] bool CanCastAssignment(DataType Left, DataType Right, Operator::Type Type) const;
         [[nodiscard]] bool CanCastToJointType(DataType Left, DataType Right, Operator::Type Type) const;
 
-        bool CastToJointType(DataType &Left, DataType &Right, Operator::Type Type);
+        bool CastToJointType(DataType &Left, DataType &Right, Operator::Type Type, size_t Line, size_t Column);
         static bool ImplicitCast(DataType &Src, DataType Dst);
+        bool ImplicitCastOrError(DataType& Src, DataType Dst, size_t Line, size_t Column);
 
         void EnterScope();
         void ExitScope();

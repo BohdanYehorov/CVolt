@@ -124,7 +124,7 @@ namespace Volt
             return llvm::PointerType::get(
                 GetLLVMType(RefType->BaseType, Context)->getContext(), 0);
 
-        return nullptr;
+        throw std::runtime_error("Unsupported data type");
     }
 
     bool DataType::IsEqual(const DataTypeBase *Left, const DataTypeBase *Right)
@@ -264,5 +264,45 @@ namespace Volt
             return TypeCategory::REFERENCE;
 
         return TypeCategory::INVALID;
+    }
+
+    std::string DataType::ToString() const
+    {
+        return TypeToString(Type);
+    }
+
+    std::string DataType::TypeToString(DataTypeBase *Type)
+    {
+        if (Cast<const VoidType>(Type))
+            return "void";
+        if (Cast<const BoolType>(Type))
+            return "bool";
+        if (Cast<const CharType>(Type))
+            return "char";
+        if (const auto Integer = Cast<const IntegerType>(Type))
+        {
+            switch (Integer->BitWidth)
+            {
+                case 8:  return "byte";
+                case 32: return "int";
+                case 64: return "long";
+                default: throw std::runtime_error("Unsupported integer size");
+            }
+        };
+        if (const auto Float = Cast<const FloatingPointType>(Type))
+        {
+            switch (Float->BitWidth) {
+                case 32: return "float";
+                case 64: return "double";
+                case 128: return "float128";
+                default: throw std::runtime_error("Unsupported FP size");
+            }
+        }
+        if (const auto PtrType = Cast<const PointerType>(Type))
+            return TypeToString(PtrType->BaseType) + "*";
+        if (const auto RefType = Cast<const ReferenceType>(Type))
+            return TypeToString(RefType->BaseType) + "$";
+
+        throw std::runtime_error("Unsupported data type");
     }
 }

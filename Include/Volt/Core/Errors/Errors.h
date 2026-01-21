@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <format>
+#include <llvm/ADT/APFloat.h>
 
 namespace Volt
 {
@@ -63,29 +64,79 @@ namespace Volt
         FunctionDefinitionNotAllowed
     };
 
-    struct LexError
+    enum class TypeErrorKind
     {
-        LexErrorType Type;
-        size_t Line;
-        size_t Column;
-        std::vector<std::string> Context;
-
-        LexError(LexErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context)
-            : Type(Type), Line(Line), Column(Column), Context(std::move(Context)) {}
-
-        [[nodiscard]] std::string ToString() const;
+        UnknownType,
+        InvalidType,
+        TypeMissmatch,
+        IncompatibleTypes,
+        UndefinedVariable,
+        UninitializedVariable,
+        Redeclaration,
+        ImmutableAssignment,
+        InvalidAssignment,
+        AssignmentTypeMismatch,
+        InvalidBinaryOperator,
+        BinaryOperandTypeMismatch,
+        LogicalOperatorOnNonBool,
+        ComparisonTypeMismatch,
+        InvalidUnaryOperator,
+        UnaryOperandTypeMismatch,
+        ConditionNotBool,
+        DuplicateFunction,
+        InvalidReturnType,
+        UndefinedFunction,
+        ArgumentCountMismatch,
+        ArgumentTypeMismatch,
+        AmbiguousFunctionCall,
+        InvalidCalleeType,
+        CallingNonCallable,
+        ReturnTypeMismatch,
+        MissingReturn,
+        VoidReturnValue,
+        NonVoidMissingReturn,
+        IndexingNonArray,
+        IndexNotInteger,
+        ArrayElementTypeMismatch,
+        InvalidArrayLiteral
     };
 
-    struct ParseError
+    struct Error
     {
-        ParseErrorType Type;
         size_t Line;
         size_t Column;
         std::vector<std::string> Context;
 
-        ParseError(ParseErrorType Type, size_t Line, size_t Column, const std::vector<std::string>& Context)
-            : Type(Type), Line(Line), Column(Column), Context(Context) {}
-        [[nodiscard]] std::string ToString() const;
+        Error(size_t Line, size_t Column, std::vector<std::string>&& Context)
+            : Line(Line), Column(Column), Context(std::move(Context)) {}
+        virtual ~Error() = default;
+
+        [[nodiscard]] virtual std::string ToString() const = 0;
+    };
+
+    struct LexError : Error
+    {
+        LexErrorType Type;
+        LexError(LexErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context)
+            : Error(Line, Column, std::move(Context)), Type(Type) {}
+
+        [[nodiscard]] std::string ToString() const override;
+    };
+
+    struct ParseError : Error
+    {
+        ParseErrorType Type;
+        ParseError(ParseErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context)
+            : Error(Line, Column, std::move(Context)), Type(Type) {}
+        [[nodiscard]] std::string ToString() const override;
+    };
+
+    struct TypeError : Error
+    {
+        TypeErrorKind Kind;
+        TypeError(TypeErrorKind Kind, size_t Line, size_t Column, std::vector<std::string>&& Context)
+            : Error(Line, Column, std::move(Context)), Kind(Kind) {}
+        [[nodiscard]] std::string ToString() const override;
     };
 }
 

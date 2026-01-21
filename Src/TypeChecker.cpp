@@ -26,6 +26,13 @@ namespace Volt
         } }
     };
 
+    void TypeChecker::WriteErrors(std::ostream& Os) const
+    {
+        for (const TypeError& Error : Errors)
+            Os << "TypeError: " << Error.ToString() <<
+                " At position: [" << Error.Line << ":" << Error.Column << "]\n";
+    }
+
     DataType TypeChecker::VisitNode(ASTNode *Node)
     {
         if (auto Sequence = Cast<SequenceNode>(Node))
@@ -166,6 +173,7 @@ namespace Volt
             return nullptr;
 
         DataType ElementsType = nullptr;
+        bool HasErrors = false;
         for (auto El : Elements)
         {
             DataType ElType = VisitNode(El);
@@ -175,8 +183,15 @@ namespace Volt
             if (!ElementsType)
                 ElementsType = ElType;
             else if (ElementsType != ElType)
-            { /*ERROR*/ }
+            {
+                SendError(TypeErrorKind::ArrayElementTypeMismatch,
+                    El, { ElementsType.ToString(), ElType.ToString() });
+                HasErrors = true;
+            }
         }
+
+        if (HasErrors)
+            return nullptr;
 
         Array->ResolvedType = DataType::CreatePtr(ElementsType.GetTypeBase(), MainArena);
         return Array->ResolvedType;
@@ -184,13 +199,19 @@ namespace Volt
 
     DataType TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        Identifier->ResolvedType = GetVariable(Identifier->Value.ToString());
-        return Identifier->ResolvedType;
+        DataType VarType = GetVariable(Identifier->Value.ToString());;
+        if (!VarType)
+            SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.ToString() });
+
+        Identifier->ResolvedType = VarType;
+        return VarType;
     }
 
     DataType TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
         DataType SuffixType = VisitNode(Suffix->Operand);
+        if (!SuffixType)
+            return nullptr;
 
         switch (Suffix->Type)
         {
@@ -203,6 +224,8 @@ namespace Volt
                     return SuffixType;
                 }
 
+                SendError(TypeErrorKind::InvalidUnaryOperator, Suffix,
+                    { Operator::ToString(Suffix->Type), SuffixType.ToString() });
                 return nullptr;
             }
             default:
@@ -213,6 +236,8 @@ namespace Volt
     DataType TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
         DataType PrefixType = VisitNode(Prefix->Operand);
+        if (!Prefix)
+            return nullptr;
 
         switch (Prefix->Type)
         {
@@ -224,6 +249,8 @@ namespace Volt
                     Prefix->ResolvedType = PrefixType;
                     return PrefixType;
                 }
+                SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
+                    { Operator::ToString(Prefix->Type), PrefixType.ToString() });
 
                 return nullptr;
             }
@@ -235,6 +262,9 @@ namespace Volt
     DataType TypeChecker::VisitUnary(UnaryOpNode *Unary)
     {
         DataType OperandType = VisitNode(Unary->Operand);
+        if (!OperandType)
+            return nullptr;
+
         TypeCategory OperandTypeCategory = OperandType.GetTypeCategory();
 
         switch (Unary->Type)
@@ -278,7 +308,10 @@ namespace Volt
         DataType LeftType = VisitNode(Binary->Left);
         DataType RightType = VisitNode(Binary->Right);
 
-        if (CastToJointType(LeftType, RightType, Binary->Type))
+        if (!LeftType || !RightType)
+            return nullptr;
+
+        if (CastToJointType(LeftType, RightType, Binary->Type, Binary->Line, Binary->Column))
         {
             Binary->ResolvedType = LeftType;
             return LeftType;
@@ -296,7 +329,12 @@ namespace Volt
             ArgTypes.reserve(Call->Arguments.size());
 
             for (auto Arg : Call->Arguments)
-                ArgTypes.push_back(VisitNode(Arg));
+            {
+                DataType ArgType = VisitNode(Arg);
+                if (!ArgType)
+                    return nullptr;
+                ArgTypes.push_back(ArgType);
+            }
 
             FunctionSignature Signature(Name, ArgTypes);
 
@@ -305,8 +343,18 @@ namespace Volt
                 Call->ResolvedType = Iter->second;
                 return Iter->second;
             }
+
+            if (auto Func = BuiltinFuncTable.Get(Signature))
+            {
+                Call->ResolvedType = Func->ReturnType;
+                return Func->ReturnType;
+            }
+
+            SendError(TypeErrorKind::UndefinedFunction, Call->Callee, { Name });
+            return nullptr;
         }
 
+        SendError(TypeErrorKind::InvalidCalleeType, Call->Callee);
         return nullptr;
     }
 
@@ -315,8 +363,16 @@ namespace Volt
         DataType VarType = Variable->Type->Type;
         DataType ValueType = VisitNode(Variable->Value);
 
-        if (!ImplicitCast(ValueType, VarType))
+        if (!VarType)
             return nullptr;
+
+        if (ValueType && !ImplicitCast(ValueType, VarType))
+        {
+            SendError(TypeErrorKind::AssignmentTypeMismatch,
+                Variable,{Variable->Name.ToString(),
+                DataType(Variable->Type->Type).ToString(), ValueType.ToString()});
+            return nullptr;
+        }
 
         DeclareVariable(Variable->Name.ToString(),Variable->Type->Type);
         return nullptr;
@@ -342,8 +398,14 @@ namespace Volt
     DataType TypeChecker::VisitIf(IfNode *If)
     {
         DataType CondType = VisitNode(If->Condition);
-        if (!CanImplicitCast(CondType, DataType::CreateBoolean(MainArena)))
+        if (!CondType)
             return nullptr;
+
+        if (!CanImplicitCast(CondType, DataType::CreateBoolean(MainArena)))
+        {
+            SendError(TypeErrorKind::ConditionNotBool, If->Condition);
+            return nullptr;
+        }
 
         VisitNode(If->Branch);
 
@@ -356,8 +418,14 @@ namespace Volt
     DataType TypeChecker::VisitWhile(WhileNode *While)
     {
         DataType CondType = VisitNode(While->Condition);
-        if (!CanImplicitCast(CondType, DataType::CreateBoolean(MainArena)))
+        if (!CondType)
             return nullptr;
+
+        if (!CanImplicitCast(CondType, DataType::CreateBoolean(MainArena)))
+        {
+            SendError(TypeErrorKind::ConditionNotBool, While->Condition);
+            return nullptr;
+        }
 
         VisitNode(While->Branch);
         return nullptr;
@@ -367,8 +435,14 @@ namespace Volt
     {
         VisitNode(For->Initialization);
         DataType CondType = VisitNode(For->Condition);
-        if (!CanImplicitCast(CondType, DataType::CreateBoolean(MainArena)))
+        if (!CondType)
             return nullptr;
+
+        if (!CanImplicitCast(CondType, DataType::CreateBoolean(MainArena)))
+        {
+            SendError(TypeErrorKind::ConditionNotBool, For->Condition);
+            return nullptr;
+        }
         VisitNode(For->Iteration);
         VisitNode(For->Body);
 
@@ -379,15 +453,21 @@ namespace Volt
     {
         if (Return->ReturnValue)
         {
+            if (FunctionReturnType == DataType(DataType::CreateVoid(MainArena)))
+            {
+                SendError(TypeErrorKind::VoidReturnValue, Return->ReturnValue);
+                return nullptr;
+            }
+
             DataType ReturnType = VisitNode(Return->ReturnValue);
             if (!CanImplicitCast(ReturnType, FunctionReturnType))
-            { /*ERROR*/ }
+                SendError(TypeErrorKind::ReturnTypeMismatch, Return->ReturnValue);
 
             return nullptr;
         }
 
         if (FunctionReturnType != DataType(DataType::CreateVoid(MainArena)))
-        { /*ERROR*/ }
+            SendError(TypeErrorKind::NonVoidMissingReturn, Return);
 
         return nullptr;
     }
@@ -590,10 +670,14 @@ namespace Volt
         return false;
     }
 
-    bool TypeChecker::CastToJointType(DataType &Left, DataType &Right, Operator::Type Type)
+    bool TypeChecker::CastToJointType(DataType &Left, DataType &Right, Operator::Type Type, size_t Line, size_t Column)
     {
         if (!CanCastToJointType(Left, Right, Type))
+        {
+            SendError(TypeErrorKind::InvalidBinaryOperator,
+                Line, Column, { Operator::ToString(Type), Left.ToString(), Right.ToString() });
             return false;
+        }
 
         int LeftTypeRank = Left.GetTypeRank(MainArena);
         int RightTypeRank = Right.GetTypeRank(MainArena);
@@ -607,7 +691,7 @@ namespace Volt
         DataType& Src = LeftTypeRank > RightTypeRank ? Right : Left;
         DataType& Dst = LeftTypeRank > RightTypeRank ? Left : Right;
 
-        return ImplicitCast(Src, Dst);
+        return ImplicitCastOrError(Src, Dst, Line, Column);
     }
 
     bool TypeChecker::ImplicitCast(DataType &Src, DataType Dst)
@@ -627,6 +711,15 @@ namespace Volt
             }
         }
 
+        return false;
+    }
+
+    bool TypeChecker::ImplicitCastOrError(DataType &Src, DataType Dst, size_t Line, size_t Column)
+    {
+        if (ImplicitCast(Src, Dst))
+            return true;
+
+        SendError(TypeErrorKind::IncompatibleTypes, Line, Column, { Src.ToString(), Dst.ToString() });
         return false;
     }
 

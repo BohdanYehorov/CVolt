@@ -385,7 +385,7 @@ namespace Volt
     {
         if (Errors.size() >= 100000)
             throw std::runtime_error("Error list Overload");
-        Errors.emplace_back(Type, Line, Column, Context);
+        Errors.emplace_back(Type, Line, Column, std::move(Context));
     }
 
     void Parser::SendError(ParseErrorType Type, std::vector<std::string> &&Context)

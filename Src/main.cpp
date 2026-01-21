@@ -45,8 +45,11 @@ int main()
     FuncTable.AddFunction("Cos", "Cos", &Cos);
     FuncTable.AddFunction("Tan", "Tan", &Tan);
 
-    // Volt::TypeChecker MyTypeChecker(MyParser, MainArena);
-    // MyTypeChecker.Check();
+    Volt::TypeChecker MyTypeChecker(MyParser, MainArena, FuncTable);
+    MyTypeChecker.Check();
+
+    if (MyTypeChecker.PrintErrors())
+        return -1;
 
     Volt::LLVMCompiler MyCompiler(MainArena, MyParser.GetASTTree(), FuncTable);
     MyCompiler.Compile();
