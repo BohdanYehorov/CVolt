@@ -3,7 +3,6 @@
 //
 
 #include "Volt/Compiler/LLVMCompiler.h"
-#include "Volt/Compiler/Functions/DefaultFunctions.h"
 #include <llvm/Support/TargetSelect.h>
 
 #define ERROR(Message) throw CompilerError(Message);
@@ -12,18 +11,18 @@ namespace Volt
 {
     void LLVMCompiler::Compile()
     {
-        CreateDefaultFunction("Out", "OutBool", &OutBool);
-        CreateDefaultFunction("Out", "OutChar", &OutChar);
-        CreateDefaultFunction("Out", "OutByte", &OutByte);
-        CreateDefaultFunction("Out", "OutInt", &OutInt);
-        CreateDefaultFunction("Out", "OutLong", &OutLong);
-        CreateDefaultFunction("Out", "OutStr", &OutStr);
-        CreateDefaultFunction("Out", "OutFloat", &OutFloat);
-        CreateDefaultFunction("Out", "OutDouble", &OutDouble);
-        CreateDefaultFunction("Time", "Time", &Time);
-        CreateDefaultFunction("Sin", "Sin", &Sin);
-        CreateDefaultFunction("Cos", "Cos", &Cos);
-        CreateDefaultFunction("Tan", "Tan", &Tan);
+        // CreateDefaultFunction("Out", "OutBool", &OutBool);
+        // CreateDefaultFunction("Out", "OutChar", &OutChar);
+        // CreateDefaultFunction("Out", "OutByte", &OutByte);
+        // CreateDefaultFunction("Out", "OutInt", &OutInt);
+        // CreateDefaultFunction("Out", "OutLong", &OutLong);
+        // CreateDefaultFunction("Out", "OutStr", &OutStr);
+        // CreateDefaultFunction("Out", "OutFloat", &OutFloat);
+        // CreateDefaultFunction("Out", "OutDouble", &OutDouble);
+        // CreateDefaultFunction("Time", "Time", &Time);
+        // CreateDefaultFunction("Sin", "Sin", &Sin);
+        // CreateDefaultFunction("Cos", "Cos", &Cos);
+        // CreateDefaultFunction("Tan", "Tan", &Tan);
 
         CompileNode(ASTTree);
 
@@ -49,8 +48,10 @@ namespace Volt
 
         llvm::orc::SymbolMap Symbols;
 
-        for (const auto& [Name, ExeSymbolDef] : DefaultSymbols)
-            Symbols[JIT->get()->mangleAndIntern(Name)] = ExeSymbolDef;
+        // for (const auto& [Name, ExeSymbolDef] : DefaultSymbols)
+        //     Symbols[JIT->get()->mangleAndIntern(Name)] = ExeSymbolDef;
+
+        BuiltinFuncTable.GenSymbolMap(JIT->get(), Symbols);
 
         cantFail(JIT->get()->getMainJITDylib().define(
             llvm::orc::absoluteSymbols(Symbols)
@@ -612,11 +613,11 @@ namespace Volt
                 return Create<TypedValue>(Builder.CreateCall(
                             Iter->second->GetFunction(), LLVMArgs), Iter->second->GetReturnType());
 
-            if (auto Iter = DefaultFunctionSignatures.find(Signature); Iter != DefaultFunctionSignatures.end())
+            if (auto FuncData = BuiltinFuncTable.Get(Signature))
             {
-                llvm::Function* OutFunc = Module->getFunction(Iter->second.first);
+                llvm::Function* OutFunc = Module->getFunction(FuncData->BaseName);
                 return Create<TypedValue>(Builder.CreateCall(OutFunc,LLVMArgs),
-                Iter->second.second );
+                FuncData->ReturnType );
             }
 
             int MinDiffRank = std::numeric_limits<int>::max();

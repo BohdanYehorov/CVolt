@@ -31,7 +31,7 @@ namespace Volt
         };
 
     private:
-        Arena NodesArena;
+        Arena& NodesArena;
         const ArenaStream& TokensArena;
 
         const std::vector<Token>& Tokens;
@@ -48,17 +48,25 @@ namespace Volt
         size_t Depth = 0;
 
     private:
-        static void PrintASTTree(std::ostream& Os, ASTNode* Node, int Tabs = 0);
+        static void WriteASTTree(std::ostream& Os, ASTNode* Node, int Tabs = 0);
 
     public:
-        Parser(const Lexer& L) : TokensArena(L.GetTokensArena()), Tokens(L.GetTokens()) {}
+        Parser(Arena& NodesArena, const Lexer& L)
+            : NodesArena(NodesArena), TokensArena(L.GetTokensArena()), Tokens(L.GetTokens()) {}
 
         void Parse();
         [[nodiscard]] ASTNode* GetASTTree() const { return Root; }
         [[nodiscard]] const std::vector<ParseError>& GetErrorList() const { return Errors; }
         [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
-        bool PrintErrors() const;
-        void PrintASTTree(std::ostream& Os) const;
+        bool PrintErrors() const
+        {
+            WriteErrors(std::cout);
+            return HasErrors();
+        };
+        void WriteErrors(std::ostream& Os) const;
+
+        void WriteASTTree(std::ostream& Os) const { WriteASTTree(Os, Root); }
+        void PrintASTTree() const { WriteASTTree(std::cout); };
 
     private:
         [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.size(); }

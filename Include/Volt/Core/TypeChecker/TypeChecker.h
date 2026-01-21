@@ -40,6 +40,7 @@ namespace Volt
         TypeChecker(const Parser& Psr, Arena& MainArena)
             : ASTTree(Psr.GetASTTree()), MainArena(MainArena) {}
 
+        void Check() { VisitNode(ASTTree); }
     private:
         DataType VisitNode(ASTNode* Node);
 
@@ -51,6 +52,7 @@ namespace Volt
         DataType VisitBool(BoolNode* Bool);
         DataType VisitChar(CharNode* Char);
         DataType VisitString(StringNode* String);
+        DataType VisitArray(ArrayNode *Array);
         DataType VisitIdentifier(IdentifierNode* Identifier);
         DataType VisitSuffix(SuffixOpNode* Suffix);
         DataType VisitPrefix(PrefixOpNode* Prefix);

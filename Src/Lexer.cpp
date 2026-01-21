@@ -247,19 +247,17 @@ namespace Volt
 		TokensArena.SetAutoReallocate(false);
 	}
 
-	void Lexer::PrintTokens() const
-	{
-		for (const Token& Tok : Tokens)
-			std::cout << Tok.ToString(TokensArena) << std::endl;
-	}
-
-	bool Lexer::PrintErrors() const
+	void Lexer::WriteErrors(std::ostream &Os) const
 	{
 		for (const LexError& Error : Errors)
-			std::cout << "LexError: " << Error.ToString() <<
+			Os << "LexError: " << Error.ToString() <<
 				" At position: [" << Error.Line << ":" << Error.Column << "]\n";
+	}
 
-		return HasErrors();
+	void Lexer::WriteTokens(std::ostream &Os) const
+	{
+		for (const Token& Tok : Tokens)
+			Os << Tok.ToString(TokensArena) << std::endl;
 	}
 
 	void Lexer::MovePos()

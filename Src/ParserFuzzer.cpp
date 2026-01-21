@@ -5,8 +5,6 @@
 #include <Volt/Tests/Fuzzer/ParserFuzzer.h>
 #include <thread>
 
-#include "Volt/Compiler/Functions/DefaultFunctions.h"
-
 namespace Volt
 {
     std::mt19937 ParserFuzzer::Gen{ std::random_device{}() };
@@ -148,15 +146,11 @@ namespace Volt
                 }
 
                 OutFile.open("../Tests/Tokens/" + std::to_string(i) + ".tok");
-                const auto& Tokens = TestLexer.GetTokens();
-                for (const auto& Token : Tokens)
-                {
-                    std::string TokenStr = Token.ToString(TestLexer.GetTokensArena()) + "\n";
-                    OutFile.write(TokenStr.c_str(), TokenStr.size());
-                }
+                TestLexer.WriteErrors(OutFile);
                 OutFile.close();
 
-                Parser TestParser(TestLexer);
+                Arena MainArena;
+                Parser TestParser(MainArena, TestLexer);
                 TestParser.Parse();
 
                 if (TestParser.HasErrors())
@@ -173,7 +167,7 @@ namespace Volt
                 }
 
                 OutFile.open("../Tests/AST/" + std::to_string(i) + ".ast");
-                TestParser.PrintASTTree(OutFile);
+                TestParser.WriteASTTree(OutFile);
                 OutFile.close();
 
                 std::cout << "Test " << i << ": Success\n";

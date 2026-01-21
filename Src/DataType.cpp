@@ -208,6 +208,8 @@ namespace Volt
 
         if (Cast<const PointerType>(Type))
             return MaxPrimitiveTypeRank + 1;
+
+        return -1;
     }
 
     int DataType::GetTypeBitWidth() const
@@ -252,7 +254,7 @@ namespace Volt
             return TypeCategory::VOID;
         if (Cast<BoolType>(Type))
             return TypeCategory::BOOLEAN;
-        if (Cast<IntegerNode>(Type))
+        if (Cast<IntegerType>(Type))
             return TypeCategory::INTEGER;
         if (Cast<FloatingPointType>(Type))
             return TypeCategory::FLOATING_POINT;

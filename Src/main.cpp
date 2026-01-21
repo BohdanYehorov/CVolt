@@ -1,6 +1,8 @@
 #include "Volt/Core/Parser/Parser.h"
 #include "Volt/Compiler/LLVMCompiler.h"
-#include "Volt/Tests/Fuzzer/ParserFuzzer.h"
+#include "Volt/Core/TypeChecker/TypeChecker.h"
+#include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
+#include "Volt/Core/BuiltinFunctions/BuiltinFunctions.h"
 #include <fstream>
 #include <sstream>
 
@@ -20,14 +22,33 @@ int main()
     if (MyLexer.PrintErrors())
         return -1;
 
-    Volt::Parser MyParser(MyLexer);
+    Volt::Arena MainArena;
+
+    Volt::Parser MyParser(MainArena, MyLexer);
     MyParser.Parse();
-    MyParser.PrintASTTree(std::cout);
+    MyParser.PrintASTTree();
 
     if (MyParser.PrintErrors())
         return -1;
 
-    Volt::LLVMCompiler MyCompiler(MyParser.GetASTTree());
+    Volt::BuiltinFunctionTable FuncTable(MainArena);
+    FuncTable.AddFunction("Out", "OutBool", &OutBool);
+    FuncTable.AddFunction("Out", "OutChar", &OutChar);
+    FuncTable.AddFunction("Out", "OutByte", &OutByte);
+    FuncTable.AddFunction("Out", "OutInt", &OutInt);
+    FuncTable.AddFunction("Out", "OutLong", &OutLong);
+    FuncTable.AddFunction("Out", "OutStr", &OutStr);
+    FuncTable.AddFunction("Out", "OutFloat", &OutFloat);
+    FuncTable.AddFunction("Out", "OutDouble", &OutDouble);
+    FuncTable.AddFunction("Time", "Time", &Time);
+    FuncTable.AddFunction("Sin", "Sin", &Sin);
+    FuncTable.AddFunction("Cos", "Cos", &Cos);
+    FuncTable.AddFunction("Tan", "Tan", &Tan);
+
+    // Volt::TypeChecker MyTypeChecker(MyParser, MainArena);
+    // MyTypeChecker.Check();
+
+    Volt::LLVMCompiler MyCompiler(MainArena, MyParser.GetASTTree(), FuncTable);
     MyCompiler.Compile();
     MyCompiler.Print();
 

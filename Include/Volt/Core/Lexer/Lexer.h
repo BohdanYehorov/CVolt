@@ -156,13 +156,19 @@ namespace Volt
         Lexer& operator=(Lexer&&) noexcept = default;
 
         void Lex();
-        void PrintTokens() const;
+        void PrintTokens() const { WriteTokens(std::cout); }
 
         [[nodiscard]] const std::vector<Token>& GetTokens() const { return Tokens; }
         [[nodiscard]] const ArenaStream& GetTokensArena() const { return TokensArena; }
         std::vector<LexError> GetErrors() { return Errors; }
         [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
-        bool PrintErrors() const;
+        bool PrintErrors() const
+        {
+            WriteErrors(std::cout);
+            return HasErrors();
+        }
+        void WriteErrors(std::ostream& Os) const;
+        void WriteTokens(std::ostream& Os) const;
 
     private:
         [[nodiscard]] char CurrentChar() const { return *TokensArena.GetArenaAllocator().Read<char>(Pos); }

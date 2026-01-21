@@ -9,6 +9,9 @@ namespace Volt
 {
     size_t DataTypeHash::operator()(const DataTypeBase *Type) const
     {
+        if (!Type)
+            throw std::runtime_error("Type is nullptr");
+
         if (Type->CachedHash != 0)
             return Type->CachedHash;
 

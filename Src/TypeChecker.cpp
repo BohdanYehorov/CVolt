@@ -42,6 +42,43 @@ namespace Volt
 
         if (auto Int = Cast<IntegerNode>(Node))
             return VisitInt(Int);
+        if (auto Float = Cast<FloatingPointNode>(Node))
+            return VisitFloat(Float);
+        if (auto Bool = Cast<BoolNode>(Node))
+            return VisitBool(Bool);
+        if (auto Char = Cast<CharNode>(Node))
+            return VisitChar(Char);
+        if (auto String = Cast<StringNode>(Node))
+            return VisitString(String);
+        if (auto Array = Cast<ArrayNode>(Node))
+            return VisitArray(Array);
+        if (auto Identifier = Cast<IdentifierNode>(Node))
+            return VisitIdentifier(Identifier);
+        if (auto Suffix = Cast<SuffixOpNode>(Node))
+            return VisitSuffix(Suffix);
+        if (auto Prefix = Cast<PrefixOpNode>(Node))
+            return VisitPrefix(Prefix);
+        if (auto Unary = Cast<UnaryOpNode>(Node))
+            return VisitUnary(Unary);
+        if (auto Binary = Cast<BinaryOpNode>(Node))
+            return VisitBinary(Binary);
+        if (auto Call = Cast<CallNode>(Node))
+            return VisitCall(Call);
+        if (auto Variable = Cast<VariableNode>(Node))
+            return VisitVariable(Variable);
+        if (auto Function = Cast<FunctionNode>(Node))
+            return VisitFunction(Function);
+        if (auto If = Cast<IfNode>(Node))
+            return VisitIf(If);
+        if (auto While = Cast<WhileNode>(Node))
+            return VisitWhile(While);
+        if (auto For = Cast<ForNode>(Node))
+            return VisitFor(For);
+        if (auto Return = Cast<ReturnNode>(Node))
+            return VisitReturn(Return);
+
+        if (Cast<BreakNode>(Node)) return nullptr;
+        if (Cast<ContinueNode>(Node)) return nullptr;
 
         return nullptr;
     }
@@ -119,6 +156,30 @@ namespace Volt
     {
         String->ResolvedType = DataType::CreatePtr(DataType::CreateChar(MainArena), MainArena);
         return String->ResolvedType;
+    }
+
+    DataType TypeChecker::VisitArray(ArrayNode *Array)
+    {
+        llvm::ArrayRef<ASTNode*> Elements = Array->Elements;
+
+        if (Elements.empty())
+            return nullptr;
+
+        DataType ElementsType = nullptr;
+        for (auto El : Elements)
+        {
+            DataType ElType = VisitNode(El);
+            if (!ElType)
+                return nullptr;
+
+            if (!ElementsType)
+                ElementsType = ElType;
+            else if (ElementsType != ElType)
+            { /*ERROR*/ }
+        }
+
+        Array->ResolvedType = DataType::CreatePtr(ElementsType.GetTypeBase(), MainArena);
+        return Array->ResolvedType;
     }
 
     DataType TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
@@ -243,15 +304,6 @@ namespace Volt
             {
                 Call->ResolvedType = Iter->second;
                 return Iter->second;
-            }
-
-            int BestRank = std::numeric_limits<int>::max();
-            for (const auto& [FuncSignature, FuncType] : Functions)
-            {
-                if (Name != FuncSignature.Name || ArgTypes.size() != FuncSignature.Params.size())
-                    continue;
-
-
             }
         }
 
@@ -393,7 +445,7 @@ namespace Volt
 
                     case TypeCategory::POINTER:
                     {
-                        if (Type != Operator::ADD || Type != Operator::SUB)
+                        if (Type != Operator::ADD && Type != Operator::SUB)
                             return false;
 
                         switch (RightTypeCategory)
@@ -522,8 +574,9 @@ namespace Volt
                 return CanCastArithmetic(Right, Left, Operator::MUL);
             case Operator::DIV_ASSIGN:
                 return CanCastArithmetic(Right, Left, Operator::DIV);
+            default:
+                return false;
         }
-        return false;
     }
 
     bool TypeChecker::CanCastToJointType(DataType Left, DataType Right, Operator::Type Type) const

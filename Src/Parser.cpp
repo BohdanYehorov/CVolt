@@ -11,7 +11,7 @@
 
 namespace Volt
 {
-    void Parser::PrintASTTree(std::ostream& Os, ASTNode *Node, int Tabs)
+    void Parser::WriteASTTree(std::ostream& Os, ASTNode *Node, int Tabs)
     {
         static auto PrintTabs = [&Os](int Spaces)
         {
@@ -34,13 +34,13 @@ namespace Volt
         {
             Os << std::endl;
             for (auto Statement : Sequence->Statements)
-                PrintASTTree(Os, Statement, Tabs + 1);
+                WriteASTTree(Os, Statement, Tabs + 1);
         }
         else if (auto Block = Cast<BlockNode>(Node))
         {
             Os << std::endl;
             for (auto Statement : Block->Statements)
-                PrintASTTree(Os, Statement, Tabs + 1);
+                WriteASTTree(Os, Statement, Tabs + 1);
         }
         else if (auto Identifier = Cast<IdentifierNode>(Node))
             Os << Identifier->Value.ToString() << std::endl;
@@ -58,46 +58,46 @@ namespace Volt
         {
             Os << "Elements:\n";
             for (auto El : Array->Elements)
-                PrintASTTree(Os, El, Tabs + 1);
+                WriteASTTree(Os, El, Tabs + 1);
         }
         else if (auto Ref = Cast<RefNode>(Node))
         {
             Os << "Target:\n";
-            PrintASTTree(Os, Ref->Target, Tabs + 1);
+            WriteASTTree(Os, Ref->Target, Tabs + 1);
         }
         else if (auto UnaryOp = Cast<UnaryOpNode>(Node))
         {
             Os << "OpType: " << Operator::ToString(UnaryOp->Type);
             Os << std::endl;
-            PrintASTTree(Os, UnaryOp->Operand, Tabs + 1);
+            WriteASTTree(Os, UnaryOp->Operand, Tabs + 1);
         }
         else if (auto BinaryOp = Cast<BinaryOpNode>(Node))
         {
             Os << "OpType: " << Operator::ToString(BinaryOp->Type);
             Os << std::endl;
-            PrintASTTree(Os, BinaryOp->Left, Tabs + 1);
-            PrintASTTree(Os, BinaryOp->Right, Tabs + 1);
+            WriteASTTree(Os, BinaryOp->Left, Tabs + 1);
+            WriteASTTree(Os, BinaryOp->Right, Tabs + 1);
         }
         else if (auto Call = Cast<CallNode>(Node))
         {
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "Callee:\n";
-            PrintASTTree(Os, Call->Callee, Tabs + 1);
+            WriteASTTree(Os, Call->Callee, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Args:\n";
             for (auto Arg : Call->Arguments)
-                PrintASTTree(Os, Arg, Tabs + 1);
+                WriteASTTree(Os, Arg, Tabs + 1);
         }
         else if (auto Subscript = Cast<SubscriptNode>(Node))
         {
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "Target:\n";
-            PrintASTTree(Os, Subscript->Target, Tabs + 1);
+            WriteASTTree(Os, Subscript->Target, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Index:\n";
-            PrintASTTree(Os, Subscript->Index, Tabs + 1);
+            WriteASTTree(Os, Subscript->Index, Tabs + 1);
         }
         else if (auto IntType = Cast<IntegerType>(Node))
             Os << "Bit Width: " << IntType->BitWidth << std::endl;
@@ -108,61 +108,61 @@ namespace Volt
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "DataType:\n";
-            PrintASTTree(Os, Variable->Type, Tabs + 1);
+            WriteASTTree(Os, Variable->Type, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Name: " << Variable->Name.ToString() << std::endl;
             PrintTabs(Tabs);
             Os << "Value:\n";
-            PrintASTTree(Os, Variable->Value, Tabs + 1);
+            WriteASTTree(Os, Variable->Value, Tabs + 1);
         }
         else if (auto Param = Cast<ParamNode>(Node))
         {
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "DataType:\n";
-            PrintASTTree(Os, Param->Type, Tabs + 1);
+            WriteASTTree(Os, Param->Type, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Name: " << Param->Name.ToString() << std::endl;
             PrintTabs(Tabs);
             Os << "DefaultValue:\n";
-            PrintASTTree(Os, Param->DefaultValue, Tabs + 1);
+            WriteASTTree(Os, Param->DefaultValue, Tabs + 1);
         }
         else if (auto Function = Cast<FunctionNode>(Node))
         {
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "ReturnType:\n";
-            PrintASTTree(Os, Function->ReturnType, Tabs + 1);
+            WriteASTTree(Os, Function->ReturnType, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Name: " << Function->Name.ToString() << std::endl;
             PrintTabs(Tabs);
             Os << "Parameters:\n";
 
             for (auto Parameter : Function->Params)
-                PrintASTTree(Os, Parameter, Tabs + 1);
+                WriteASTTree(Os, Parameter, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Body:\n";
-            PrintASTTree(Os, Function->Body, Tabs + 1);
+            WriteASTTree(Os, Function->Body, Tabs + 1);
         }
         else if (auto Return = Cast<ReturnNode>(Node))
         {
             Os << "Return Value:\n";
-            PrintASTTree(Os, Return->ReturnValue, Tabs + 1);
+            WriteASTTree(Os, Return->ReturnValue, Tabs + 1);
         }
         else if (auto If = Cast<IfNode>(Node))
         {
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "Condition:\n";
-            PrintASTTree(Os, If->Condition, Tabs + 1);
+            WriteASTTree(Os, If->Condition, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Branch:\n";
-            PrintASTTree(Os, If->Branch, Tabs + 1);
+            WriteASTTree(Os, If->Branch, Tabs + 1);
             if (If->ElseBranch)
             {
                 PrintTabs(Tabs);
                 Os << "ElseBranch:\n";
-                PrintASTTree(Os, If->ElseBranch, Tabs + 1);
+                WriteASTTree(Os, If->ElseBranch, Tabs + 1);
             }
         }
         else if (auto While = Cast<WhileNode>(Node))
@@ -170,26 +170,26 @@ namespace Volt
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "Condition:\n";
-            PrintASTTree(Os, While->Condition, Tabs + 1);
+            WriteASTTree(Os, While->Condition, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Branch:\n";
-            PrintASTTree(Os, While->Branch, Tabs + 1);
+            WriteASTTree(Os, While->Branch, Tabs + 1);
         }
         else if (auto For = Cast<ForNode>(Node))
         {
             Os << std::endl;
             PrintTabs(++Tabs);
             Os << "Initialization:\n";
-            PrintASTTree(Os, For->Initialization, Tabs + 1);
+            WriteASTTree(Os, For->Initialization, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Condition:\n";
-            PrintASTTree(Os, For->Condition, Tabs + 1);
+            WriteASTTree(Os, For->Condition, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Iteration:\n";
-            PrintASTTree(Os, For->Iteration, Tabs + 1);
+            WriteASTTree(Os, For->Iteration, Tabs + 1);
             PrintTabs(Tabs);
             Os << "Body:\n";
-            PrintASTTree(Os, For->Body, Tabs + 1);
+            WriteASTTree(Os, For->Body, Tabs + 1);
         }
         else
             Os << std::endl;
@@ -200,19 +200,13 @@ namespace Volt
         Root = ParseSequence();
     }
 
-    bool Parser::PrintErrors() const
+    void Parser::WriteErrors(std::ostream &Os) const
     {
         for (const auto& Err : Errors)
         {
-            std::cout << "ParseError: " << Err.ToString() <<
+            Os << "ParseError: " << Err.ToString() <<
                 " At position: [" << Err.Line << ":" << Err.Column << "]\n";
         }
-        return HasErrors();
-    }
-
-    void Parser::PrintASTTree(std::ostream& Os) const
-    {
-        PrintASTTree(Os, Root);
     }
 
     bool Parser::Consume()

@@ -27,6 +27,7 @@ add_executable(CVolt
         Src/FunctionSignatureHash.cpp
         Src/ParserFuzzer.cpp
         Src/TypeChecker.cpp
+        Src/BuiltinFunctionTable.cpp
 )
 
 target_link_libraries(CVolt PRIVATE LLVM)
