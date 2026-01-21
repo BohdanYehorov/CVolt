@@ -9,15 +9,17 @@ namespace Volt
 {
     size_t DataTypeHash::operator()(const DataTypeBase *Type) const
     {
-        if (const auto PrimitiveType = Cast<const PrimitiveDataType>(Type))
-            return std::hash<int>{}(DataType::GetPrimitiveTypeRank(PrimitiveType));
+        if (Type->CachedHash != 0)
+            return Type->CachedHash;
 
-        if (const auto PtrType = Cast<const PointerType>(Type))
+        if (const auto PrimitiveType = Cast<const PrimitiveDataType>(Type))
+            Type->CachedHash = std::hash<int>{}(DataType::GetPrimitiveTypeRank(PrimitiveType));
+        else if (const auto PtrType = Cast<const PointerType>(Type))
         {
             size_t Res = operator()(PtrType->BaseType);
-            return Res + 0x9e3779b9 + (Res << 6) + (Res >> 2);
+            Type->CachedHash = Res + 0x9e3779b9 + (Res << 6) + (Res >> 2);
         }
 
-        return 0;
+        return Type->CachedHash;
     }
 }

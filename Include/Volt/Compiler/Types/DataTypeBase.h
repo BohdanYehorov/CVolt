@@ -5,13 +5,21 @@
 #ifndef CVOLT_DATATYPEBASE_H
 #define CVOLT_DATATYPEBASE_H
 
+#include <llvm/ADT/Hashing.h>
+
 #include "Volt/Core/Object/Object.h"
+#include <llvm/IR/Type.h>
 
 namespace Volt
 {
     class DataTypeBase : public Object
     {
         GENERATED_BODY(DataTypeBase, Object)
+    private:
+        mutable size_t CachedHash = 0;
+        llvm::Type* CachedType = nullptr;
+        friend class DataTypeHash;
+        friend class DataType;
     };
 
     class PrimitiveDataType : public DataTypeBase

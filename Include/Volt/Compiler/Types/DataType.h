@@ -13,9 +13,19 @@
 
 namespace Volt
 {
-    class DataType : public Object
+    enum class TypeCategory : UInt8
     {
-        GENERATED_BODY(DataType, Object)
+        INVALID,
+        VOID,
+        BOOLEAN,
+        INTEGER,
+        FLOATING_POINT,
+        POINTER,
+        REFERENCE
+    };
+
+    class DataType final
+    {
     private:
         struct DataTypeNodeWrap
         {
@@ -27,31 +37,32 @@ namespace Volt
             bool operator==(const DataTypeNodeWrap& Other) const { return IsEqual(Type, Other.Type); }
         };
 
-        static std::unordered_map<DataTypeNodeWrap, DataType*, DataTypeHash> CachedTypes;
+        static std::unordered_map<DataTypeNodeWrap, DataType, DataTypeHash> CachedTypes;
 
-        static DataType *CachedVoidType;
-        static DataType *CachedBoolType;
-        static DataType *CachedCharType;
-        static DataType *CachedIntegerTypes[4];
-        static DataType *CachedFPTypes[4];
+        static DataTypeBase* CachedVoidType;
+        static DataTypeBase* CachedBoolType;
+        static DataTypeBase* CachedCharType;
+        static DataTypeBase* CachedIntegerTypes[4];
+        static DataTypeBase* CachedFPTypes[4];
+
+        static llvm::LLVMContext* CachedContext;
+        static llvm::LLVMContext* Context;
 
     public:
-        static DataType *Create(DataTypeBase *Base, Arena &TypesArena);
-        static DataType *CreateVoid(Arena &TypesArena);
-        static DataType *CreateBoolean(Arena &TypesArena);
-        static DataType *CreateChar(Arena &TypesArena);
-        static DataType *CreateInteger(size_t BitWidth, Arena &TypesArena);
-        static DataType *CreateFloatingPoint(size_t BitWidth, Arena &TypesArena);
+        static DataTypeBase* CreateVoid(Arena &TypesArena);
+        static DataTypeBase* CreateBoolean(Arena &TypesArena);
+        static DataTypeBase* CreateChar(Arena &TypesArena);
+        static DataTypeBase* CreateInteger(size_t BitWidth, Arena &TypesArena);
+        static DataTypeBase* CreateFloatingPoint(size_t BitWidth, Arena &TypesArena);
 
-        static DataType *CreatePtr(DataTypeBase* BaseType, Arena& TypesArena);
+        static DataTypeBase* CreatePtr(DataTypeBase* BaseType, Arena& TypesArena);
 
         static llvm::Type *GetLLVMType(const DataTypeBase *Type, llvm::LLVMContext &Context);
         static bool IsEqual(const DataTypeBase *Left, const DataTypeBase *Right);
         static int GetPrimitiveTypeRank(const PrimitiveDataType *Type);
+        static int GetTypeRank(const DataTypeBase* Type, Arena &TypesArena);
 
     private:
-        llvm::LLVMContext *CachedContext = nullptr;
-        llvm::Type *CachedType = nullptr;
         DataTypeBase *Type = nullptr;
 
     public:
@@ -71,10 +82,43 @@ namespace Volt
         [[nodiscard]] PointerType *GetPtrType() const { return Cast<PointerType>(Type); }
         [[nodiscard]] ReferenceType *GetRefType() const { return Cast<ReferenceType>(Type); }
 
-        [[nodiscard]] llvm::Type *GetLLVMType(llvm::LLVMContext& Context);
-        [[nodiscard]] bool IsEqual(const DataType *Other) const { return IsEqual(Type, Other->Type); }
+        [[nodiscard]] llvm::Type *GetLLVMType(llvm::LLVMContext& TmpContext) const
+        {
+            return GetLLVMType(Type, TmpContext);
+        }
+
+        [[nodiscard]] llvm::Type* GetLLVMType() const;
+        [[nodiscard]] TypeCategory GetTypeCategory() const;
+        [[nodiscard]] bool IsEqual(const DataType Other) const { return IsEqual(Type, Other.Type); }
+
+        [[nodiscard]] operator DataTypeBase*() const { return Type; }
+        [[nodiscard]] operator llvm::Type*() const { return GetLLVMType(); }
+        [[nodiscard]] operator bool() const { return Type != nullptr; }
+        [[nodiscard]] DataTypeBase* operator->() const { return Type; }
+        [[nodiscard]] bool operator==(const DataType& Other) const { return Type == Other.Type; }
+        [[nodiscard]] bool operator!=(const DataType& Other) const { return Type != Other.Type; }
+        [[nodiscard]] bool operator==(std::nullptr_t) const { return Type == nullptr; }
+        [[nodiscard]] bool operator!=(std::nullopt_t) const { return Type != nullptr; }
 
         [[nodiscard]] int GetPrimitiveTypeRank() const {return GetPrimitiveTypeRank(GetPrimitiveType()); }
+        [[nodiscard]] int GetTypeRank(Arena& TypesArena) const { return GetTypeRank(Type, TypesArena); }
+
+        friend class LLVMContextScope;
+    };
+
+    class LLVMContextScope
+    {
+    public:
+        LLVMContextScope(llvm::LLVMContext& Context)
+        {
+            DataType::Context = &Context;
+        }
+
+        ~LLVMContextScope()
+        {
+            DataType::Context = nullptr;
+            DataType::CachedContext = nullptr;
+        }
     };
 }
 

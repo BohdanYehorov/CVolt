@@ -26,6 +26,7 @@ namespace Volt
     {
     private:
         llvm::LLVMContext Context;
+        LLVMContextScope ContextScope{ Context };
         std::unique_ptr<llvm::Module> Module = nullptr;
         llvm::IRBuilder<> Builder;
         Arena CompilerArena;
@@ -37,14 +38,14 @@ namespace Volt
         std::unordered_map<std::string, TypedValue*> SymbolTable;
         std::unordered_map<std::string, llvm::orc::ExecutorSymbolDef> DefaultSymbols;
         std::unordered_map<FunctionSignature,
-        std::pair<std::string, DataType*>, FunctionSignatureHash> DefaultFunctionSignatures;
+        std::pair<std::string, DataType>, FunctionSignatureHash> DefaultFunctionSignatures;
 
         std::vector<std::vector<ScopeEntry>> ScopeStack;
         std::stack<llvm::BasicBlock*> LoopEndStack;
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
         llvm::Function* CurrentFunction = nullptr;
-        llvm::ArrayRef<DataTypeBase*> FunctionParams;
+        llvm::ArrayRef<DataType> FunctionParams;
 
     public:
         LLVMCompiler(ASTNode* ASTTree)
@@ -97,11 +98,11 @@ namespace Volt
             const llvm::SmallVector<llvm::Type*, 8>& Params);
 
         void CastToJointType(TypedValue *&Left, TypedValue *&Right);
-        TypedValue *ImplicitCast(TypedValue *Value, DataType *Target);
-        static bool CanImplicitCast(DataType *Src, DataType *Dst);
+        TypedValue *ImplicitCast(TypedValue *Value, DataType Target);
+        static bool CanImplicitCast(DataType Src, DataType Dst);
 
         template <typename T, typename ...Rest>
-        void FillParams(llvm::SmallVector<DataType*, 8>& Params);
+        void FillParams(llvm::SmallVector<DataType, 8>& Params);
 
         template <typename Ret, typename ...Args>
         void CreateDefaultFunction(const std::string& SignatureName, const std::string& Name, Ret(*FuncPtr)(Args...));
@@ -126,65 +127,65 @@ namespace Volt
     }
 
     template <typename>
-    DataType* GetDataType(Arena& TypesArena);
+    DataType GetDataType(Arena& TypesArena);
 
-    template<> inline DataType* GetDataType<void>(Arena& TypesArena)
+    template<> inline DataType GetDataType<void>(Arena& TypesArena)
     {
         return DataType::CreateVoid(TypesArena);
     }
 
-    template<> inline DataType* GetDataType<bool>(Arena& TypesArena)
+    template<> inline DataType GetDataType<bool>(Arena& TypesArena)
     {
         return DataType::CreateBoolean(TypesArena);
     }
 
-    template<> inline DataType* GetDataType<char>(Arena& TypesArena)
+    template<> inline DataType GetDataType<char>(Arena& TypesArena)
     {
         return DataType::CreateChar(TypesArena);
     }
 
-    template<> inline DataType* GetDataType<std::byte>(Arena& TypesArena)
+    template<> inline DataType GetDataType<std::byte>(Arena& TypesArena)
     {
         return DataType::CreateInteger(8, TypesArena);
     }
 
-    template<> inline DataType* GetDataType<short>(Arena& TypesArena)
+    template<> inline DataType GetDataType<short>(Arena& TypesArena)
     {
         return DataType::CreateInteger(16, TypesArena);
     }
 
-    template<> inline DataType* GetDataType<int>(Arena& TypesArena)
+    template<> inline DataType GetDataType<int>(Arena& TypesArena)
     {
         return DataType::CreateInteger(32, TypesArena);
     }
 
-    template<> inline DataType* GetDataType<long>(Arena& TypesArena)
+    template<> inline DataType GetDataType<long>(Arena& TypesArena)
     {
         return DataType::CreateInteger(64, TypesArena);
     }
 
-    template<> inline DataType* GetDataType<long long>(Arena& TypesArena)
+    template<> inline DataType GetDataType<long long>(Arena& TypesArena)
     {
         return DataType::CreateInteger(64, TypesArena);
     }
 
-    template<> inline DataType* GetDataType<float>(Arena& TypesArena)
+    template<> inline DataType GetDataType<float>(Arena& TypesArena)
     {
         return DataType::CreateFloatingPoint(32, TypesArena);
     }
 
-    template<> inline DataType* GetDataType<double>(Arena& TypesArena)
+    template<> inline DataType GetDataType<double>(Arena& TypesArena)
     {
         return DataType::CreateFloatingPoint(64, TypesArena);
     }
 
-    template<> inline DataType* GetDataType<const char*>(Arena& TypesArena)
+    template<> inline DataType GetDataType<const char*>(Arena& TypesArena)
     {
-        return DataType::CreatePtr(DataType::CreateChar(TypesArena)->GetTypeBase(), TypesArena);
+        return DataType::CreatePtr(DataType(DataType::CreateChar(TypesArena)).GetTypeBase(), TypesArena);
     }
 
     template<typename T, typename ... Rest>
-    void LLVMCompiler::FillParams(llvm::SmallVector<DataType*, 8> &Params)
+    void LLVMCompiler::FillParams(llvm::SmallVector<DataType, 8> &Params)
     {
         Params.push_back(GetDataType<T>(CompilerArena));
         if constexpr (sizeof...(Rest) > 0)
@@ -194,38 +195,38 @@ namespace Volt
     template<typename Ret, typename ... Args>
     void LLVMCompiler::CreateDefaultFunction(const std::string& SignatureName, const std::string &Name, Ret(*FuncPtr)(Args...))
     {
-        llvm::SmallVector<DataType*, 8> Params;
+        llvm::SmallVector<DataType, 8> Params;
         FillParams<Args...>(Params);
 
         llvm::SmallVector<llvm::Type*, 8> LLVMParams;
-        llvm::SmallVector<DataTypeBase*, 8> BaseParams;
+        llvm::SmallVector<DataType, 8> BaseParams;
 
         LLVMParams.reserve(Params.size());
         BaseParams.reserve(Params.size());
 
-        for (const auto Param : Params)
+        for (const auto& Param : Params)
         {
-            LLVMParams.push_back(Param->GetLLVMType(Context));
-            BaseParams.push_back(Param->GetTypeBase());
+            LLVMParams.push_back(Param.GetLLVMType(Context));
+            BaseParams.push_back(Param);
         }
 
-        DataType* RetType = GetDataType<Ret>(CompilerArena);
+        DataType RetType = GetDataType<Ret>(CompilerArena);
 
         FunctionSignature Signature{ SignatureName, BaseParams};
         DefaultFunctionSignatures[Signature] = std::make_pair(Name, RetType);
 
-        CreateDefaultFunction(Name, FuncPtr, RetType->GetLLVMType(Context), LLVMParams);
+        CreateDefaultFunction(Name, FuncPtr, RetType.GetLLVMType(Context), LLVMParams);
     }
 
     template<typename Ret>
     void LLVMCompiler::CreateDefaultFunction(const std::string& SignatureName, const std::string &Name, Ret(*FuncPtr)())
     {
-        DataType* RetType = GetDataType<Ret>(CompilerArena);
+        DataType RetType = GetDataType<Ret>(CompilerArena);
 
         FunctionSignature Signature{ SignatureName, {}};
         DefaultFunctionSignatures[Signature] = std::make_pair(Name, RetType);;
 
-        CreateDefaultFunction(Name, FuncPtr, RetType->GetLLVMType(Context), {});
+        CreateDefaultFunction(Name, FuncPtr, RetType.GetLLVMType(Context), {});
     }
 }
 

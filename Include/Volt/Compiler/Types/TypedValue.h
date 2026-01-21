@@ -14,16 +14,16 @@ namespace Volt
         GENERATED_BODY(TypedValue, Object)
     private:
         llvm::Value* Value = nullptr;
-        DataType* Type = nullptr;
+        DataType Type = nullptr;
         bool IsLValue = false;
 
     public:
         TypedValue() = default;
-        TypedValue(llvm::Value* Value, DataType* Type, bool IsLValue = false)
+        TypedValue(llvm::Value* Value, DataType Type, bool IsLValue = false)
             : Value(Value), Type(Type), IsLValue(IsLValue) {}
 
         [[nodiscard]] llvm::Value* GetValue() const { return Value; }
-        [[nodiscard]] DataType* GetDataType() const { return Type; }
+        [[nodiscard]] DataType GetDataType() const { return Type; }
     };
 
     class TypedFunction : public Object
@@ -31,15 +31,15 @@ namespace Volt
         GENERATED_BODY(TypedValue, Object)
     private:
         llvm::Function* Function = nullptr;
-        DataType* ReturnType = nullptr;
+        DataType ReturnType = nullptr;
 
     public:
         TypedFunction() = default;
-        TypedFunction(llvm::Function* Function, DataType* ReturnType)
+        TypedFunction(llvm::Function* Function, DataType ReturnType)
             : Function(Function), ReturnType(ReturnType) {}
 
         [[nodiscard]] llvm::Function* GetFunction() const { return Function; }
-        [[nodiscard]] DataType* GetReturnType() const { return ReturnType; }
+        [[nodiscard]] DataType GetReturnType() const { return ReturnType; }
     };
 }
 

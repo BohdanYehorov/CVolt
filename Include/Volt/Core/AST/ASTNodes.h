@@ -20,6 +20,7 @@ namespace Volt
     {
         GENERATED_BODY(ASTNode, Object)
     public:
+        DataTypeBase* ResolvedType = nullptr;
         size_t Pos, Line, Column;
         ASTNode(size_t Pos, size_t Line, size_t Column)
             : Pos(Pos), Line(Line), Column(Column) {}

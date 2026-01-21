@@ -9,54 +9,44 @@
 
 namespace Volt
 {
-    std::unordered_map<DataType::DataTypeNodeWrap, DataType*, DataTypeHash> DataType::CachedTypes;
-    DataType* DataType::CachedVoidType = nullptr;
-    DataType* DataType::CachedBoolType = nullptr;
-    DataType* DataType::CachedCharType = nullptr;
-    DataType* DataType::CachedIntegerTypes[] = { nullptr, nullptr, nullptr, nullptr };
-    DataType* DataType::CachedFPTypes[] = { nullptr, nullptr, nullptr, nullptr };
+    std::unordered_map<DataType::DataTypeNodeWrap, DataType, DataTypeHash> DataType::CachedTypes;
+    DataTypeBase* DataType::CachedVoidType = nullptr;
+    DataTypeBase* DataType::CachedBoolType = nullptr;
+    DataTypeBase* DataType::CachedCharType = nullptr;
+    DataTypeBase* DataType::CachedIntegerTypes[] = { nullptr, nullptr, nullptr, nullptr };
+    DataTypeBase* DataType::CachedFPTypes[] = { nullptr, nullptr, nullptr, nullptr };
 
-    DataType *DataType::Create(DataTypeBase *Base, Arena &TypesArena)
-    {
-        if (auto Iter = CachedTypes.find(Base); Iter != CachedTypes.end())
-        {
-            std::cout << "Cached Type\n";
-            return Iter->second;
-        }
+    llvm::LLVMContext* DataType::CachedContext = nullptr;
+    llvm::LLVMContext* DataType::Context = nullptr;
 
-        DataType* Type = TypesArena.Create<DataType>(Base);
-        CachedTypes[Base] = Type;
-        return Type;
-    }
-
-    DataType *DataType::CreateVoid(Arena &TypesArena)
+    DataTypeBase* DataType::CreateVoid(Arena &TypesArena)
     {
         if (CachedVoidType)
             return CachedVoidType;
 
-        CachedVoidType = TypesArena.Create<DataType>(TypesArena.Create<VoidType>());
+        CachedVoidType = TypesArena.Create<VoidType>();
         return CachedVoidType;
     }
 
-    DataType *DataType::CreateBoolean(Arena &TypesArena)
+    DataTypeBase* DataType::CreateBoolean(Arena &TypesArena)
     {
         if (CachedBoolType)
             return CachedBoolType;
 
-        CachedBoolType = TypesArena.Create<DataType>(TypesArena.Create<BoolType>());
+        CachedBoolType = TypesArena.Create<BoolType>();
         return CachedBoolType;
     }
 
-    DataType *DataType::CreateChar(Arena &TypesArena)
+    DataTypeBase* DataType::CreateChar(Arena &TypesArena)
     {
         if (CachedCharType)
             return CachedCharType;
 
-        CachedCharType = TypesArena.Create<DataType>(TypesArena.Create<CharType>());
+        CachedCharType = TypesArena.Create<CharType>();
         return CachedCharType;
     }
 
-    DataType *DataType::CreateInteger(size_t BitWidth, Arena &TypesArena)
+    DataTypeBase* DataType::CreateInteger(size_t BitWidth, Arena &TypesArena)
     {
         static size_t MinBitWidth = 8;
 
@@ -69,11 +59,11 @@ namespace Volt
         if (CachedIntegerTypes[Index])
             return CachedIntegerTypes[Index];
 
-        CachedIntegerTypes[Index] = TypesArena.Create<DataType>(TypesArena.Create<IntegerType>(BitWidth));
+        CachedIntegerTypes[Index] = TypesArena.Create<IntegerType>(BitWidth);
         return CachedIntegerTypes[Index];
     }
 
-    DataType *DataType::CreateFloatingPoint(size_t BitWidth, Arena &TypesArena)
+    DataTypeBase* DataType::CreateFloatingPoint(size_t BitWidth, Arena &TypesArena)
     {
         static size_t MinBitWidth = 16;
         assert(BitWidth % 8 == 0 && BitWidth >= MinBitWidth && BitWidth <= 128);
@@ -85,11 +75,11 @@ namespace Volt
         if (CachedFPTypes[Index])
             return CachedFPTypes[Index];
 
-        CachedFPTypes[Index] = TypesArena.Create<DataType>(TypesArena.Create<FloatingPointType>(BitWidth));
+        CachedFPTypes[Index] = TypesArena.Create<FloatingPointType>(BitWidth);
         return CachedFPTypes[Index];
     }
 
-    DataType* DataType::CreatePtr(DataTypeBase *BaseType, Arena &TypesArena)
+    DataTypeBase* DataType::CreatePtr(DataTypeBase *BaseType, Arena &TypesArena)
     {
         PointerType PtrDataType(BaseType);
 
@@ -100,7 +90,7 @@ namespace Volt
         }
 
         auto PtrTypeNode = TypesArena.Create<PointerType>(BaseType);
-        auto PtrType = TypesArena.Create<DataType>(PtrTypeNode);
+        auto PtrType = PtrTypeNode;
 
         CachedTypes[PtrTypeNode] = PtrType;
 
@@ -208,6 +198,18 @@ namespace Volt
         return -1;
     }
 
+    int DataType::GetTypeRank(const DataTypeBase *Type, Arena &TypesArena)
+    {
+        if (const auto PrimitiveType =  Cast<const PrimitiveDataType>(Type))
+            return GetPrimitiveTypeRank(PrimitiveType);
+
+        static int MaxPrimitiveTypeRank = GetPrimitiveTypeRank(
+            Cast<PrimitiveDataType>(CreateFloatingPoint(128, TypesArena)));
+
+        if (Cast<const PointerType>(Type))
+            return MaxPrimitiveTypeRank + 1;
+    }
+
     int DataType::GetTypeBitWidth() const
     {
         if (Cast<VoidType>(Type))
@@ -228,19 +230,37 @@ namespace Volt
         return -1;
     }
 
-    llvm::Type* DataType::GetLLVMType(llvm::LLVMContext& Context)
+    llvm::Type * DataType::GetLLVMType() const
     {
-        if (CachedContext != &Context)
+        if (!Context || !Type)
+            return nullptr;
+
+        if (CachedContext != Context)
         {
-            CachedContext = &Context;
-            CachedType = GetLLVMType(Type, Context);
-            return CachedType;
+            CachedContext = Context;
+            Type->CachedType = GetLLVMType(*Context);
         }
+        else if (!Type->CachedType)
+            Type->CachedType = GetLLVMType(*Context);
 
-        if (CachedType)
-            return CachedType;
+        return Type->CachedType;
+    }
 
-        CachedType = GetLLVMType(Type, Context);
-        return CachedType;
+    TypeCategory DataType::GetTypeCategory() const
+    {
+        if (Cast<VoidType>(Type))
+            return TypeCategory::VOID;
+        if (Cast<BoolType>(Type))
+            return TypeCategory::BOOLEAN;
+        if (Cast<IntegerNode>(Type))
+            return TypeCategory::INTEGER;
+        if (Cast<FloatingPointType>(Type))
+            return TypeCategory::FLOATING_POINT;
+        if (Cast<PointerType>(Type))
+            return TypeCategory::POINTER;
+        if (Cast<ReferenceType>(Type))
+            return TypeCategory::REFERENCE;
+
+        return TypeCategory::INVALID;
     }
 }
