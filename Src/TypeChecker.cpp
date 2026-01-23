@@ -61,16 +61,22 @@ namespace Volt
             return VisitArray(Array);
         if (auto Identifier = Cast<IdentifierNode>(Node))
             return VisitIdentifier(Identifier);
+        if (auto Ref = Cast<RefNode>(Node))
+            return VisitRef(Ref);
         if (auto Suffix = Cast<SuffixOpNode>(Node))
             return VisitSuffix(Suffix);
         if (auto Prefix = Cast<PrefixOpNode>(Node))
             return VisitPrefix(Prefix);
         if (auto Unary = Cast<UnaryOpNode>(Node))
             return VisitUnary(Unary);
+        if (auto Comparison = Cast<ComparisonNode>(Node))
+            return VisitComparison(Comparison);
         if (auto Binary = Cast<BinaryOpNode>(Node))
             return VisitBinary(Binary);
         if (auto Call = Cast<CallNode>(Node))
             return VisitCall(Call);
+        if (auto Subscript = Cast<SubscriptNode>(Node))
+            return VisitSubscript(Subscript);
         if (auto Variable = Cast<VariableNode>(Node))
             return VisitVariable(Variable);
         if (auto Function = Cast<FunctionNode>(Node))
@@ -99,6 +105,12 @@ namespace Volt
     void TypeChecker::VisitBlock(BlockNode *Block)
     {
         EnterScope();
+
+        if (!FunctionParams.empty())
+        {
+            for (const auto& [Name, Type] : FunctionParams)
+                DeclareVariable(Name, Type);
+        }
 
         for (auto Statement : Block->Statements)
             VisitNode(Statement);
@@ -207,6 +219,14 @@ namespace Volt
         return VarType;
     }
 
+    DataType TypeChecker::VisitRef(RefNode *Ref)
+    {
+        DataType RefType = VisitNode(Ref->Target);
+        if (!RefType)
+            return nullptr;
+        return DataType::CreatePtr(RefType, MainArena);
+    }
+
     DataType TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
         DataType SuffixType = VisitNode(Suffix->Operand);
@@ -236,7 +256,7 @@ namespace Volt
     DataType TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
         DataType PrefixType = VisitNode(Prefix->Operand);
-        if (!Prefix)
+        if (!PrefixType)
             return nullptr;
 
         switch (Prefix->Type)
@@ -303,6 +323,24 @@ namespace Volt
         }
     }
 
+    DataType TypeChecker::VisitComparison(ComparisonNode *Comparison)
+    {
+        DataType LeftType = VisitNode(Comparison->Left);
+        DataType RightType = VisitNode(Comparison->Right);
+
+        if (!LeftType || !RightType)
+            return nullptr;
+
+        if (CastToJointType(LeftType, RightType, Comparison->Type, Comparison->Line, Comparison->Column))
+        {
+            Comparison->ResolvedType = DataType::CreateBoolean(MainArena);
+            Comparison->OperandsType = LeftType;
+            return Comparison->ResolvedType;
+        }
+
+        return nullptr;
+    }
+
     DataType TypeChecker::VisitBinary(BinaryOpNode *Binary)
     {
         DataType LeftType = VisitNode(Binary->Left);
@@ -314,6 +352,7 @@ namespace Volt
         if (CastToJointType(LeftType, RightType, Binary->Type, Binary->Line, Binary->Column))
         {
             Binary->ResolvedType = LeftType;
+            Binary->OperandsType = LeftType;
             return LeftType;
         }
 
@@ -340,8 +379,8 @@ namespace Volt
 
             if (auto Iter = Functions.find(Signature); Iter != Functions.end())
             {
-                Call->ResolvedType = Iter->second;
-                return Iter->second;
+                Call->ResolvedType = Iter->second->GetReturnType();
+                return Call->ResolvedType;
             }
 
             if (auto Func = BuiltinFuncTable.Get(Signature))
@@ -355,6 +394,33 @@ namespace Volt
         }
 
         SendError(TypeErrorKind::InvalidCalleeType, Call->Callee);
+        return nullptr;
+    }
+
+    DataType TypeChecker::VisitSubscript(SubscriptNode *Subscript)
+    {
+        DataType TargetType = VisitNode(Subscript->Target);
+        DataType IndexType = VisitNode(Subscript->Index);
+
+        DataType Int32Type = DataType::CreateInteger(32, MainArena);
+        // if (!CanImplicitCast(IndexType, Int32Type))
+        // {
+        //     SendError(TypeErrorKind::TypeMissmatch,
+        //         Subscript->Index, { IndexType.ToString(), Int32Type.ToString() });
+        //     return nullptr;
+        // }
+
+        if (!ImplicitCastOrError(IndexType, Int32Type, Subscript->Index->Line, Subscript->Index->Column))
+            return nullptr;
+
+        Subscript->Index->ResolvedType = IndexType;
+
+        if (auto PtrType = TargetType.GetPtrType())
+        {
+            Subscript->ResolvedType = PtrType->BaseType;
+            return PtrType->BaseType;
+        }
+
         return nullptr;
     }
 
@@ -382,11 +448,15 @@ namespace Volt
     {
         llvm::SmallVector<DataType, 8> Params;
         Params.reserve(Function->Params.size());
+        FunctionParams.reserve(Function->Params.size());
         for (const auto& Param : Function->Params)
+        {
             Params.push_back(Param->Type->Type);
+            FunctionParams.emplace_back(Param->Name.ToString(), Param->Type->Type);
+        }
 
         FunctionSignature Signature(Function->Name.ToString(), Params);
-        Functions[Signature] = Function->ReturnType->Type;
+        Functions[Signature] = MainArena.Create<TypedFunction>(Function->ReturnType->Type);
 
         FunctionReturnType = Function->ReturnType->Type;
         VisitBlock(Cast<BlockNode>(Function->Body));
@@ -596,8 +666,6 @@ namespace Volt
             default:
                 return false;
         }
-
-        return false;
     }
 
     bool TypeChecker::CanCastLogical(DataType Left, DataType Right, Operator::Type Type) const
@@ -730,7 +798,7 @@ namespace Volt
 
     void TypeChecker::ExitScope()
     {
-        for (const TypeScopeEntry& Entry : ScopeStack.back())
+        for (const ScopeEntry& Entry : ScopeStack.back())
         {
             if (Entry.Previous)
                 Variables[Entry.Name] = Entry.Previous;
@@ -746,14 +814,14 @@ namespace Volt
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.back().push_back({ Name, Iter->second });
 
-        Variables[Name] = Type;
+        Variables[Name] = MainArena.Create<TypedValue>(Type);
         ScopeStack.back().push_back({ Name, nullptr });
     }
 
     DataType TypeChecker::GetVariable(const std::string &Name)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            return Iter->second;
+            return Iter->second->GetDataType();
 
         return nullptr;
     }

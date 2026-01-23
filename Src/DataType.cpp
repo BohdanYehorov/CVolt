@@ -22,7 +22,10 @@ namespace Volt
     DataTypeBase* DataType::CreateVoid(Arena &TypesArena)
     {
         if (CachedVoidType)
+        {
+            //std::cout << "Void Type From Cache\n";
             return CachedVoidType;
+        }
 
         CachedVoidType = TypesArena.Create<VoidType>();
         return CachedVoidType;
@@ -31,7 +34,10 @@ namespace Volt
     DataTypeBase* DataType::CreateBoolean(Arena &TypesArena)
     {
         if (CachedBoolType)
+        {
+            //std::cout << "Bool Type From Cache\n";
             return CachedBoolType;
+        }
 
         CachedBoolType = TypesArena.Create<BoolType>();
         return CachedBoolType;
@@ -40,7 +46,10 @@ namespace Volt
     DataTypeBase* DataType::CreateChar(Arena &TypesArena)
     {
         if (CachedCharType)
+        {
+            //std::cout << "Char Type From Cache\n";
             return CachedCharType;
+        }
 
         CachedCharType = TypesArena.Create<CharType>();
         return CachedCharType;
@@ -57,7 +66,10 @@ namespace Volt
             throw std::range_error("Out of range");
 
         if (CachedIntegerTypes[Index])
+        {
+            //std::cout << "Int" << BitWidth << " Type From Cache\n";
             return CachedIntegerTypes[Index];
+        }
 
         CachedIntegerTypes[Index] = TypesArena.Create<IntegerType>(BitWidth);
         return CachedIntegerTypes[Index];
@@ -73,7 +85,10 @@ namespace Volt
             throw std::range_error("Out of range");
 
         if (CachedFPTypes[Index])
+        {
+            //std::cout << "Float" << BitWidth << " Type From Cache\n";
             return CachedFPTypes[Index];
+        }
 
         CachedFPTypes[Index] = TypesArena.Create<FloatingPointType>(BitWidth);
         return CachedFPTypes[Index];
@@ -85,7 +100,7 @@ namespace Volt
 
         if (auto Iter = CachedTypes.find(&PtrDataType); Iter != CachedTypes.end())
         {
-            std::cout << "Cached Ptr\n";
+            //std::cout << "Pointer From Cache\n";
             return Iter->second;
         }
 
@@ -168,7 +183,7 @@ namespace Volt
         if (Cast<const BoolType>(Type))
             return 1;
 
-        if (Cast<const CharNode>(Type))
+        if (Cast<const CharType>(Type))
             return 2;
 
         if (const auto IntType = Cast<const IntegerType>(Type))
@@ -220,7 +235,7 @@ namespace Volt
         if (Cast<BoolType>(Type))
             return 1;
 
-        if (Cast<CharNode>(Type))
+        if (Cast<CharType>(Type))
             return 8;
 
         if (const auto IntType = Cast<IntegerType>(Type))

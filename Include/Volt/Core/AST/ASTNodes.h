@@ -8,7 +8,7 @@
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Parser/Operators/Operator.h"
 #include "Volt/Core/Memory/BufferView.h"
-#include "Volt/Compiler/Types/DataTypeBase.h"
+#include "Volt/Compiler/Types/DataType.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
 #include <vector>
@@ -20,7 +20,7 @@ namespace Volt
     {
         GENERATED_BODY(ASTNode, Object)
     public:
-        DataTypeBase* ResolvedType = nullptr;
+        DataType ResolvedType = nullptr;
         size_t Pos, Line, Column;
         ASTNode(size_t Pos, size_t Line, size_t Column)
             : Pos(Pos), Line(Line), Column(Column) {}
@@ -175,6 +175,8 @@ namespace Volt
     {
         GENERATED_BODY(BinaryOpNode, ASTNode)
     public:
+        DataType OperandsType = nullptr;
+
         Operator::Type Type;
         ASTNode* Left;
         ASTNode* Right;

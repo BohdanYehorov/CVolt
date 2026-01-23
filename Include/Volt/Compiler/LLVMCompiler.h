@@ -12,6 +12,8 @@
 #include "Functions/FunctionSignature.h"
 #include "Hash/FunctionSignatureHash.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
+#include "Volt/Core/TypeChecker/TypeChecker.h"
+#include "Volt/Core/Types/TypeDefs.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -35,8 +37,8 @@ namespace Volt
         BuiltinFunctionTable& BuiltinFuncTable;
 
         std::unordered_map<std::string, llvm::Function*> Functions;
-        std::unordered_map<FunctionSignature, TypedFunction*, FunctionSignatureHash> FunctionSignatures;
-        std::unordered_map<std::string, TypedValue*> SymbolTable;
+        FunctionTable FunctionSignatures;
+        VariableTable SymbolTable;
         std::unordered_map<std::string, llvm::orc::ExecutorSymbolDef> DefaultSymbols;
         std::unordered_map<FunctionSignature,
         std::pair<std::string, DataType>, FunctionSignatureHash> DefaultFunctionSignatures;
@@ -49,9 +51,11 @@ namespace Volt
         llvm::ArrayRef<DataType> FunctionParams;
 
     public:
-        LLVMCompiler(Arena& CompilerArena, ASTNode* ASTTree, BuiltinFunctionTable& BuiltinFuncTable)
+        LLVMCompiler(Arena& CompilerArena, TypeChecker& TyChecker)
             : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context),
-            CompilerArena(CompilerArena), ASTTree(ASTTree), BuiltinFuncTable(BuiltinFuncTable)
+            CompilerArena(CompilerArena), ASTTree(TyChecker.GetASTTree()),
+            BuiltinFuncTable(TyChecker.GetBuiltinFunctionTable()),
+            FunctionSignatures(TyChecker.GetFunctions())
         {
             BuiltinFuncTable.CreateLLVMFunctions(Module.get());
         }
@@ -92,6 +96,7 @@ namespace Volt
         TypedValue *CompileContinue();
 
         void DeclareVariable(const std::string& Name, TypedValue *Var);
+        void DeclareVariable(const std::string& Name, llvm::AllocaInst* Alloca);
         TypedValue *GetVariable(const std::string &Name);
 
         void EnterScope();
@@ -99,7 +104,7 @@ namespace Volt
 
         TypedValue *GetLValue(const ASTNode *Node);
 
-        void CastToJointType(TypedValue *&Left, TypedValue *&Right);
+        //void CastToJointType(TypedValue *&Left, TypedValue *&Right);
         TypedValue *ImplicitCast(TypedValue *Value, DataType Target);
         static bool CanImplicitCast(DataType Src, DataType Dst);
 

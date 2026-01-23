@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cmath>
 #include <ctime>
+#include <random>
 
 extern "C"
 {
@@ -51,6 +52,17 @@ extern "C"
 		std::cout << Num << std::endl;
 	}
 
+	inline void InInt(int* Num)
+	{
+		std::cin >> *Num;
+	}
+
+	inline void InIntWithLabel(char* Label, int* Num)
+	{
+		std::cout << Label << " ";
+		std::cin >> *Num;
+	}
+
 	inline long Time()
 	{
 		return std::time(nullptr);
@@ -69,6 +81,18 @@ extern "C"
 	inline double Tan(double Angle)
 	{
 		return std::tan(Angle);
+	}
+
+	inline int RandomInt(int Min, int Max)
+	{
+		static std::mt19937 Gen{ std::random_device{}() };
+		std::uniform_int_distribution<int> Dist(Min, Max);
+		return Dist(Gen);
+	}
+
+	inline int System(char* Cmd)
+	{
+		return system(Cmd);
 	}
 }
 

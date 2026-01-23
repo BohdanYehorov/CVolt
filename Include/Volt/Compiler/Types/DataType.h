@@ -5,7 +5,6 @@
 #ifndef CVOLT_DATA_TYPE_H
 #define CVOLT_DATA_TYPE_H
 
-#include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Compiler/Hash/DataTypeHash.h"

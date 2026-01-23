@@ -6,6 +6,10 @@
 #include <fstream>
 #include <sstream>
 
+#define GEN_TEST(TypeName) Volt::DataType TypeName##Type1 = Volt::DataType::Create##TypeName(Arena); \
+    Volt::DataType TypeName##Type2 = Volt::DataType::Create##TypeName(Arena); \
+    std::cout << (TypeName##Type1 == TypeName##Type2) << std::endl;
+
 int main()
 {
     std::ifstream File("../Resources/test.volt");
@@ -40,10 +44,14 @@ int main()
     FuncTable.AddFunction("Out", "OutStr", &OutStr);
     FuncTable.AddFunction("Out", "OutFloat", &OutFloat);
     FuncTable.AddFunction("Out", "OutDouble", &OutDouble);
+    FuncTable.AddFunction("In", "InInt", &InInt);
+    FuncTable.AddFunction("In", "InIntWithLabel", &InIntWithLabel);
     FuncTable.AddFunction("Time", "Time", &Time);
     FuncTable.AddFunction("Sin", "Sin", &Sin);
     FuncTable.AddFunction("Cos", "Cos", &Cos);
     FuncTable.AddFunction("Tan", "Tan", &Tan);
+    FuncTable.AddFunction("RandomInt", "RandomInt", &RandomInt);
+    FuncTable.AddFunction("System", "System", &System);
 
     Volt::TypeChecker MyTypeChecker(MyParser, MainArena, FuncTable);
     MyTypeChecker.Check();
@@ -51,7 +59,7 @@ int main()
     if (MyTypeChecker.PrintErrors())
         return -1;
 
-    Volt::LLVMCompiler MyCompiler(MainArena, MyParser.GetASTTree(), FuncTable);
+    Volt::LLVMCompiler MyCompiler(MainArena, MyTypeChecker);
     MyCompiler.Compile();
     MyCompiler.Print();
 

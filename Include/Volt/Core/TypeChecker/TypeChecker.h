@@ -8,9 +8,10 @@
 #include "Volt/Core/Parser/Parser.h"
 #include "Volt/Compiler/Types/DataType.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
-#include "Volt/Compiler/Hash/FunctionSignatureHash.h"
 #include "Volt/Core/Errors/Errors.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
+#include "Volt/Core/Types/TypeDefs.h"
+#include "Volt/Compiler/Types/CompilerTypes.h"
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 
@@ -34,11 +35,12 @@ namespace Volt
 
         std::vector<TypeError> Errors;
 
-        std::unordered_map<FunctionSignature, DataType, FunctionSignatureHash> Functions;
-        std::unordered_map<std::string, DataType> Variables;
+        FunctionTable Functions;
+        VariableTable Variables;
 
-        std::vector<std::vector<TypeScopeEntry>> ScopeStack;
+        std::vector<std::vector<ScopeEntry>> ScopeStack;
 
+        llvm::SmallVector<std::pair<std::string, DataType>, 8> FunctionParams;
         DataType FunctionReturnType = nullptr;
 
     public:
@@ -53,6 +55,11 @@ namespace Volt
             WriteErrors(std::cout);
             return HasErrors();
         }
+
+        [[nodiscard]] FunctionTable& GetFunctions() { return Functions; }
+        [[nodiscard]] VariableTable& GetVariables() { return Variables; }
+        [[nodiscard]] ASTNode* GetASTTree() const { return ASTTree; }
+        [[nodiscard]] BuiltinFunctionTable& GetBuiltinFunctionTable() const { return BuiltinFuncTable; }
 
     private:
         void SendError(TypeErrorKind Kind, size_t Line, size_t Column, std::vector<std::string>&& Context = {})
@@ -77,11 +84,14 @@ namespace Volt
         DataType VisitString(StringNode* String);
         DataType VisitArray(ArrayNode *Array);
         DataType VisitIdentifier(IdentifierNode* Identifier);
+        DataType VisitRef(RefNode* Ref);
         DataType VisitSuffix(SuffixOpNode* Suffix);
         DataType VisitPrefix(PrefixOpNode* Prefix);
         DataType VisitUnary(UnaryOpNode* Unary);
+        DataType VisitComparison(ComparisonNode *Comparison);
         DataType VisitBinary(BinaryOpNode* Binary);
         DataType VisitCall(CallNode* Call);
+        DataType VisitSubscript(SubscriptNode* Subscript);
         DataType VisitVariable(VariableNode* Variable);
         DataType VisitFunction(FunctionNode* Function);
         DataType VisitIf(IfNode* If);

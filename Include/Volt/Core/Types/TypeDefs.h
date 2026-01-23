@@ -1,26 +1,20 @@
 //
-// Created by bohdan on 21.12.25.
+// Created by bohdan on 22.01.26.
 //
 
 #ifndef CVOLT_TYPEDEFS_H
 #define CVOLT_TYPEDEFS_H
 
-#include <cstddef>
-#include <cstdint>
+#include "Volt/Compiler/Functions/FunctionSignature.h"
+#include "Volt/Compiler/Types/TypedValue.h"
+#include "Volt/Compiler/Hash/FunctionSignatureHash.h"
+#include <unordered_map>
+#include <string>
 
 namespace Volt
 {
-    using PtrT = uintptr_t;
-
-    using Int8 = int8_t;
-    using Int16 = int16_t;
-    using Int32 = int32_t;
-    using Int64 = int64_t;
-
-    using UInt8 = uint8_t;
-    using UInt16 = uint16_t;
-    using UInt32 = uint32_t;
-    using UInt64 = uint64_t;
+	using FunctionTable = std::unordered_map<FunctionSignature, TypedFunction*, FunctionSignatureHash>;
+	using VariableTable = std::unordered_map<std::string, TypedValue*>;
 }
 
 #endif //CVOLT_TYPEDEFS_H

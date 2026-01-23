@@ -11,21 +11,7 @@ namespace Volt
 {
     void LLVMCompiler::Compile()
     {
-        // CreateDefaultFunction("Out", "OutBool", &OutBool);
-        // CreateDefaultFunction("Out", "OutChar", &OutChar);
-        // CreateDefaultFunction("Out", "OutByte", &OutByte);
-        // CreateDefaultFunction("Out", "OutInt", &OutInt);
-        // CreateDefaultFunction("Out", "OutLong", &OutLong);
-        // CreateDefaultFunction("Out", "OutStr", &OutStr);
-        // CreateDefaultFunction("Out", "OutFloat", &OutFloat);
-        // CreateDefaultFunction("Out", "OutDouble", &OutDouble);
-        // CreateDefaultFunction("Time", "Time", &Time);
-        // CreateDefaultFunction("Sin", "Sin", &Sin);
-        // CreateDefaultFunction("Cos", "Cos", &Cos);
-        // CreateDefaultFunction("Tan", "Tan", &Tan);
-
         CompileNode(ASTTree);
-
         std::cout << "Arena Size: " << CompilerArena.Size() << std::endl;
     }
 
@@ -47,9 +33,6 @@ namespace Volt
             return 1;
 
         llvm::orc::SymbolMap Symbols;
-
-        // for (const auto& [Name, ExeSymbolDef] : DefaultSymbols)
-        //     Symbols[JIT->get()->mangleAndIntern(Name)] = ExeSymbolDef;
 
         BuiltinFuncTable.GenSymbolMap(JIT->get(), Symbols);
 
@@ -173,40 +156,46 @@ namespace Volt
 
     TypedValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
-        switch (Int->Type)
-        {
-            case IntegerNode::BYTE:
-                return Create<TypedValue>(
-                    llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value),
-                    DataType::CreateInteger(8, CompilerArena));
-            case IntegerNode::INT:
-                return Create<TypedValue>(
-                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value),
-                    DataType::CreateInteger(32, CompilerArena));
-            case IntegerNode::LONG:
-                return Create<TypedValue>(
-                    llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value),
-                    DataType::CreateInteger(64, CompilerArena));
-            default:
-                ERROR("Unknown integer type")
-        }
+        // switch (Int->Type)
+        // {
+        //     case IntegerNode::BYTE:
+        //         return Create<TypedValue>(
+        //             llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value),
+        //             Int->ResolvedType);
+        //     case IntegerNode::INT:
+        //         return Create<TypedValue>(
+        //             llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value),
+        //             Int->ResolvedType);
+        //     case IntegerNode::LONG:
+        //         return Create<TypedValue>(
+        //             llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value),
+        //             Int->ResolvedType);
+        //     default:
+        //         ERROR("Unknown integer type")
+        // }
+
+        return Create<TypedValue>(llvm::ConstantInt::get(
+            Int->ResolvedType.GetLLVMType(), Int->Value), Int->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
     {
-        switch (Float->Type)
-        {
-            case FloatingPointNode::DOUBLE:
-                return Create<TypedValue>(llvm::ConstantFP::get(
-                    llvm::Type::getDoubleTy(Context), Float->Value),
-                    DataType::CreateFloatingPoint(64, CompilerArena));
-            case FloatingPointNode::FLOAT:
-                return Create<TypedValue>(
-                    llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value),
-                    DataType::CreateFloatingPoint(32, CompilerArena));
-            default:
-                ERROR("Unknown float type")
-        }
+        // switch (Float->Type)
+        // {
+        //     case FloatingPointNode::DOUBLE:
+        //         return Create<TypedValue>(llvm::ConstantFP::get(
+        //             llvm::Type::getDoubleTy(Context), Float->Value),
+        //             Float->ResolvedType);
+        //     case FloatingPointNode::FLOAT:
+        //         return Create<TypedValue>(
+        //             llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value),
+        //             DataType::CreateFloatingPoint(32, CompilerArena));
+        //     default:
+        //         ERROR("Unknown float type")
+        // }
+
+        return Create<TypedValue>(llvm::ConstantFP::get(
+            Float->ResolvedType.GetLLVMType(), Float->Value), Float->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileBool(const BoolNode *Bool)
@@ -234,28 +223,22 @@ namespace Volt
         if (Array->Elements.empty())
             ERROR("Array empty")
 
-        TypedValue* FirstEl = nullptr;
-        llvm::ArrayType* ArrType = nullptr;
-        llvm::AllocaInst* Arr = nullptr;
+        llvm::Type* ArrType = llvm::ArrayType::get(DataType(
+            Array->ResolvedType.GetPtrType()->BaseType).GetLLVMType(), Array->Elements.size());
+
+        llvm::AllocaInst* Arr = Builder.CreateAlloca(ArrType);
         llvm::Value* FirstElPtr = nullptr;
+
+        llvm::Value* Idx[2] = {
+            Builder.getInt32(0),
+            nullptr
+        };
 
         for (size_t i = 0; i < Array->Elements.size(); i++)
         {
             TypedValue* El = CompileNode(Array->Elements[i]);
-            if (!FirstEl)
-            {
-                FirstEl = El;
-                ArrType = llvm::ArrayType::get(
-                    FirstEl->GetDataType(), Array->Elements.size());
-                Arr = Builder.CreateAlloca(ArrType);
-            }
-            else if (!El->GetDataType().IsEqual(FirstEl->GetDataType()))
-                ERROR("Cannot init array with different types")
 
-            llvm::Value* Idx[2] = {
-                Builder.getInt32(0),
-                Builder.getInt32(i)
-            };
+            Idx[1] = Builder.getInt32(i);
 
             llvm::Value* ElPtr = Builder.CreateGEP(Arr->getAllocatedType(), Arr, Idx);
             if (!FirstElPtr)
@@ -264,8 +247,7 @@ namespace Volt
             Builder.CreateStore(El->GetValue(), ElPtr);
         }
 
-        return Create<TypedValue>(FirstElPtr, DataType::CreatePtr(
-            FirstEl->GetDataType(), CompilerArena));
+        return Create<TypedValue>(FirstElPtr, Array->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
@@ -288,7 +270,7 @@ namespace Volt
         if (!LValue)
             ERROR("Cannot apply operator '$' to l-value")
 
-       return LValue;
+       return Create<TypedValue>(LValue->GetValue(), DataType::CreatePtr(LValue->GetDataType(), CompilerArena));
     }
 
     TypedValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
@@ -357,10 +339,10 @@ namespace Volt
             case Operator::ADD:         return TValue;
             case Operator::SUB:         return Create<TypedValue>(IsFP ?
                                         Builder.CreateNeg(Value) :
-                                        Builder.CreateFNeg(Value), Type);
+                                        Builder.CreateFNeg(Value), Unary->ResolvedType);
             case Operator::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
-                                               ImplicitCast(TValue, BoolType)->GetValue()), BoolType);
-            case Operator::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Type);
+                                               ImplicitCast(TValue, BoolType)->GetValue()), Unary->ResolvedType);
+            case Operator::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Unary->ResolvedType);
             default: ERROR("Unknown unary operator")
         }
     }
@@ -370,13 +352,13 @@ namespace Volt
         TypedValue* Left = CompileNode(Comparison->Left);
         TypedValue* Right = CompileNode(Comparison->Right);
 
-        CastToJointType(Left, Right);
+        Left = ImplicitCast(Left, Comparison->OperandsType);
+        Right = ImplicitCast(Right, Comparison->OperandsType);
+
         DataType Type = Left->GetDataType();
 
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
-
-        DataType BoolType = DataType::CreateBoolean(CompilerArena);
 
         bool IsFP = Type.GetFloatingPointType();
 
@@ -389,26 +371,26 @@ namespace Volt
         {
             case Operator::EQ:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOEQ(LeftVal, RightVal) :
-                                Builder.CreateICmpEQ(LeftVal, RightVal), BoolType);
+                                Builder.CreateICmpEQ(LeftVal, RightVal), Comparison->ResolvedType);
             case Operator::NEQ: return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpONE(LeftVal, RightVal) :
-                                Builder.CreateICmpNE(LeftVal, RightVal), BoolType);
+                                Builder.CreateICmpNE(LeftVal, RightVal), Comparison->ResolvedType);
             case Operator::LT:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOLT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLT(LeftVal, RightVal) :
-                                Builder.CreateICmpULT(LeftVal, RightVal), BoolType);
+                                Builder.CreateICmpULT(LeftVal, RightVal), Comparison->ResolvedType);
             case Operator::LTE: return Create<TypedValue>( IsFP ?
                                 Builder.CreateFCmpOLE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLE(LeftVal, RightVal) :
-                                Builder.CreateICmpULE(LeftVal, RightVal), BoolType);
+                                Builder.CreateICmpULE(LeftVal, RightVal), Comparison->ResolvedType);
             case Operator::GT:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOGT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGT(LeftVal, RightVal) :
-                                Builder.CreateICmpUGT(LeftVal, RightVal), BoolType);
+                                Builder.CreateICmpUGT(LeftVal, RightVal), Comparison->ResolvedType);
             case Operator::GTE: return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOGE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGE(LeftVal, RightVal) :
-                                Builder.CreateICmpUGE(LeftVal, RightVal), BoolType);
+                                Builder.CreateICmpUGE(LeftVal, RightVal), Comparison->ResolvedType);
             default: ERROR("Unknown comparison operator")
         }
     }
@@ -416,7 +398,7 @@ namespace Volt
     TypedValue *LLVMCompiler::CompileLogical(const LogicalNode *Logical)
     {
         TypedValue* Left = CompileNode(Logical->Left);
-        Left = ImplicitCast(Left, DataType::CreateBoolean(CompilerArena));
+        Left = ImplicitCast(Left, Logical->OperandsType);
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -432,7 +414,7 @@ namespace Volt
 
                 Builder.SetInsertPoint(OrRhsBB);
                 TypedValue* Right = CompileNode(Logical->Right);
-                Right = ImplicitCast(Right, DataType::CreateBoolean(CompilerArena));
+                Right = ImplicitCast(Right, Logical->OperandsType);
                 Builder.CreateCondBr(Right->GetValue(), OrTrueBB, OrEndBB);
 
                 Builder.SetInsertPoint(OrTrueBB);
@@ -446,7 +428,7 @@ namespace Volt
                 Phi->addIncoming(Builder.getFalse(), OrRhsBB);
 
                 return Create<TypedValue>(
-                      Phi, DataType::CreateBoolean(CompilerArena));
+                      Phi, Logical->ResolvedType);
             }
             case Operator::LOGICAL_AND:
             {
@@ -458,7 +440,7 @@ namespace Volt
 
                 Builder.SetInsertPoint(AndRhsBB);
                 TypedValue* Right = CompileNode(Logical->Right);
-                Right = ImplicitCast(Right, DataType::CreateBoolean(CompilerArena));
+                Right = ImplicitCast(Right, Logical->OperandsType);
                 Builder.CreateBr(AndEndBB);
 
                 Builder.SetInsertPoint(AndFalseBB);
@@ -472,7 +454,7 @@ namespace Volt
                 Phi->addIncoming(Builder.getFalse(), AndFalseBB);
 
                 return Create<TypedValue>(
-                      Phi, DataType::CreateBoolean(CompilerArena));
+                      Phi, Logical->ResolvedType);
             }
             default:
                 ERROR("Unknown logical operator")
@@ -539,7 +521,9 @@ namespace Volt
         TypedValue* Left = CompileNode(BinaryOp->Left);
         TypedValue* Right = CompileNode(BinaryOp->Right);
 
-        CastToJointType(Left, Right);
+        Left = ImplicitCast(Left, BinaryOp->OperandsType);
+        Right = ImplicitCast(Right, BinaryOp->OperandsType);
+
         DataType Type = Left->GetDataType();
 
         llvm::Value* LeftVal = Left->GetValue();
@@ -554,31 +538,31 @@ namespace Volt
         {
             case Operator::ADD:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFAdd(LeftVal, RightVal) :
-                                    Builder.CreateAdd(LeftVal, RightVal), Type);
+                                    Builder.CreateAdd(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::SUB:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFSub(LeftVal, RightVal) :
-                                    Builder.CreateSub(LeftVal, RightVal), Type);
+                                    Builder.CreateSub(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::MUL:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFMul(LeftVal, RightVal) :
-                                    Builder.CreateMul(LeftVal, RightVal), Type);
+                                    Builder.CreateMul(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::DIV:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFDiv(LeftVal, RightVal) : IsSigned ?
                                     Builder.CreateSDiv(LeftVal, RightVal) :
-                                    Builder.CreateUDiv(LeftVal, RightVal), Type);
+                                    Builder.CreateUDiv(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::MOD:     return Create<TypedValue>(IsSigned ?
                                     Builder.CreateSRem(LeftVal, RightVal) :
-                                    Builder.CreateURem(LeftVal, RightVal), Type);
+                                    Builder.CreateURem(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::BIT_AND: return Create<TypedValue>(
-                                    Builder.CreateAnd(LeftVal, RightVal), Type);
+                                    Builder.CreateAnd(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::BIT_OR:  return Create<TypedValue>(
-                                    Builder.CreateOr(LeftVal, RightVal), Type);
+                                    Builder.CreateOr(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::BIT_XOR: return Create<TypedValue>(
-                                    Builder.CreateXor(LeftVal, RightVal), Type);
+                                    Builder.CreateXor(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::LSHIFT:  return  Create<TypedValue>(
-                                    Builder.CreateShl(LeftVal, RightVal), Type);
+                                    Builder.CreateShl(LeftVal, RightVal), BinaryOp->ResolvedType);
             case Operator::RSHIFT:  return Create<TypedValue>(IsSigned ?
                                     Builder.CreateAShr(LeftVal, RightVal) :
-                                    Builder.CreateLShr(LeftVal, RightVal), Type);
+                                    Builder.CreateLShr(LeftVal, RightVal), BinaryOp->ResolvedType);
             default: ERROR("Unknown binary operator")
         }
     }
@@ -695,9 +679,9 @@ namespace Volt
         if (!ElPtrType)
             ERROR("Cannot apply subscript to non-pointer type");
 
-
         llvm::Type* ElType = DataType::GetLLVMType(ElPtrType->BaseType, Context);
         TypedValue* Index = CompileNode(Subscript->Index);
+        Index = ImplicitCast(Index, Subscript->Index->ResolvedType);
 
         llvm::Value* ElPtr = Builder.CreateGEP( ElType, Ptr->GetValue(), Index->GetValue());
         llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
@@ -756,7 +740,12 @@ namespace Volt
         FunctionParams = ParamsTypes;
 
         FunctionSignature Signature{ FuncName, ParamsTypes };
-        FunctionSignatures[Signature] = Create<TypedFunction>(Func, Function->ReturnType->Type);
+        //FunctionSignatures[Signature] = Create<TypedFunction>(Func, Function->ReturnType->Type);
+
+        if (auto Iter = FunctionSignatures.find(Signature); Iter != FunctionSignatures.end())
+            Iter->second->InitFunction(Func);
+        else
+            ERROR("Function definition '" + FuncName + "' is unknown");
 
         llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
         Builder.SetInsertPoint(Entry);
@@ -928,7 +917,7 @@ namespace Volt
                 return Entry.Name == Name;
             });
             Iter != ScopeStack.back().end())
-            ERROR("This variable: '" + Name + "' has been declared in this scope");
+            ERROR("This variable: '" + Name + "' has already declared in this scope");
 
         ScopeEntry Entry;
         Entry.Name = Name;
@@ -987,26 +976,6 @@ namespace Volt
         }
 
         return nullptr;
-    }
-
-    void LLVMCompiler::CastToJointType(TypedValue *&Left, TypedValue *&Right)
-    {
-        DataType LeftType = Left->GetDataType();
-        DataType RightType = Right->GetDataType();
-
-        int LeftRank = LeftType.GetPrimitiveTypeRank();
-        int RightRank = RightType.GetPrimitiveTypeRank();
-
-        if (LeftRank == -1 || RightRank == -1)
-            ERROR("Invalid cast");
-
-        if (LeftRank == RightRank)
-            return;
-
-        if (LeftRank > RightRank)
-            Right = ImplicitCast(Right, LeftType);
-        else
-            Left = ImplicitCast(Left, RightType);
     }
 
     TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataType Target)
@@ -1074,7 +1043,7 @@ namespace Volt
             }
         }
 
-        ERROR("Invalid cast")
+        ERROR(std::format("Cannot conver '{}' to '{}'", SrcType.ToString(), Target.ToString()))
     }
 
     bool LLVMCompiler::CanImplicitCast(DataType Src, DataType Dst)
