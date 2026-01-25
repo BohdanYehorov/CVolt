@@ -96,7 +96,6 @@ namespace Volt
         TypedValue *CompileContinue();
 
         void DeclareVariable(const std::string& Name, TypedValue *Var);
-        void DeclareVariable(const std::string& Name, llvm::AllocaInst* Alloca);
         TypedValue *GetVariable(const std::string &Name);
 
         void EnterScope();
@@ -104,9 +103,10 @@ namespace Volt
 
         TypedValue *GetLValue(const ASTNode *Node);
 
-        //void CastToJointType(TypedValue *&Left, TypedValue *&Right);
         TypedValue *ImplicitCast(TypedValue *Value, DataType Target);
         static bool CanImplicitCast(DataType Src, DataType Dst);
+
+        static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);
 
         template <typename T, typename ...Args_>
         [[nodiscard]] T *Create(Args_&&... Args) { return CompilerArena.Create<T>(std::forward<Args_>(Args)...); }

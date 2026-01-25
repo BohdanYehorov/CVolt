@@ -237,23 +237,75 @@ namespace Volt
             : ASTNode(Pos, Line, Column), Target(Target), Index(Index) {}
     };
 
-    class DataTypeNode : public ASTNode
+    class DataTypeNodeBase : public ASTNode
     {
-        GENERATED_BODY(DataTypeNode, ASTNode)
+        GENERATED_BODY(DataTypeNodeBase, ASTNode)
+    public:
+        DataTypeNodeBase(size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column) {}
+    };
+
+    class PrimitiveTypeNode : public DataTypeNodeBase
+    {
+        GENERATED_BODY(PrimitiveTypeNode, DataTypeNodeBase)
+    public:
+        PrimitiveDataType* Type;
+        PrimitiveTypeNode(PrimitiveDataType* Type, size_t Pos, size_t Line, size_t Column)
+            : DataTypeNodeBase(Pos, Line, Column), Type(Type) {}
+    };
+
+    class DerivedTypeNode : public DataTypeNodeBase
+    {
+        GENERATED_BODY(DerivedTypeNode, DataTypeNodeBase)
+    public:
+        DataTypeNodeBase* BaseType;
+
+        DerivedTypeNode(DataTypeNodeBase* BaseType, size_t Pos, size_t Line, size_t Column)
+            : DataTypeNodeBase(Pos, Line, Column), BaseType(BaseType) {}
+    };
+
+    class PointerTypeNode : public DerivedTypeNode
+    {
+        GENERATED_BODY(PointerTypeNode, DerivedTypeNode)
+    public:
+        PointerTypeNode(DataTypeNodeBase* BaseType, size_t Pos, size_t Line, size_t Column)
+            : DerivedTypeNode(BaseType, Pos, Line, Column) {}
+    };
+
+    class ReferenceTypeNode : public DerivedTypeNode
+    {
+        GENERATED_BODY(PointerTypeNode, DerivedTypeNode)
+    public:
+        ReferenceTypeNode(DataTypeNodeBase* BaseType, size_t Pos, size_t Line, size_t Column)
+            : DerivedTypeNode(BaseType, Pos, Line, Column) {}
+    };
+
+    class DataTypeNode : public DataTypeNodeBase
+    {
+        GENERATED_BODY(DataTypeNode, DataTypeNodeBase)
     public:
         DataTypeBase* Type;
         DataTypeNode(DataTypeBase* Type, size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Type(Type) {}
+            : DataTypeNodeBase(Pos, Line, Column), Type(Type) {}
+    };
+
+    class ArrayTypeNode : public DerivedTypeNode
+    {
+        GENERATED_BODY(ArrayTypeNode, DerivedTypeNode)
+    public:
+        ASTNode* Length;
+        ArrayTypeNode(DataTypeNodeBase* BaseType, ASTNode* Length, size_t Pos, size_t Line, size_t Column)
+            : DerivedTypeNode(BaseType, Pos, Line, Column), Length(Length) {}
     };
 
     class VariableNode : public ASTNode
     {
         GENERATED_BODY(VariableNode, ASTNode)
     public:
-        DataTypeNode* Type;
+        DataTypeNodeBase* Type;
         BufferStringView Name;
         ASTNode* Value;
-        VariableNode(DataTypeNode* Type, BufferStringView Name, ASTNode* Value,
+        VariableNode(DataTypeNodeBase* Type, BufferStringView Name, ASTNode* Value,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Type(Type), Name(Name), Value(Value) {}
     };
@@ -262,10 +314,10 @@ namespace Volt
     {
         GENERATED_BODY(ParamNode, ASTNode)
     public:
-        DataTypeNode* Type;
+        DataTypeNodeBase* Type;
         BufferStringView Name;
         ASTNode* DefaultValue;
-        ParamNode(DataTypeNode* Type, BufferStringView Name, ASTNode* Value,
+        ParamNode(DataTypeNodeBase* Type, BufferStringView Name, ASTNode* Value,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Type(Type), Name(Name), DefaultValue(Value) {}
     };
@@ -274,11 +326,11 @@ namespace Volt
     {
         GENERATED_BODY(FunctionNode, ASTNode)
     public:
-        DataTypeNode* ReturnType;
+        DataTypeNodeBase* ReturnType;
         BufferStringView Name;
         llvm::TinyPtrVector<ParamNode*> Params;
         ASTNode* Body = nullptr;
-        FunctionNode(DataTypeNode* Type, BufferStringView Name,
+        FunctionNode(DataTypeNodeBase* Type, BufferStringView Name,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), ReturnType(Type), Name(Name) {}
 

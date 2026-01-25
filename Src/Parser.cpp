@@ -494,7 +494,7 @@ namespace Volt
         return nullptr;
     }
 
-    DataTypeNode* Parser::ParseDataType()
+    DataTypeNodeBase* Parser::ParseDataType()
     {
         DepthIncScope DScope(Depth);
 
@@ -503,11 +503,11 @@ namespace Volt
 
         const Token& Tok = CurrentToken();
 
-        DataTypeBase* Type;
+        PrimitiveDataType* Type;
         switch (Tok.Type)
         {
             case Token::TYPE_VOID:
-                Type = NodesArena.Create<VoidType>();
+                Type = DataType::CreateVoid(NodesArena);
                 break;
             case Token::TYPE_BOOL:
                 Type = NodesArena.Create<BoolType>();
@@ -535,24 +535,40 @@ namespace Volt
         }
         Consume();
 
+        DataTypeNodeBase* TypeNode = NodesArena.Create<PrimitiveTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
+
         if (!IsValidIndex())
             return NodesArena.Create<DataTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
 
         while (true)
         {
-            switch (CurrentToken().Type)
+            switch (const Token& Tok = CurrentToken(); Tok.Type)
             {
                 case Token::OP_MUL:
-                    Type = NodesArena.Create<PointerType>(Type);
+                    TypeNode = NodesArena.Create<PointerTypeNode>(TypeNode, Tok.Pos, Tok.Line, Tok.Column);
+                    Consume();
                     break;
                 case Token::OP_REFERENCE:
-                    Type = NodesArena.Create<ReferenceType>(Type);
+                    TypeNode = NodesArena.Create<ReferenceTypeNode>(TypeNode, Tok.Pos, Tok.Line, Tok.Column);
+                    Consume();
                     break;
-                default:
-                    return NodesArena.Create<DataTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
-            }
+                case Token::OP_LBRACKET:
+                {
+                    Consume();
+                    ASTNode* Length = ParseAssignment();
+                    if (!Expect(Token::OP_RBRACKET))
+                    {
+                        Synchronize();
+                        return nullptr;
+                    }
 
-            Consume();
+                    TypeNode = NodesArena.Create<ArrayTypeNode>(
+                        TypeNode, Length, Tok.Pos, Tok.Line, Tok.Column);
+                    break;
+                }
+                default:
+                    return TypeNode;
+            }
         }
     }
     ASTNode* Parser::ParseParameter()
@@ -560,7 +576,7 @@ namespace Volt
         DepthIncScope DScope(Depth);
 
         const Token* TokPtr;
-        DataTypeNode* DataType = ParseDataType();
+        DataTypeNodeBase* DataType = ParseDataType();
         if (!DataType)
             return nullptr;
 
@@ -597,7 +613,7 @@ namespace Volt
             return nullptr;
         }
 
-        DataTypeNode* DataType = ParseDataType();
+        DataTypeNodeBase* DataType = ParseDataType();
         if (!DataType)
         {
             SendError(ParseErrorType::ExpectedDataType);
@@ -663,7 +679,7 @@ namespace Volt
         }
 
         size_t StartIndex = Index;
-        DataTypeNode* DataType = ParseDataType();
+        DataTypeNodeBase* DataType = ParseDataType();
         if (!DataType)
         {
             SendError(ParseErrorType::ExpectedDataType);

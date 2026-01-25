@@ -6,10 +6,6 @@
 #include <fstream>
 #include <sstream>
 
-#define GEN_TEST(TypeName) Volt::DataType TypeName##Type1 = Volt::DataType::Create##TypeName(Arena); \
-    Volt::DataType TypeName##Type2 = Volt::DataType::Create##TypeName(Arena); \
-    std::cout << (TypeName##Type1 == TypeName##Type2) << std::endl;
-
 int main()
 {
     std::ifstream File("../Resources/test.volt");
@@ -69,6 +65,16 @@ int main()
 
     std::cout << "\n====================================================\n";
     std::cout << "Exited With Code: " << Res << std::endl;
+
+    // Volt::Arena Arena;
+    // auto VoidType = Volt::DataType::CreateVoid(Arena);
+    // auto IntType = Volt::DataType::CreateInteger(32, Arena);
+    // auto ArrType = Volt::DataType::CreateArray(VoidType, 5, Arena);
+    // auto ArrType1 = Volt::DataType::CreateArray(VoidType, 10, Arena);
+    //
+    // std::cout << std::boolalpha << Volt::DataType::IsEqual(ArrType, ArrType1);
+    // std::cout << Volt::DataTypeHash{}(VoidType) << " " << Volt::DataTypeHash{}(PtrType) << std::endl;
+    // std::cout << Volt::DataTypeHash{}(IntType) << " " << Volt::DataTypeHash{}(IntPtrType) << std::endl;
 
     return 0;
 }

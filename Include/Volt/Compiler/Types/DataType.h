@@ -8,10 +8,13 @@
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Compiler/Hash/DataTypeHash.h"
+#include <unordered_set>
 #include <llvm/IR/Type.h>
 
 namespace Volt
 {
+    class DataTypeNodeBase;
+
     enum class TypeCategory : UInt8
     {
         INVALID,
@@ -36,25 +39,28 @@ namespace Volt
             bool operator==(const DataTypeNodeWrap& Other) const { return IsEqual(Type, Other.Type); }
         };
 
-        static std::unordered_map<DataTypeNodeWrap, DataType, DataTypeHash> CachedTypes;
+        static std::unordered_set<DataTypeNodeWrap, DataTypeHash> CachedTypes;
 
-        static DataTypeBase* CachedVoidType;
-        static DataTypeBase* CachedBoolType;
-        static DataTypeBase* CachedCharType;
-        static DataTypeBase* CachedIntegerTypes[4];
-        static DataTypeBase* CachedFPTypes[4];
+        static VoidType* CachedVoidType;
+        static BoolType* CachedBoolType;
+        static CharType* CachedCharType;
+        static IntegerType* CachedIntegerTypes[4];
+        static FloatingPointType* CachedFPTypes[4];
 
         static llvm::LLVMContext* CachedContext;
         static llvm::LLVMContext* Context;
 
     public:
-        static DataTypeBase* CreateVoid(Arena &TypesArena);
-        static DataTypeBase* CreateBoolean(Arena &TypesArena);
-        static DataTypeBase* CreateChar(Arena &TypesArena);
-        static DataTypeBase* CreateInteger(size_t BitWidth, Arena &TypesArena);
-        static DataTypeBase* CreateFloatingPoint(size_t BitWidth, Arena &TypesArena);
+        static VoidType* CreateVoid(Arena &TypesArena);
+        static BoolType* CreateBoolean(Arena &TypesArena);
+        static CharType* CreateChar(Arena &TypesArena);
+        static IntegerType* CreateInteger(size_t BitWidth, Arena &TypesArena);
+        static FloatingPointType* CreateFloatingPoint(size_t BitWidth, Arena &TypesArena);
 
-        static DataTypeBase* CreatePtr(DataTypeBase* BaseType, Arena& TypesArena);
+        static PointerType* CreatePtr(DataTypeBase* BaseType, Arena& TypesArena);
+        static ArrayType* CreateArray(DataTypeBase* BaseType, size_t Length, Arena& TypesArena);
+
+        static DataTypeBase* CreateFromAST(const DataTypeNodeBase *Node, Arena &TypesArena);
 
         static llvm::Type *GetLLVMType(const DataTypeBase *Type, llvm::LLVMContext &Context);
         static bool IsEqual(const DataTypeBase *Left, const DataTypeBase *Right);
@@ -80,6 +86,7 @@ namespace Volt
         [[nodiscard]] PrimitiveDataType *GetPrimitiveType() const { return Cast<PrimitiveDataType>(Type); }
         [[nodiscard]] PointerType *GetPtrType() const { return Cast<PointerType>(Type); }
         [[nodiscard]] ReferenceType *GetRefType() const { return Cast<ReferenceType>(Type); }
+        [[nodiscard]] ArrayType *GetArrayType() const { return Cast<ArrayType>(Type); }
 
         [[nodiscard]] llvm::Type *GetLLVMType(llvm::LLVMContext& TmpContext) const
         {
@@ -102,7 +109,7 @@ namespace Volt
         [[nodiscard]] int GetPrimitiveTypeRank() const {return GetPrimitiveTypeRank(GetPrimitiveType()); }
         [[nodiscard]] int GetTypeRank(Arena& TypesArena) const { return GetTypeRank(Type, TypesArena); }
 
-        std::string ToString() const;
+        [[nodiscard]] std::string ToString() const;
 
     private:
         static std::string TypeToString(DataTypeBase* Type);

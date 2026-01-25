@@ -93,7 +93,7 @@ namespace Volt
         ASTNode* ParseSequence();
         ASTNode* ParseBlock();
 
-        DataTypeNode* ParseDataType();
+        DataTypeNodeBase* ParseDataType();
 
         ASTNode* ParseParameter();
         ASTNode* ParseFunction();

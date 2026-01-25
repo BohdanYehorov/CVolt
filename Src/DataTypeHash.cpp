@@ -3,6 +3,8 @@
 //
 
 #include "Volt/Compiler/Hash/DataTypeHash.h"
+
+#include "Volt/Compiler/Hash/Hash.h"
 #include "Volt/Compiler/Types/DataType.h"
 
 namespace Volt
@@ -16,11 +18,19 @@ namespace Volt
             return Type->CachedHash;
 
         if (const auto PrimitiveType = Cast<const PrimitiveDataType>(Type))
-            Type->CachedHash = std::hash<int>{}(DataType::GetPrimitiveTypeRank(PrimitiveType));
+            Type->CachedHash = std::hash<size_t>{}(PrimitiveType->Object_GetType());
+        else if (const auto ArrType = Cast<const ArrayType>(Type))
+        {
+            size_t Res = std::hash<size_t>{}(ArrType->Object_GetType());
+            CombineHashes(Res, std::hash<size_t>{}(ArrType->Length));
+            CombineHashes(Res, operator()(ArrType->BaseType));
+            Type->CachedHash = Res;
+        }
         else if (const auto PtrType = Cast<const PointerType>(Type))
         {
-            size_t Res = operator()(PtrType->BaseType);
-            Type->CachedHash = Res + 0x9e3779b9 + (Res << 6) + (Res >> 2);
+            size_t Res = std::hash<size_t>{}(PtrType->Object_GetType());
+            CombineHashes(Res, operator()(PtrType->BaseType));
+            Type->CachedHash = Res;
         }
 
         return Type->CachedHash;

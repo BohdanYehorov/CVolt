@@ -4,22 +4,24 @@
 
 #include "Volt/Compiler/Types/DataType.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
+#include "Volt/Core/AST/ASTNodes.h"
 #include <complex>
+#include <unordered_set>
 #include <llvm/IR/DerivedTypes.h>
 
 namespace Volt
 {
-    std::unordered_map<DataType::DataTypeNodeWrap, DataType, DataTypeHash> DataType::CachedTypes;
-    DataTypeBase* DataType::CachedVoidType = nullptr;
-    DataTypeBase* DataType::CachedBoolType = nullptr;
-    DataTypeBase* DataType::CachedCharType = nullptr;
-    DataTypeBase* DataType::CachedIntegerTypes[] = { nullptr, nullptr, nullptr, nullptr };
-    DataTypeBase* DataType::CachedFPTypes[] = { nullptr, nullptr, nullptr, nullptr };
+    std::unordered_set<DataType::DataTypeNodeWrap, DataTypeHash> DataType::CachedTypes;
+    VoidType* DataType::CachedVoidType = nullptr;
+    BoolType* DataType::CachedBoolType = nullptr;
+    CharType* DataType::CachedCharType = nullptr;
+    IntegerType* DataType::CachedIntegerTypes[] = { nullptr, nullptr, nullptr, nullptr };
+    FloatingPointType* DataType::CachedFPTypes[] = { nullptr, nullptr, nullptr, nullptr };
 
     llvm::LLVMContext* DataType::CachedContext = nullptr;
     llvm::LLVMContext* DataType::Context = nullptr;
 
-    DataTypeBase* DataType::CreateVoid(Arena &TypesArena)
+    VoidType* DataType::CreateVoid(Arena &TypesArena)
     {
         if (CachedVoidType)
         {
@@ -31,7 +33,7 @@ namespace Volt
         return CachedVoidType;
     }
 
-    DataTypeBase* DataType::CreateBoolean(Arena &TypesArena)
+    BoolType* DataType::CreateBoolean(Arena &TypesArena)
     {
         if (CachedBoolType)
         {
@@ -43,7 +45,7 @@ namespace Volt
         return CachedBoolType;
     }
 
-    DataTypeBase* DataType::CreateChar(Arena &TypesArena)
+    CharType* DataType::CreateChar(Arena &TypesArena)
     {
         if (CachedCharType)
         {
@@ -55,7 +57,7 @@ namespace Volt
         return CachedCharType;
     }
 
-    DataTypeBase* DataType::CreateInteger(size_t BitWidth, Arena &TypesArena)
+    IntegerType* DataType::CreateInteger(size_t BitWidth, Arena &TypesArena)
     {
         static size_t MinBitWidth = 8;
 
@@ -75,7 +77,7 @@ namespace Volt
         return CachedIntegerTypes[Index];
     }
 
-    DataTypeBase* DataType::CreateFloatingPoint(size_t BitWidth, Arena &TypesArena)
+    FloatingPointType* DataType::CreateFloatingPoint(size_t BitWidth, Arena &TypesArena)
     {
         static size_t MinBitWidth = 16;
         assert(BitWidth % 8 == 0 && BitWidth >= MinBitWidth && BitWidth <= 128);
@@ -94,22 +96,58 @@ namespace Volt
         return CachedFPTypes[Index];
     }
 
-    DataTypeBase* DataType::CreatePtr(DataTypeBase *BaseType, Arena &TypesArena)
+    PointerType* DataType::CreatePtr(DataTypeBase *BaseType, Arena &TypesArena)
     {
         PointerType PtrDataType(BaseType);
 
         if (auto Iter = CachedTypes.find(&PtrDataType); Iter != CachedTypes.end())
         {
-            //std::cout << "Pointer From Cache\n";
-            return Iter->second;
+            std::cout << "Pointer From Cache\n";
+            return Cast<PointerType>(Iter->Type);
         }
 
         auto PtrTypeNode = TypesArena.Create<PointerType>(BaseType);
-        auto PtrType = PtrTypeNode;
+        CachedTypes.insert(PtrTypeNode);
 
-        CachedTypes[PtrTypeNode] = PtrType;
+        return PtrTypeNode;
+    }
 
-        return PtrType;
+    ArrayType* DataType::CreateArray(DataTypeBase *BaseType, size_t Length, Arena &TypesArena)
+    {
+        ArrayType ArrDataType(BaseType, Length);
+
+        if (auto Iter = CachedTypes.find(&ArrDataType); Iter != CachedTypes.end())
+        {
+            std::cout << "Array From Cache\n";
+            return Cast<ArrayType>(Iter->Type);
+        }
+
+        auto ArrType = TypesArena.Create<ArrayType>(BaseType, Length);
+        CachedTypes.insert(ArrType);
+
+        return ArrType;
+    }
+
+    DataTypeBase* DataType::CreateFromAST(const DataTypeNodeBase *Node, Arena &TypesArena)
+    {
+        if (const auto Primitive = Cast<const PrimitiveTypeNode>(Node))
+            return Primitive->Type;
+        if (const auto Ptr = Cast<const PointerTypeNode>(Node))
+            return CreatePtr(CreateFromAST(Ptr->BaseType, TypesArena), TypesArena);
+        // if (const auto Ref = Cast<const ReferenceTypeNode>(Node))
+        //
+        if (const auto Array = Cast<const ArrayTypeNode>(Node))
+        {
+            if (auto Int = Cast<IntegerNode>(Array->Length))
+            {
+                return CreateArray(CreateFromAST(
+                    Array->BaseType, TypesArena), Int->Value, TypesArena);
+            }
+
+            return nullptr;
+        }
+
+        return nullptr;
     }
 
     llvm::Type* DataType::GetLLVMType(const DataTypeBase* Type, llvm::LLVMContext &Context)
@@ -132,12 +170,12 @@ namespace Volt
                 default: throw std::runtime_error("Unsupported FP size");
             }
         }
-        if (const auto PtrType = Cast<const PointerType>(Type))
-            return llvm::PointerType::get(
-                GetLLVMType(PtrType->BaseType, Context)->getContext(), 0);
-        if (const auto RefType = Cast<const ReferenceType>(Type))
-            return llvm::PointerType::get(
-                GetLLVMType(RefType->BaseType, Context)->getContext(), 0);
+        if (const auto ArrType = Cast<const ArrayType>(Type))
+            return llvm::ArrayType::get(GetLLVMType(ArrType->BaseType, Context), ArrType->Length);
+        if (Cast<const PointerType>(Type))
+            return llvm::PointerType::get(Context, 0);
+        if (Cast<const ReferenceType>(Type))
+            return llvm::PointerType::get(Context, 0);
 
         throw std::runtime_error("Unsupported data type");
     }
@@ -163,6 +201,11 @@ namespace Volt
         if (const auto LeftFloatType = Cast<const FloatingPointType>(Left))
             if (const auto RightFloatType = Cast<const FloatingPointType>(Right))
                 return LeftFloatType->BitWidth == RightFloatType->BitWidth;
+
+        if (const auto LeftArrType = Cast<const ArrayType>(Left))
+            if (const auto RightArrType = Cast<const ArrayType>(Right))
+                return LeftArrType->Length == RightArrType->Length &&
+                    IsEqual(LeftArrType->BaseType, RightArrType->BaseType);
 
         if (const auto LeftPtrType = Cast<const PointerType>(Left))
             if (const auto RightPtrType = Cast<const PointerType>(Right))

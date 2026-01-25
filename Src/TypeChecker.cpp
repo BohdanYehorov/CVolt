@@ -426,7 +426,7 @@ namespace Volt
 
     DataType TypeChecker::VisitVariable(VariableNode *Variable)
     {
-        DataType VarType = Variable->Type->Type;
+        DataType VarType = DataType::CreateFromAST(Variable->Type, MainArena);
         DataType ValueType = VisitNode(Variable->Value);
 
         if (!VarType)
@@ -436,11 +436,11 @@ namespace Volt
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
                 Variable,{Variable->Name.ToString(),
-                DataType(Variable->Type->Type).ToString(), ValueType.ToString()});
+                VarType.ToString(), ValueType.ToString()});
             return nullptr;
         }
 
-        DeclareVariable(Variable->Name.ToString(),Variable->Type->Type);
+        DeclareVariable(Variable->Name.ToString(), VarType);
         return nullptr;
     }
 
@@ -451,14 +451,16 @@ namespace Volt
         FunctionParams.reserve(Function->Params.size());
         for (const auto& Param : Function->Params)
         {
-            Params.push_back(Param->Type->Type);
-            FunctionParams.emplace_back(Param->Name.ToString(), Param->Type->Type);
+            DataType ParamType = DataType::CreateFromAST(Param->Type, MainArena);
+            Params.push_back(ParamType);
+            FunctionParams.emplace_back(Param->Name.ToString(), ParamType);
         }
 
         FunctionSignature Signature(Function->Name.ToString(), Params);
-        Functions[Signature] = MainArena.Create<TypedFunction>(Function->ReturnType->Type);
+        DataType ReturnType = DataType::CreateFromAST(Function->ReturnType, MainArena);
+        Functions[Signature] = MainArena.Create<TypedFunction>(ReturnType);
 
-        FunctionReturnType = Function->ReturnType->Type;
+        FunctionReturnType = ReturnType;
         VisitBlock(Cast<BlockNode>(Function->Body));
         FunctionReturnType = nullptr;
 
