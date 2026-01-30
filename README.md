@@ -53,7 +53,7 @@ for (Initialization; Condition; Iteration)
 ```
 
 ### Comments
-```
+```c++
 // Line comment
 /*
 	Block comment
@@ -63,7 +63,7 @@ for (Initialization; Condition; Iteration)
 ## Examples
 
 ### Print "Hello, World!"
-```
+```c++
 fun:int Main()
 {
 	Out("Hello, World!");
@@ -71,8 +71,8 @@ fun:int Main()
 }
 ```
 
-### If/else
-```
+### If/Else
+```c++
 fun:int Main()
 {
 	let:int Num = 5;
@@ -86,7 +86,7 @@ fun:int Main()
 ```
 
 ### While
-```
+```c++
 fun:int Main()
 {
 	let:int Num = 0;
@@ -101,7 +101,7 @@ fun:int Main()
 ```
 
 ### For
-```
+```c++
 fun:int Main()
 {
 	let:int[5] Arr = [1, 2, 3, 4, 5];

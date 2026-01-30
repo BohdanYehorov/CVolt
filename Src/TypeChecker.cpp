@@ -981,8 +981,11 @@ namespace Volt
 
     CTimeValue *TypeChecker::CalculateUnary(CTimeValue *Operand, Operator::Type Type) const
     {
-        if (!Operand || !Operand->IsValid)
+        if (!Operand)
             return nullptr;
+
+        if (!Operand->IsValid)
+            return CTimeValue::CreateNull(Operand->Type, MainArena);
 
         TypeCategory OperandTypeCategory = Operand->Type.GetTypeCategory();
         switch (Type)
@@ -1023,8 +1026,7 @@ namespace Volt
 
                 return nullptr;
             }
-            default:
-                return nullptr;
+            default: return CTimeValue::CreateNull(Operand->Type, MainArena);
         }
     }
 
@@ -1067,7 +1069,7 @@ namespace Volt
     CTimeValue *TypeChecker::CalculateBinary(CTimeValue *Left, CTimeValue *Right, Operator::Type Type) const
     {
         if (!Left->IsValid || !Right->IsValid)
-            return nullptr;
+            return CTimeValue::CreateNull(Left->Type, MainArena);
 
         switch (Type)
         {
@@ -1089,7 +1091,7 @@ namespace Volt
             case Operator::BIT_XOR:     CREATE_OP_FOR_INT(^);
             case Operator::LSHIFT:      CREATE_OP_FOR_INT(<<);
             case Operator::RSHIFT:      CREATE_OP_FOR_INT(>>);
-            default:                    return nullptr;
+            default:                    return CTimeValue::CreateNull(Left->Type, MainArena);
         }
     }
 }
