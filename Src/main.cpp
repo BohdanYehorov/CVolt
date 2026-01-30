@@ -6,30 +6,9 @@
 #include <fstream>
 #include <sstream>
 
-int main()
+int main(int Argc, char* Argv[])
 {
-    std::ifstream File("../Resources/test.volt");
-    if (!File.is_open())
-        return -1;
-
-    std::stringstream SStr;
-    SStr << File.rdbuf();
-
-    Volt::Lexer MyLexer(SStr.str());
-    MyLexer.Lex();
-    MyLexer.PrintTokens();
-
-    if (MyLexer.PrintErrors())
-        return -1;
-
     Volt::Arena MainArena;
-
-    Volt::Parser MyParser(MainArena, MyLexer);
-    MyParser.Parse();
-    MyParser.PrintASTTree();
-
-    if (MyParser.PrintErrors())
-        return -1;
 
     Volt::BuiltinFunctionTable FuncTable(MainArena);
     FuncTable.AddFunction("Out", "OutBool", &OutBool);
@@ -49,11 +28,35 @@ int main()
     FuncTable.AddFunction("RandomInt", "RandomInt", &RandomInt);
     FuncTable.AddFunction("System", "System", &System);
 
+#ifdef _DEBUG
+    std::ifstream File("../Resources/test.volt");
+    if (!File.is_open())
+        return -1;
+
+    std::stringstream SStr;
+    SStr << File.rdbuf();
+
+    Volt::Lexer MyLexer(SStr.str());
+    MyLexer.Lex();
+    MyLexer.PrintTokens();
+
+    if (MyLexer.PrintErrors())
+        return -1;
+
+    Volt::Parser MyParser(MainArena, MyLexer);
+    MyParser.Parse();
+    MyParser.PrintASTTree();
+
+    if (MyParser.PrintErrors())
+        return -1;
+
     Volt::TypeChecker MyTypeChecker(MyParser, MainArena, FuncTable);
     MyTypeChecker.Check();
 
     if (MyTypeChecker.PrintErrors())
         return -1;
+
+    MyParser.PrintASTTree();
 
     Volt::LLVMCompiler MyCompiler(MainArena, MyTypeChecker);
     MyCompiler.Compile();
@@ -66,15 +69,45 @@ int main()
     std::cout << "\n====================================================\n";
     std::cout << "Exited With Code: " << Res << std::endl;
 
-    // Volt::Arena Arena;
-    // auto VoidType = Volt::DataType::CreateVoid(Arena);
-    // auto IntType = Volt::DataType::CreateInteger(32, Arena);
-    // auto ArrType = Volt::DataType::CreateArray(VoidType, 5, Arena);
-    // auto ArrType1 = Volt::DataType::CreateArray(VoidType, 10, Arena);
-    //
-    // std::cout << std::boolalpha << Volt::DataType::IsEqual(ArrType, ArrType1);
-    // std::cout << Volt::DataTypeHash{}(VoidType) << " " << Volt::DataTypeHash{}(PtrType) << std::endl;
-    // std::cout << Volt::DataTypeHash{}(IntType) << " " << Volt::DataTypeHash{}(IntPtrType) << std::endl;
+#else
+    if (Argc < 2)
+    {
+        std::cerr << "Error: No input files\n";
+        return -1;
+    }
 
+    std::ifstream File(Argv[1]);
+    if (!File.is_open())
+    {
+        std::cerr << "Error: Cannot open this file: '" << Argv[1] << "'" << std::endl;
+        return -1;
+    }
+
+    std::stringstream SStr;
+    SStr << File.rdbuf();
+
+    Volt::Lexer MyLexer(SStr.str());
+    MyLexer.Lex();
+
+    if (MyLexer.PrintErrors())
+        return -1;
+
+    Volt::Parser MyParser(MainArena, MyLexer);
+    MyParser.Parse();
+
+    if (MyParser.PrintErrors())
+        return -1;
+
+    Volt::TypeChecker MyTypeChecker(MyParser, MainArena, FuncTable);
+    MyTypeChecker.Check();
+
+    if (MyTypeChecker.PrintErrors())
+        return -1;
+
+    Volt::LLVMCompiler MyCompiler(MainArena, MyTypeChecker);
+    MyCompiler.Compile();
+    int Res = MyCompiler.Run();
+    std::cout << "\nExited With Code: " << Res << std::endl;
+#endif
     return 0;
 }

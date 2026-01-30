@@ -33,7 +33,7 @@ namespace Volt
                 " At position: [" << Error.Line << ":" << Error.Column << "]\n";
     }
 
-    DataType TypeChecker::VisitNode(ASTNode *Node)
+    CTimeValue *TypeChecker::VisitNode(ASTNode *Node)
     {
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
@@ -118,7 +118,7 @@ namespace Volt
         ExitScope();
     }
 
-    DataType TypeChecker::VisitInt(IntegerNode *Int)
+    CTimeValue *TypeChecker::VisitInt(IntegerNode *Int)
     {
         int BitWidth = 0;
         switch (Int->Type)
@@ -137,10 +137,11 @@ namespace Volt
         }
 
         Int->ResolvedType = DataType::CreateInteger(BitWidth, MainArena);
-        return Int->ResolvedType;
+        Int->CompileTimeValue = CTimeValue::CreateInteger(Int->ResolvedType, Int->Value, MainArena);
+        return Int->CompileTimeValue;
     }
 
-    DataType TypeChecker::VisitFloat(FloatingPointNode *Float)
+    CTimeValue *TypeChecker::VisitFloat(FloatingPointNode *Float)
     {
         int BitWidth = 0;
         switch (Float->Type)
@@ -156,28 +157,30 @@ namespace Volt
         }
 
         Float->ResolvedType = DataType::CreateFloatingPoint(BitWidth, MainArena);
-        return Float->ResolvedType;
+        Float->CompileTimeValue = CTimeValue::CreateFloat(Float->ResolvedType, Float->Value, MainArena);
+        return Float->CompileTimeValue;
     }
 
-    DataType TypeChecker::VisitBool(BoolNode *Bool)
+    CTimeValue *TypeChecker::VisitBool(BoolNode *Bool)
     {
         Bool->ResolvedType = DataType::CreateBoolean(MainArena);
-        return Bool->ResolvedType;
+        Bool->CompileTimeValue = CTimeValue::CreateBool(Bool->ResolvedType, Bool->Value, MainArena);
+        return Bool->CompileTimeValue;
     }
 
-    DataType TypeChecker::VisitChar(CharNode *Char)
+    CTimeValue *TypeChecker::VisitChar(CharNode *Char)
     {
         Char->ResolvedType = DataType::CreateChar(MainArena);
-        return Char->ResolvedType;
+        return CTimeValue::CreateChar(Char->ResolvedType, Char->Value, MainArena);
     }
 
-    DataType TypeChecker::VisitString(StringNode *String)
+    CTimeValue *TypeChecker::VisitString(StringNode *String)
     {
         String->ResolvedType = DataType::CreatePtr(DataType::CreateChar(MainArena), MainArena);
-        return String->ResolvedType;
+        return CTimeValue::CreatePointer(String->ResolvedType, String->Value.Data(), MainArena);
     }
 
-    DataType TypeChecker::VisitArray(ArrayNode *Array)
+    CTimeValue *TypeChecker::VisitArray(ArrayNode *Array)
     {
         llvm::ArrayRef<ASTNode*> Elements = Array->Elements;
 
@@ -188,7 +191,7 @@ namespace Volt
         bool HasErrors = false;
         for (auto El : Elements)
         {
-            DataType ElType = VisitNode(El);
+            DataType ElType = VisitNode(El)->Type;
             if (!ElType)
                 return nullptr;
 
@@ -205,31 +208,32 @@ namespace Volt
         if (HasErrors)
             return nullptr;
 
-        Array->ResolvedType = DataType::CreatePtr(ElementsType.GetTypeBase(), MainArena);
-        return Array->ResolvedType;
+        Array->ResolvedType = DataType::CreateArray(
+            ElementsType.GetTypeBase(), Elements.size(), MainArena);
+        return CTimeValue::CreateNull(Array->ResolvedType, MainArena);
     }
 
-    DataType TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
+    CTimeValue *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
         DataType VarType = GetVariable(Identifier->Value.ToString());;
         if (!VarType)
             SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.ToString() });
 
         Identifier->ResolvedType = VarType;
-        return VarType;
+        return CTimeValue::CreateNull(VarType, MainArena);
     }
 
-    DataType TypeChecker::VisitRef(RefNode *Ref)
+    CTimeValue *TypeChecker::VisitRef(RefNode *Ref)
     {
-        DataType RefType = VisitNode(Ref->Target);
+        DataType RefType = VisitNode(Ref->Target)->Type;
         if (!RefType)
             return nullptr;
-        return DataType::CreatePtr(RefType, MainArena);
+        return CTimeValue::CreateNull(DataType::CreatePtr(RefType, MainArena), MainArena);
     }
 
-    DataType TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
+    CTimeValue *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
-        DataType SuffixType = VisitNode(Suffix->Operand);
+        DataType SuffixType = VisitNode(Suffix->Operand)->Type;
         if (!SuffixType)
             return nullptr;
 
@@ -241,7 +245,7 @@ namespace Volt
                 if (SuffixType.GetTypeCategory() == TypeCategory::INTEGER)
                 {
                     Suffix->ResolvedType = SuffixType;
-                    return SuffixType;
+                    return CTimeValue::CreateNull(SuffixType, MainArena);
                 }
 
                 SendError(TypeErrorKind::InvalidUnaryOperator, Suffix,
@@ -253,9 +257,9 @@ namespace Volt
         }
     }
 
-    DataType TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
+    CTimeValue *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
-        DataType PrefixType = VisitNode(Prefix->Operand);
+        DataType PrefixType = VisitNode(Prefix->Operand)->Type;
         if (!PrefixType)
             return nullptr;
 
@@ -267,7 +271,7 @@ namespace Volt
                 if (PrefixType.GetTypeCategory() == TypeCategory::INTEGER)
                 {
                     Prefix->ResolvedType = PrefixType;
-                    return PrefixType;
+                    return CTimeValue::CreateNull(PrefixType,  MainArena);
                 }
                 SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
                     { Operator::ToString(Prefix->Type), PrefixType.ToString() });
@@ -279,9 +283,10 @@ namespace Volt
         }
     }
 
-    DataType TypeChecker::VisitUnary(UnaryOpNode *Unary)
+    CTimeValue *TypeChecker::VisitUnary(UnaryOpNode *Unary)
     {
-        DataType OperandType = VisitNode(Unary->Operand);
+        CTimeValue* Operand = VisitNode(Unary->Operand);
+        DataType OperandType = Operand->Type;
         if (!OperandType)
             return nullptr;
 
@@ -296,7 +301,8 @@ namespace Volt
                    OperandTypeCategory == TypeCategory::FLOATING_POINT)
                 {
                     Unary->ResolvedType = OperandType;
-                    return OperandType;
+                    Unary->CompileTimeValue = CalculateUnary(Operand, Unary->Type);
+                    return Unary->CompileTimeValue;
                 }
                 return nullptr;
             }
@@ -305,7 +311,8 @@ namespace Volt
                 if (ImplicitCast(OperandType, DataType::CreateBoolean(MainArena)))
                 {
                     Unary->ResolvedType = OperandType;
-                    return OperandType;
+                    Unary->CompileTimeValue = CalculateUnary(Operand, Unary->Type);
+                    return Unary->CompileTimeValue;
                 }
                 return nullptr;
             }
@@ -314,7 +321,8 @@ namespace Volt
                 if (OperandTypeCategory == TypeCategory::INTEGER)
                 {
                     Unary->ResolvedType = OperandType;
-                    return OperandType;
+                    Unary->CompileTimeValue = CalculateUnary(Operand, Unary->Type);
+                    return Unary->CompileTimeValue;
                 }
                 return nullptr;
             }
@@ -323,43 +331,51 @@ namespace Volt
         }
     }
 
-    DataType TypeChecker::VisitComparison(ComparisonNode *Comparison)
+    CTimeValue *TypeChecker::VisitComparison(ComparisonNode *Comparison)
     {
-        DataType LeftType = VisitNode(Comparison->Left);
-        DataType RightType = VisitNode(Comparison->Right);
+        CTimeValue* Left = VisitNode(Comparison->Left);
+        CTimeValue* Right = VisitNode(Comparison->Right);
+
+        DataType LeftType = Left->Type;
+        DataType RightType = Right->Type;
 
         if (!LeftType || !RightType)
             return nullptr;
 
-        if (CastToJointType(LeftType, RightType, Comparison->Type, Comparison->Line, Comparison->Column))
+        if (CastToJointType(Left, Right, Comparison->Type, Comparison->Line, Comparison->Column))
         {
             Comparison->ResolvedType = DataType::CreateBoolean(MainArena);
             Comparison->OperandsType = LeftType;
-            return Comparison->ResolvedType;
+            Comparison->CompileTimeValue = CalculateBinary(Left, Right, Comparison->Type);
+            return Comparison->CompileTimeValue;
         }
 
         return nullptr;
     }
 
-    DataType TypeChecker::VisitBinary(BinaryOpNode *Binary)
+    CTimeValue *TypeChecker::VisitBinary(BinaryOpNode *Binary)
     {
-        DataType LeftType = VisitNode(Binary->Left);
-        DataType RightType = VisitNode(Binary->Right);
+        CTimeValue* Left = VisitNode(Binary->Left);
+        CTimeValue* Right = VisitNode(Binary->Right);
+
+        DataType LeftType = Left->Type;
+        DataType RightType = Right->Type;
 
         if (!LeftType || !RightType)
             return nullptr;
 
-        if (CastToJointType(LeftType, RightType, Binary->Type, Binary->Line, Binary->Column))
+        if (CastToJointType(Left, Right, Binary->Type, Binary->Line, Binary->Column))
         {
             Binary->ResolvedType = LeftType;
             Binary->OperandsType = LeftType;
-            return LeftType;
+            Binary->CompileTimeValue = CalculateBinary(Left, Right, Binary->Type);
+            return Binary->CompileTimeValue;
         }
 
         return nullptr;
     }
 
-    DataType TypeChecker::VisitCall(CallNode *Call)
+    CTimeValue *TypeChecker::VisitCall(CallNode *Call)
     {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
@@ -369,7 +385,7 @@ namespace Volt
 
             for (auto Arg : Call->Arguments)
             {
-                DataType ArgType = VisitNode(Arg);
+                DataType ArgType = VisitNode(Arg)->Type;
                 if (!ArgType)
                     return nullptr;
                 ArgTypes.push_back(ArgType);
@@ -380,13 +396,13 @@ namespace Volt
             if (auto Iter = Functions.find(Signature); Iter != Functions.end())
             {
                 Call->ResolvedType = Iter->second->GetReturnType();
-                return Call->ResolvedType;
+                return CTimeValue::CreateNull(Call->ResolvedType, MainArena);
             }
 
             if (auto Func = BuiltinFuncTable.Get(Signature))
             {
                 Call->ResolvedType = Func->ReturnType;
-                return Func->ReturnType;
+                return CTimeValue::CreateNull(Func->ReturnType, MainArena);
             }
 
             SendError(TypeErrorKind::UndefinedFunction, Call->Callee, { Name });
@@ -397,10 +413,10 @@ namespace Volt
         return nullptr;
     }
 
-    DataType TypeChecker::VisitSubscript(SubscriptNode *Subscript)
+    CTimeValue *TypeChecker::VisitSubscript(SubscriptNode *Subscript)
     {
-        DataType TargetType = VisitNode(Subscript->Target);
-        DataType IndexType = VisitNode(Subscript->Index);
+        DataType TargetType = VisitNode(Subscript->Target)->Type;
+        DataType IndexType = VisitNode(Subscript->Index)->Type;
 
         DataType Int32Type = DataType::CreateInteger(32, MainArena);
         // if (!CanImplicitCast(IndexType, Int32Type))
@@ -415,28 +431,28 @@ namespace Volt
 
         Subscript->Index->ResolvedType = IndexType;
 
-        if (auto PtrType = TargetType.GetPtrType())
+        if (auto PtrType = TargetType.GetArrayType())
         {
             Subscript->ResolvedType = PtrType->BaseType;
-            return PtrType->BaseType;
+            return CTimeValue::CreateNull(PtrType->BaseType, MainArena);
         }
 
         return nullptr;
     }
 
-    DataType TypeChecker::VisitVariable(VariableNode *Variable)
+    CTimeValue *TypeChecker::VisitVariable(VariableNode *Variable)
     {
-        DataType VarType = DataType::CreateFromAST(Variable->Type, MainArena);
-        DataType ValueType = VisitNode(Variable->Value);
+        DataType VarType = VisitType(Variable->Type);
+        CTimeValue* Value = VisitNode(Variable->Value);
 
         if (!VarType)
             return nullptr;
 
-        if (ValueType && !ImplicitCast(ValueType, VarType))
+        if (Value && !ImplicitCast(Value->Type, VarType))
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
                 Variable,{Variable->Name.ToString(),
-                VarType.ToString(), ValueType.ToString()});
+                VarType.ToString(), Value->Type.ToString()});
             return nullptr;
         }
 
@@ -444,20 +460,20 @@ namespace Volt
         return nullptr;
     }
 
-    DataType TypeChecker::VisitFunction(FunctionNode *Function)
+    CTimeValue *TypeChecker::VisitFunction(FunctionNode *Function)
     {
         llvm::SmallVector<DataType, 8> Params;
         Params.reserve(Function->Params.size());
         FunctionParams.reserve(Function->Params.size());
         for (const auto& Param : Function->Params)
         {
-            DataType ParamType = DataType::CreateFromAST(Param->Type, MainArena);
+            DataType ParamType = VisitType(Param->Type);
             Params.push_back(ParamType);
             FunctionParams.emplace_back(Param->Name.ToString(), ParamType);
         }
 
         FunctionSignature Signature(Function->Name.ToString(), Params);
-        DataType ReturnType = DataType::CreateFromAST(Function->ReturnType, MainArena);
+        DataType ReturnType = VisitType(Function->ReturnType);
         Functions[Signature] = MainArena.Create<TypedFunction>(ReturnType);
 
         FunctionReturnType = ReturnType;
@@ -467,9 +483,9 @@ namespace Volt
         return nullptr;
     }
 
-    DataType TypeChecker::VisitIf(IfNode *If)
+    CTimeValue *TypeChecker::VisitIf(IfNode *If)
     {
-        DataType CondType = VisitNode(If->Condition);
+        DataType CondType = VisitNode(If->Condition)->Type;
         if (!CondType)
             return nullptr;
 
@@ -487,9 +503,9 @@ namespace Volt
         return nullptr;
     }
 
-    DataType TypeChecker::VisitWhile(WhileNode *While)
+    CTimeValue *TypeChecker::VisitWhile(WhileNode *While)
     {
-        DataType CondType = VisitNode(While->Condition);
+        DataType CondType = VisitNode(While->Condition)->Type;
         if (!CondType)
             return nullptr;
 
@@ -503,10 +519,10 @@ namespace Volt
         return nullptr;
     }
 
-    DataType TypeChecker::VisitFor(ForNode *For)
+    CTimeValue *TypeChecker::VisitFor(ForNode *For)
     {
         VisitNode(For->Initialization);
-        DataType CondType = VisitNode(For->Condition);
+        DataType CondType = VisitNode(For->Condition)->Type;
         if (!CondType)
             return nullptr;
 
@@ -521,7 +537,7 @@ namespace Volt
         return nullptr;
     }
 
-    DataType TypeChecker::VisitReturn(ReturnNode *Return)
+    CTimeValue *TypeChecker::VisitReturn(ReturnNode *Return)
     {
         if (Return->ReturnValue)
         {
@@ -531,7 +547,7 @@ namespace Volt
                 return nullptr;
             }
 
-            DataType ReturnType = VisitNode(Return->ReturnValue);
+            DataType ReturnType = VisitNode(Return->ReturnValue)->Type;
             if (!CanImplicitCast(ReturnType, FunctionReturnType))
                 SendError(TypeErrorKind::ReturnTypeMismatch, Return->ReturnValue);
 
@@ -540,6 +556,33 @@ namespace Volt
 
         if (FunctionReturnType != DataType(DataType::CreateVoid(MainArena)))
             SendError(TypeErrorKind::NonVoidMissingReturn, Return);
+
+        return nullptr;
+    }
+
+    DataType TypeChecker::VisitType(DataTypeNodeBase *Type)
+    {
+        if (auto Primitive = Cast<PrimitiveTypeNode>(Type))
+        {
+            Primitive->ResolvedType = Primitive->Type;
+            return Primitive->Type;
+        }
+        if (auto Ptr = Cast<PointerTypeNode>(Type))
+        {
+            Ptr->ResolvedType = DataType::CreatePtr(VisitType(Ptr->BaseType), MainArena);
+            return Ptr->ResolvedType;
+        }
+        if (auto Array = Cast<ArrayTypeNode>(Type))
+        {
+            CTimeValue* Length = VisitNode(Array->Length);
+            if (Length && Length->Type.GetTypeCategory() == TypeCategory::INTEGER)
+            {
+                Array->ResolvedType = DataType::CreateArray(VisitType(Array->BaseType), Length->Int, MainArena);
+                return Array->ResolvedType;
+            }
+
+            throw std::runtime_error("Array length mast be defined in compiler time");
+        }
 
         return nullptr;
     }
@@ -619,8 +662,6 @@ namespace Volt
             default:
                 return false;
         }
-
-        return false;
     }
 
     bool TypeChecker::CanCastComparison(DataType Left, DataType Right, Operator::Type Type) const
@@ -793,6 +834,116 @@ namespace Volt
         return false;
     }
 
+    bool TypeChecker::ImplicitCast(CTimeValue *Src, DataType DstType)
+    {
+        DataType SrcType = Src->Type;
+
+        if (SrcType == DstType) return true;
+
+        TypeCategory SrcTypeCategory = SrcType.GetTypeCategory();
+        TypeCategory DstTypeCategory = DstType.GetTypeCategory();
+
+        if (auto SrcIter = ImplicitCastTypes.find(SrcTypeCategory); SrcIter != ImplicitCastTypes.end())
+        {
+            const auto& DstImplicitCastTypes = SrcIter->second;
+            if (auto DstIter = DstImplicitCastTypes.find(DstTypeCategory); DstIter != DstImplicitCastTypes.end())
+            {
+                Src->Type = DstType;
+
+                switch (DstTypeCategory)
+                {
+                    case TypeCategory::INTEGER:
+                    {
+                        switch (SrcTypeCategory)
+                        {
+                            case TypeCategory::INTEGER:
+                                break;
+                            case TypeCategory::FLOATING_POINT:
+                                Src->Int = static_cast<UInt64>(Src->Float);
+                                break;
+                            case TypeCategory::BOOLEAN:
+                                Src->Int = static_cast<UInt64>(Src->Bool);
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+
+                    case TypeCategory::FLOATING_POINT:
+                    {
+                        switch (SrcTypeCategory)
+                        {
+                            case TypeCategory::INTEGER:
+                                Src->Float = static_cast<double>(Src->Int);
+                                break;
+                            case TypeCategory::FLOATING_POINT:
+                                break;
+                            case TypeCategory::BOOLEAN:
+                                Src->Float = static_cast<double>(Src->Bool);
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+
+                    case TypeCategory::BOOLEAN:
+                    {
+                        switch (SrcTypeCategory)
+                        {
+                            case TypeCategory::INTEGER:
+                                Src->Bool = static_cast<bool>(Src->Int);
+                                break;
+                            case TypeCategory::FLOATING_POINT:
+                                Src->Bool = static_cast<bool>(Src->Float);
+                                break;
+                            case TypeCategory::BOOLEAN:
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool TypeChecker::CastToJointType(CTimeValue *Left, CTimeValue *Right, Operator::Type Type, size_t Line, size_t Column)
+    {
+        DataType LeftType = Left->Type;
+        DataType RightType = Right->Type;
+
+        if (!CanCastToJointType(LeftType, RightType, Type))
+        {
+            SendError(TypeErrorKind::InvalidBinaryOperator,
+                Line, Column, { Operator::ToString(Type), LeftType.ToString(), RightType.ToString() });
+            return false;
+        }
+
+        int LeftTypeRank = LeftType.GetTypeRank(MainArena);
+        int RightTypeRank = RightType.GetTypeRank(MainArena);
+
+        if (LeftTypeRank == -1 || RightTypeRank == -1)
+            return false;
+
+        if (LeftTypeRank == RightTypeRank)
+            return true;
+
+        CTimeValue* Src = LeftTypeRank > RightTypeRank ? Right : Left;
+        DataType& Dst = LeftTypeRank > RightTypeRank ? LeftType : RightType;
+
+        return ImplicitCast(Src, Dst); //ImplicitCastOrError(Src, Dst, Line, Column);
+    }
+
     void TypeChecker::EnterScope()
     {
         ScopeStack.emplace_back();
@@ -826,5 +977,119 @@ namespace Volt
             return Iter->second->GetDataType();
 
         return nullptr;
+    }
+
+    CTimeValue *TypeChecker::CalculateUnary(CTimeValue *Operand, Operator::Type Type) const
+    {
+        if (!Operand || !Operand->IsValid)
+            return nullptr;
+
+        TypeCategory OperandTypeCategory = Operand->Type.GetTypeCategory();
+        switch (Type)
+        {
+            case Operator::ADD:
+            {
+                switch (OperandTypeCategory)
+                {
+                    case TypeCategory::INTEGER:
+                    case TypeCategory::FLOATING_POINT:
+                        return Operand;
+                    default:
+                        return nullptr;
+                }
+            }
+            case Operator::SUB:
+            {
+                switch (OperandTypeCategory)
+                {
+                    case TypeCategory::INTEGER:
+                        return CTimeValue::CreateInteger(Operand->Type, -Operand->Int, MainArena);
+                    case TypeCategory::FLOATING_POINT:
+                        return CTimeValue::CreateFloat(Operand->Type, -Operand->Float, MainArena);
+                    default:
+                        return nullptr;
+                }
+            }
+            case Operator::BIT_NOT:
+            {
+                if (OperandTypeCategory == TypeCategory::INTEGER)
+                    return CTimeValue::CreateInteger(Operand->Type, ~Operand->Int, MainArena);
+                return nullptr;
+            }
+            case Operator::LOGICAL_NOT:
+            {
+                if (OperandTypeCategory == TypeCategory::BOOLEAN)
+                    return CTimeValue::CreateBool(Operand->Type, !Operand->Bool, MainArena);
+
+                return nullptr;
+            }
+            default:
+                return nullptr;
+        }
+    }
+
+#define CREATE_OP_FOR_ALL_TYPES(Op) switch (Left->Type.GetTypeCategory()) \
+    { \
+        case TypeCategory::INTEGER: \
+            return CTimeValue::CreateInteger(Left->Type, Left->Int Op Right->Int, MainArena); \
+        case TypeCategory::FLOATING_POINT: \
+            return CTimeValue::CreateFloat(Left->Type, Left->Float Op Right->Float, MainArena); \
+        case TypeCategory::BOOLEAN: \
+            return CTimeValue::CreateBool(Left->Type, Left->Bool Op Right->Bool, MainArena); \
+        default: return nullptr; \
+    }
+
+#define CREATE_CMP_FOR_ALL_TYPES(Op) switch (Left->Type.GetTypeCategory()) \
+    { \
+        case TypeCategory::INTEGER: \
+            return CTimeValue::CreateBool(DataType::CreateBoolean(MainArena), Left->Int Op Right->Int, MainArena); \
+        case TypeCategory::FLOATING_POINT: \
+            return CTimeValue::CreateBool(DataType::CreateBoolean(MainArena), Left->Float Op Right->Float, MainArena); \
+        case TypeCategory::BOOLEAN: \
+            return CTimeValue::CreateBool(Left->Type, Left->Bool Op Right->Bool, MainArena); \
+        default: return nullptr; \
+    }
+
+#define CREATE_OP_FOR_INT(Op) switch (Left->Type.GetTypeCategory()) \
+    { \
+    case TypeCategory::INTEGER: \
+        return CTimeValue::CreateInteger(Left->Type, Left->Int Op Right->Int, MainArena); \
+    default: return nullptr; \
+    }
+
+#define CREATE_OP_FOR_BOOL(Op) switch (Left->Type.GetTypeCategory()) \
+    { \
+        case TypeCategory::BOOLEAN: \
+            return CTimeValue::CreateBool(Left->Type, Left->Bool Op Right->Bool, MainArena); \
+        default: return nullptr; \
+    }
+
+    CTimeValue *TypeChecker::CalculateBinary(CTimeValue *Left, CTimeValue *Right, Operator::Type Type) const
+    {
+        if (!Left->IsValid || !Right->IsValid)
+            return nullptr;
+
+        switch (Type)
+        {
+            case Operator::ADD:         CREATE_OP_FOR_ALL_TYPES(+);
+            case Operator::SUB:         CREATE_OP_FOR_ALL_TYPES(-);
+            case Operator::MUL:         CREATE_OP_FOR_ALL_TYPES(*);
+            case Operator::DIV:         CREATE_OP_FOR_ALL_TYPES(/);
+            case Operator::MOD:         CREATE_OP_FOR_INT(%);
+            case Operator::EQ:          CREATE_CMP_FOR_ALL_TYPES(==);
+            case Operator::NEQ:         CREATE_CMP_FOR_ALL_TYPES(!=);
+            case Operator::GT:          CREATE_CMP_FOR_ALL_TYPES(>);
+            case Operator::GTE:         CREATE_CMP_FOR_ALL_TYPES(>=);
+            case Operator::LT:          CREATE_CMP_FOR_ALL_TYPES(<);
+            case Operator::LTE:         CREATE_CMP_FOR_ALL_TYPES(<=);
+            case Operator::LOGICAL_AND: CREATE_OP_FOR_BOOL(&&);
+            case Operator::LOGICAL_OR:  CREATE_OP_FOR_BOOL(||);
+            case Operator::BIT_AND:     CREATE_OP_FOR_INT(&);
+            case Operator::BIT_OR:      CREATE_OP_FOR_INT(|);
+            case Operator::BIT_XOR:     CREATE_OP_FOR_INT(^);
+            case Operator::LSHIFT:      CREATE_OP_FOR_INT(<<);
+            case Operator::RSHIFT:      CREATE_OP_FOR_INT(>>);
+            default:                    return nullptr;
+        }
     }
 }

@@ -69,14 +69,18 @@ namespace Volt
             : BaseType(BaseType) {}
     };
 
-    class ArrayType : public PointerType
+    class ArrayType : public DataTypeBase
     {
-        GENERATED_BODY(ArrayType, PointerType)
+        GENERATED_BODY(ArrayType, DataTypeBase)
     public:
+        DataTypeBase* BaseType;
         size_t Length;
+        bool LengthInit;
 
         ArrayType(DataTypeBase* BaseType, size_t Length)
-            : PointerType(BaseType), Length(Length) {}
+            : BaseType(BaseType), Length(Length), LengthInit(true) {}
+        ArrayType(DataTypeBase* BaseType)
+            : BaseType(BaseType), Length(0), LengthInit(false) {}
     };
 
     class ReferenceType : public DataTypeBase

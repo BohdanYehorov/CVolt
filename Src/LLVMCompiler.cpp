@@ -12,7 +12,6 @@ namespace Volt
     void LLVMCompiler::Compile()
     {
         CompileNode(ASTTree);
-        std::cout << "Arena Size: " << CompilerArena.Size() << std::endl;
     }
 
     int LLVMCompiler::Run()
@@ -56,6 +55,25 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileNode(ASTNode *Node)
     {
+        if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
+        {
+            CTimeValue* Value = Node->CompileTimeValue;
+            switch (Value->Type.GetTypeCategory())
+            {
+                case TypeCategory::INTEGER:
+                    return Create<TypedValue>(llvm::ConstantInt::get(
+                    Value->Type.GetLLVMType(), Value->Int), Value->Type);
+                case TypeCategory::FLOATING_POINT:
+                    return Create<TypedValue>(llvm::ConstantFP::get(
+                        Value->Type.GetLLVMType(), Value->Float), Value->Type);
+                case TypeCategory::BOOLEAN:
+                    return Create<TypedValue>(llvm::ConstantInt::get(
+                        llvm::Type::getInt1Ty(Context), Value->Bool), Value->Type);
+                default:
+                    ERROR("Invalid compile tyme value type\n");
+            }
+        }
+
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
             for (auto Statement : Sequence->Statements)
@@ -156,44 +174,12 @@ namespace Volt
 
     TypedValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
-        // switch (Int->Type)
-        // {
-        //     case IntegerNode::BYTE:
-        //         return Create<TypedValue>(
-        //             llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Int->Value),
-        //             Int->ResolvedType);
-        //     case IntegerNode::INT:
-        //         return Create<TypedValue>(
-        //             llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), Int->Value),
-        //             Int->ResolvedType);
-        //     case IntegerNode::LONG:
-        //         return Create<TypedValue>(
-        //             llvm::ConstantInt::get(llvm::Type::getInt64Ty(Context), Int->Value),
-        //             Int->ResolvedType);
-        //     default:
-        //         ERROR("Unknown integer type")
-        // }
-
         return Create<TypedValue>(llvm::ConstantInt::get(
             Int->ResolvedType.GetLLVMType(), Int->Value), Int->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
     {
-        // switch (Float->Type)
-        // {
-        //     case FloatingPointNode::DOUBLE:
-        //         return Create<TypedValue>(llvm::ConstantFP::get(
-        //             llvm::Type::getDoubleTy(Context), Float->Value),
-        //             Float->ResolvedType);
-        //     case FloatingPointNode::FLOAT:
-        //         return Create<TypedValue>(
-        //             llvm::ConstantFP::get(llvm::Type::getFloatTy(Context), Float->Value),
-        //             DataType::CreateFloatingPoint(32, CompilerArena));
-        //     default:
-        //         ERROR("Unknown float type")
-        // }
-
         return Create<TypedValue>(llvm::ConstantFP::get(
             Float->ResolvedType.GetLLVMType(), Float->Value), Float->ResolvedType);
     }
@@ -223,8 +209,10 @@ namespace Volt
         if (Array->Elements.empty())
             ERROR("Array empty")
 
-        llvm::Type* ArrType = llvm::ArrayType::get(DataType(
-            Array->ResolvedType.GetPtrType()->BaseType).GetLLVMType(), Array->Elements.size());
+        llvm::Type* ArrType = nullptr;
+
+        if (ArrayType* Type = Array->ResolvedType.GetArrayType())
+            ArrType = llvm::ArrayType::get(DataType(Type->BaseType).GetLLVMType(), Array->Elements.size());
 
         llvm::AllocaInst* Arr = Builder.CreateAlloca(ArrType);
         llvm::Value* FirstElPtr = nullptr;
@@ -704,28 +692,42 @@ namespace Volt
         // llvm::Value* ElPtr = Builder.CreateGEP(Inst->getAllocatedType(), Inst, { Builder.getInt32(0), Index->GetValue()});
         // llvm::Value* El = Builder.CreateLoad(ElPtr->getType(), getLoadStorePointerOperand(ElPtr));
         // return Create<TypedValue>(El, ElPtrType->BaseType);
-        return Create<TypedValue>(El, Ptr->GetDataType().GetPtrType()->BaseType);
+        return Create<TypedValue>(El, Type->BaseType);
     }
 
     TypedValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
     {
-        DataType VarType = DataType::CreateFromAST(Var->Type, CompilerArena);
+        DataType VarType = Var->Type->ResolvedType; //DataType::CreateFromAST(Var->Type, CompilerArena);
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
         llvm::Type* Type = DataType::GetLLVMType(VarType, Context);
 
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
+        // if (VarType.GetArrayType() && Var->Value)
+        //     Alloca = llvm::cast<llvm::AllocaInst>(CompileArray(Cast<ArrayNode>(Var->Value))->GetValue());
+        // else
+        //     Alloca = TmpBuilder.CreateAlloca(Type);
 
-        DeclareVariable(Var->Name.ToString(),
-            Create<TypedValue>(Alloca, VarType, true));
-
-        if (Var->Value)
+        auto ArrType = VarType.GetArrayType();
+        if (ArrType && Var->Value)
+        {
+            if (auto Arr = Cast<ArrayNode>(Var->Value))
+            {
+                if (ArrType->Length < Arr->Elements.size())
+                    ERROR("Too many elements in array initializer");
+                FillArray(Arr, Alloca);
+            }
+        }
+        else if (Var->Value)
         {
             TypedValue* Value = CompileNode(Var->Value);
             Value = ImplicitCast(Value, VarType);
             Builder.CreateStore(Value->GetValue(), Alloca);
         }
+
+        DeclareVariable(Var->Name.ToString(),
+            Create<TypedValue>(Alloca, VarType, true));
 
         return nullptr;
     }
@@ -737,12 +739,12 @@ namespace Volt
 
         for (const auto Param : Function->Params)
         {
-            DataType ParamType = DataType::CreateFromAST(Param->Type, CompilerArena);
+            DataType ParamType = Param->Type->ResolvedType; //DataType::CreateFromAST(Param->Type, CompilerArena);
             Params.push_back(DataType::GetLLVMType(ParamType, Context));
         }
 
-        llvm::Type* RetType = DataType::GetLLVMType(
-            DataType::CreateFromAST(Function->ReturnType, CompilerArena), Context);
+        llvm::Type* RetType = DataType::GetLLVMType(Function->ReturnType->ResolvedType
+            /*DataType::CreateFromAST(Function->ReturnType, CompilerArena)*/, Context);
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
 
@@ -756,7 +758,7 @@ namespace Volt
         ParamsTypes.reserve(FuncParams.size());
         for (size_t i = 0; i < FuncParams.size(); i++)
         {
-            DataType ParamType = DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
+            DataType ParamType = FuncParams[i]->Type->ResolvedType; //DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
             auto Arg = Func->args().begin() + i;
             Arg->setName(FuncParams[i]->Name.ToString());
             ParamsTypes.push_back(ParamType);
@@ -1014,8 +1016,7 @@ namespace Volt
             llvm::Value* ElPtr = Builder.CreateGEP(Alloca->getAllocatedType(), Value,
                 { Builder.getInt32(0), Index->GetValue() });
 
-
-            return Create<TypedValue>(ElPtr, Ptr->GetDataType().GetArrayType()->BaseType, true);
+            return Create<TypedValue>(ElPtr, Type->BaseType, true);
         }
 
         return nullptr;
@@ -1104,5 +1105,26 @@ namespace Volt
         }
 
         return false;
+    }
+
+    void LLVMCompiler::FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca)
+    {
+        if (Array->Elements.empty())
+            ERROR("Array empty")
+
+        llvm::Value* Idx[2] = {
+            Builder.getInt32(0),
+            nullptr
+        };
+
+        for (size_t i = 0; i < Array->Elements.size(); i++)
+        {
+            TypedValue* El = CompileNode(Array->Elements[i]);
+
+            Idx[1] = Builder.getInt32(i);
+
+            llvm::Value* ElPtr = Builder.CreateGEP(Alloca->getAllocatedType(), Alloca, Idx);
+            Builder.CreateStore(El->GetValue(), ElPtr);
+        }
     }
 }

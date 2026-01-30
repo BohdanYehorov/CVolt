@@ -74,7 +74,7 @@ namespace Volt
         TypedValue *CompileBool(const BoolNode *Bool);
         TypedValue *CompileChar(const CharNode *Char);
         TypedValue *CompileString(const StringNode *String);
-        TypedValue *CompileArray(const ArrayNode* Array);
+        TypedValue *CompileArray(const ArrayNode *Array);
         TypedValue *CompileIdentifier(const IdentifierNode *Identifier);
         TypedValue *CompileRef(const RefNode *Ref);
         TypedValue *CompilePrefix(const PrefixOpNode *Prefix);
@@ -107,6 +107,8 @@ namespace Volt
         static bool CanImplicitCast(DataType Src, DataType Dst);
 
         static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);
+
+        void FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca);
 
         template <typename T, typename ...Args_>
         [[nodiscard]] T *Create(Args_&&... Args) { return CompilerArena.Create<T>(std::forward<Args_>(Args)...); }

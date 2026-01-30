@@ -28,6 +28,7 @@ add_executable(CVolt
         Src/ParserFuzzer.cpp
         Src/TypeChecker.cpp
         Src/BuiltinFunctionTable.cpp
+        Src/CTimeValue.cpp
 )
 
 target_link_libraries(CVolt PRIVATE LLVM)

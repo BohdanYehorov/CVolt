@@ -30,6 +30,30 @@ namespace Volt
         Os << Node->GetName() <<
             " [" << Node->Pos << ":" << Node->Line << ":" << Node->Column << "] ";
 
+        if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
+        {
+            Os << "CompileTimeValue: ";
+
+            CTimeValue* Value = Node->CompileTimeValue;
+
+            switch (Value->Type.GetTypeCategory())
+            {
+                case TypeCategory::INTEGER:
+                    Os << Value->Int;
+                    break;
+                case TypeCategory::FLOATING_POINT:
+                    Os << Value->Float;
+                    break;
+                case TypeCategory::BOOLEAN:
+                    Os << Value->Bool;
+                    break;
+                default:
+                    Os << "Null";
+                    break;
+            }
+
+            Os << " ";
+        }
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
             Os << std::endl;

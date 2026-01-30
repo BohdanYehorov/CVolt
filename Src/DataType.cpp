@@ -102,7 +102,7 @@ namespace Volt
 
         if (auto Iter = CachedTypes.find(&PtrDataType); Iter != CachedTypes.end())
         {
-            std::cout << "Pointer From Cache\n";
+            //std::cout << "Pointer From Cache\n";
             return Cast<PointerType>(Iter->Type);
         }
 
@@ -118,7 +118,7 @@ namespace Volt
 
         if (auto Iter = CachedTypes.find(&ArrDataType); Iter != CachedTypes.end())
         {
-            std::cout << "Array From Cache\n";
+            //std::cout << "Array From Cache\n";
             return Cast<ArrayType>(Iter->Type);
         }
 
@@ -138,12 +138,22 @@ namespace Volt
         //
         if (const auto Array = Cast<const ArrayTypeNode>(Node))
         {
-            if (auto Int = Cast<IntegerNode>(Array->Length))
+            // if (auto Int = Cast<IntegerNode>(Array->Length))
+            // {
+            //     return CreateArray(CreateFromAST(
+            //         Array->BaseType, TypesArena), Int->Value, TypesArena);
+            // }
+
+            if (ASTNode* LengthNode = Array->Length;
+                LengthNode->CompileTimeValue && LengthNode->CompileTimeValue->IsValid)
             {
-                return CreateArray(CreateFromAST(
-                    Array->BaseType, TypesArena), Int->Value, TypesArena);
+                CTimeValue* Length = LengthNode->CompileTimeValue;
+                if (Length->Type.GetTypeCategory() == TypeCategory::INTEGER)
+                    return CreateArray(CreateFromAST(
+                     Array->BaseType, TypesArena), Length->Int, TypesArena);
             }
 
+            throw std::runtime_error("Array length mast be defined in compiler time");
             return nullptr;
         }
 
@@ -360,6 +370,9 @@ namespace Volt
             return TypeToString(PtrType->BaseType) + "*";
         if (const auto RefType = Cast<const ReferenceType>(Type))
             return TypeToString(RefType->BaseType) + "$";
+
+        if (const auto ArrType = Cast<const ArrayType>(Type))
+            return TypeToString(ArrType->BaseType) + "[" + std::to_string(ArrType->Length) + "]";
 
         throw std::runtime_error("Unsupported data type");
     }

@@ -12,6 +12,7 @@
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/Types/TypeDefs.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
+#include "Volt/Compiler/CompileTime/CTimeValue.h"
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 
@@ -72,32 +73,34 @@ namespace Volt
             Errors.emplace_back(Kind, Node->Line, Node->Column, std::move(Context));
         }
 
-        DataType VisitNode(ASTNode* Node);
+        CTimeValue *VisitNode(ASTNode *Node);
 
         void VisitSequence(SequenceNode* Sequence);
         void VisitBlock(BlockNode* Block);
 
-        DataType VisitInt(IntegerNode *Int);
-        DataType VisitFloat(FloatingPointNode* Float);
-        DataType VisitBool(BoolNode* Bool);
-        DataType VisitChar(CharNode* Char);
-        DataType VisitString(StringNode* String);
-        DataType VisitArray(ArrayNode *Array);
-        DataType VisitIdentifier(IdentifierNode* Identifier);
-        DataType VisitRef(RefNode* Ref);
-        DataType VisitSuffix(SuffixOpNode* Suffix);
-        DataType VisitPrefix(PrefixOpNode* Prefix);
-        DataType VisitUnary(UnaryOpNode* Unary);
-        DataType VisitComparison(ComparisonNode *Comparison);
-        DataType VisitBinary(BinaryOpNode* Binary);
-        DataType VisitCall(CallNode* Call);
-        DataType VisitSubscript(SubscriptNode* Subscript);
-        DataType VisitVariable(VariableNode* Variable);
-        DataType VisitFunction(FunctionNode* Function);
-        DataType VisitIf(IfNode* If);
-        DataType VisitWhile(WhileNode* While);
-        DataType VisitFor(ForNode* For);
-        DataType VisitReturn(ReturnNode* Return);
+        CTimeValue *VisitInt(IntegerNode *Int);
+        CTimeValue *VisitFloat(FloatingPointNode *Float);
+        CTimeValue *VisitBool(BoolNode *Bool);
+        CTimeValue *VisitChar(CharNode *Char);
+        CTimeValue *VisitString(StringNode *String);
+        CTimeValue *VisitArray(ArrayNode *Array);
+        CTimeValue *VisitIdentifier(IdentifierNode *Identifier);
+        CTimeValue *VisitRef(RefNode *Ref);
+        CTimeValue *VisitSuffix(SuffixOpNode *Suffix);
+        CTimeValue *VisitPrefix(PrefixOpNode *Prefix);
+        CTimeValue *VisitUnary(UnaryOpNode *Unary);
+        CTimeValue *VisitComparison(ComparisonNode *Comparison);
+        CTimeValue *VisitBinary(BinaryOpNode *Binary);
+        CTimeValue *VisitCall(CallNode *Call);
+        CTimeValue *VisitSubscript(SubscriptNode *Subscript);
+        CTimeValue *VisitVariable(VariableNode *Variable);
+        CTimeValue *VisitFunction(FunctionNode *Function);
+        CTimeValue *VisitIf(IfNode *If);
+        CTimeValue *VisitWhile(WhileNode *While);
+        CTimeValue *VisitFor(ForNode *For);
+        CTimeValue *VisitReturn(ReturnNode *Return);
+
+        DataType VisitType(DataTypeNodeBase *Type);
 
         [[nodiscard]] bool CanImplicitCast(DataType Src, DataType Dst) const;
         [[nodiscard]] bool CanCastArithmetic(DataType Left, DataType Right, Operator::Type Type) const;
@@ -111,11 +114,17 @@ namespace Volt
         static bool ImplicitCast(DataType &Src, DataType Dst);
         bool ImplicitCastOrError(DataType& Src, DataType Dst, size_t Line, size_t Column);
 
+        static bool ImplicitCast(CTimeValue *Src, DataType DstType);
+        bool CastToJointType(CTimeValue *Left, CTimeValue *Right, Operator::Type Type, size_t Line, size_t Column);
+
         void EnterScope();
         void ExitScope();
 
         void DeclareVariable(const std::string& Name, DataType Type);
         DataType GetVariable(const std::string& Name);
+
+        CTimeValue *CalculateUnary(CTimeValue *Operand, Operator::Type Type) const;
+        CTimeValue *CalculateBinary(CTimeValue *Left, CTimeValue *Right, Operator::Type Type) const;
     };
 }
 
