@@ -14,18 +14,18 @@ namespace Volt
         GENERATED_BODY(TypedValue, Object)
     private:
         llvm::Value* Value = nullptr;
-        DataType Type = nullptr;
+        DataTypeBase* Type = nullptr;
         bool IsLValue = false;
 
     public:
         TypedValue() = default;
-        TypedValue(DataType Type, bool IsLValue = false)
+        TypedValue(DataTypeBase* Type, bool IsLValue = false)
             : Type(Type), IsLValue(IsLValue) {}
-        TypedValue(llvm::Value* Value, DataType Type, bool IsLValue = false)
+        TypedValue(llvm::Value* Value, DataTypeBase* Type, bool IsLValue = false)
             : Value(Value), Type(Type), IsLValue(IsLValue) {}
 
         [[nodiscard]] llvm::Value* GetValue() const { return Value; }
-        [[nodiscard]] DataType GetDataType() const { return Type; }
+        [[nodiscard]] DataTypeBase* GetDataType() const { return Type; }
 
         void InitValue(llvm::Value* InValue)
         {
@@ -41,17 +41,17 @@ namespace Volt
         GENERATED_BODY(TypedValue, Object)
     private:
         llvm::Function* Function = nullptr;
-        DataType ReturnType = nullptr;
+        DataTypeBase* ReturnType = nullptr;
 
     public:
         TypedFunction() = default;
         TypedFunction(DataType ReturnType)
             : ReturnType(ReturnType) {}
-        TypedFunction(llvm::Function* Function, DataType ReturnType)
+        TypedFunction(llvm::Function* Function, DataTypeBase* ReturnType)
             : Function(Function), ReturnType(ReturnType) {}
 
         [[nodiscard]] llvm::Function* GetFunction() const { return Function; }
-        [[nodiscard]] DataType GetReturnType() const { return ReturnType; }
+        [[nodiscard]] DataTypeBase* GetReturnType() const { return ReturnType; }
 
         void InitFunction(llvm::Function* InFunction)
         {

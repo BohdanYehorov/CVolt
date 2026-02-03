@@ -13,16 +13,17 @@
 #include "Volt/Core/Types/TypeDefs.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
 #include "Volt/Compiler/CompileTime/CTimeValue.h"
+#include "Volt/Core/Builder/Builder.h"
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 
 namespace Volt
 {
-    struct TypeScopeEntry
-    {
-        std::string Name;
-        DataType Previous = nullptr;
-    };
+    // struct TypeScopeEntry
+    // {
+    //     std::string Name;
+    //     DataType Previous = nullptr;
+    // };
 
     class TypeChecker
     {
@@ -32,6 +33,9 @@ namespace Volt
     private:
         ASTNode* ASTTree;
         Arena& MainArena;
+
+        BuilderBase& Builder;
+
         BuiltinFunctionTable& BuiltinFuncTable;
 
         std::vector<TypeError> Errors;
@@ -41,12 +45,13 @@ namespace Volt
 
         std::vector<std::vector<ScopeEntry>> ScopeStack;
 
-        llvm::SmallVector<std::pair<std::string, DataType>, 8> FunctionParams;
-        DataType FunctionReturnType = nullptr;
+        llvm::SmallVector<std::pair<std::string, DataTypeBase*>, 8> FunctionParams;
+        DataTypeBase* FunctionReturnType = nullptr;
 
     public:
-        TypeChecker(const Parser& Psr, Arena& MainArena, BuiltinFunctionTable& BuiltinFuncTable)
-            : ASTTree(Psr.GetASTTree()), MainArena(MainArena), BuiltinFuncTable(BuiltinFuncTable) {}
+        TypeChecker(const Parser& Psr, Arena& MainArena, BuilderBase& Builder, BuiltinFunctionTable& BuiltinFuncTable)
+            : ASTTree(Psr.GetASTTree()), MainArena(MainArena),
+            Builder(Builder), BuiltinFuncTable(BuiltinFuncTable) {}
 
         void Check() { VisitNode(ASTTree); }
         [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
@@ -100,31 +105,33 @@ namespace Volt
         CTimeValue *VisitFor(ForNode *For);
         CTimeValue *VisitReturn(ReturnNode *Return);
 
-        DataType VisitType(DataTypeNodeBase *Type);
+        DataTypeBase *VisitType(DataTypeNodeBase *Type);
 
-        [[nodiscard]] bool CanImplicitCast(DataType Src, DataType Dst) const;
-        [[nodiscard]] bool CanCastArithmetic(DataType Left, DataType Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastComparison(DataType Left, DataType Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastLogical(DataType Left, DataType Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastBitwise(DataType Left, DataType Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastAssignment(DataType Left, DataType Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastToJointType(DataType Left, DataType Right, Operator::Type Type) const;
+        [[nodiscard]] bool CanImplicitCast(DataTypeBase* Src, DataTypeBase* Dst) const;
+        [[nodiscard]] bool CanCastArithmetic(DataTypeBase* Left, DataTypeBase* Right, Operator::Type Type) const;
+        [[nodiscard]] bool CanCastComparison(DataTypeBase* Left, DataTypeBase* Right, Operator::Type Type) const;
+        [[nodiscard]] bool CanCastLogical(DataTypeBase* Left, DataTypeBase* Right, Operator::Type Type) const;
+        [[nodiscard]] bool CanCastBitwise(DataTypeBase* Left, DataTypeBase* Right, Operator::Type Type) const;
+        [[nodiscard]] bool CanCastAssignment(DataTypeBase* Left, DataTypeBase* Right, Operator::Type Type) const;
+        [[nodiscard]] bool CanCastToJointType(DataTypeBase* Left, DataTypeBase* Right, Operator::Type Type) const;
 
-        bool CastToJointType(DataType &Left, DataType &Right, Operator::Type Type, size_t Line, size_t Column);
-        static bool ImplicitCast(DataType &Src, DataType Dst);
-        bool ImplicitCastOrError(DataType& Src, DataType Dst, size_t Line, size_t Column);
+        bool CastToJointType(DataTypeBase *&Left, DataTypeBase *&Right, Operator::Type Type, size_t Line, size_t Column);
+        static bool ImplicitCast(DataTypeBase *&Src, DataTypeBase *Dst);
+        bool ImplicitCastOrError(DataTypeBase *&Src, DataTypeBase* Dst, size_t Line, size_t Column);
 
-        static bool ImplicitCast(CTimeValue *Src, DataType DstType);
+        static bool ImplicitCast(CTimeValue *Src, DataTypeBase* DstType);
         bool CastToJointType(CTimeValue *Left, CTimeValue *Right, Operator::Type Type, size_t Line, size_t Column);
 
         void EnterScope();
         void ExitScope();
 
-        void DeclareVariable(const std::string& Name, DataType Type);
-        DataType GetVariable(const std::string& Name);
+        void DeclareVariable(const std::string& Name, DataTypeBase* Type);
+        DataTypeBase* GetVariable(const std::string& Name);
 
         CTimeValue *CalculateUnary(CTimeValue *Operand, Operator::Type Type) const;
         CTimeValue *CalculateBinary(CTimeValue *Left, CTimeValue *Right, Operator::Type Type) const;
+
+        friend class LLVMCompiler;
     };
 }
 

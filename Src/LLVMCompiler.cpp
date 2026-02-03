@@ -44,7 +44,8 @@ namespace Volt
         if (auto Err = JIT->get()->addIRModule(std::move(TSM)))
             return 1;
         auto MainSymOrErr = JIT->get()->lookup("Main");
-        if (!MainSymOrErr) {
+        if (!MainSymOrErr)
+        {
             llvm::logAllUnhandledErrors(MainSymOrErr.takeError(), llvm::errs(), "Error: ");
             return 1;
         }
@@ -58,14 +59,14 @@ namespace Volt
         if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
         {
             CTimeValue* Value = Node->CompileTimeValue;
-            switch (Value->Type.GetTypeCategory())
+            switch (DataType::GetTypeCategory(Value->Type))
             {
                 case TypeCategory::INTEGER:
                     return Create<TypedValue>(llvm::ConstantInt::get(
-                    Value->Type.GetLLVMType(), Value->Int), Value->Type);
+                    CompilerBuilder.GetLLVMType(Value->Type), Value->Int), Value->Type);
                 case TypeCategory::FLOATING_POINT:
                     return Create<TypedValue>(llvm::ConstantFP::get(
-                        Value->Type.GetLLVMType(), Value->Float), Value->Type);
+                        CompilerBuilder.GetLLVMType(Value->Type), Value->Float), Value->Type);
                 case TypeCategory::BOOLEAN:
                     return Create<TypedValue>(llvm::ConstantInt::get(
                         llvm::Type::getInt1Ty(Context), Value->Bool), Value->Type);
@@ -175,33 +176,32 @@ namespace Volt
     TypedValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
         return Create<TypedValue>(llvm::ConstantInt::get(
-            Int->ResolvedType.GetLLVMType(), Int->Value), Int->ResolvedType);
+            CompilerBuilder.GetLLVMType(Int->ResolvedType), Int->Value), Int->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
     {
         return Create<TypedValue>(llvm::ConstantFP::get(
-            Float->ResolvedType.GetLLVMType(), Float->Value), Float->ResolvedType);
+            CompilerBuilder.GetLLVMType(Float->ResolvedType), Float->Value), Float->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileBool(const BoolNode *Bool)
     {
         return Create<TypedValue>(
             llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value),
-            DataType::CreateBoolean(CompilerArena));
+            CompilerBuilder.GetBoolType());
     }
 
     TypedValue *LLVMCompiler::CompileChar(const CharNode *Char)
     {
         return Create<TypedValue>(
-            llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value),
-            DataType::CreateChar(CompilerArena));
+            llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value), CompilerBuilder.GetCharType());
     }
 
     TypedValue *LLVMCompiler::CompileString(const StringNode *String)
     {
         return Create<TypedValue>(Builder.CreateGlobalString(String->Value.ToString()),
-            DataType::CreatePtr(DataType::CreateChar(CompilerArena), CompilerArena));
+            CompilerBuilder.GetPointerType(CompilerBuilder.GetCharType()));
     }
 
     TypedValue *LLVMCompiler::CompileArray(const ArrayNode *Array)
@@ -211,8 +211,9 @@ namespace Volt
 
         llvm::Type* ArrType = nullptr;
 
-        if (ArrayType* Type = Array->ResolvedType.GetArrayType())
-            ArrType = llvm::ArrayType::get(DataType(Type->BaseType).GetLLVMType(), Array->Elements.size());
+        if (auto Type = Cast<ArrayType>(Array->ResolvedType))
+            ArrType = llvm::ArrayType::get(
+                CompilerBuilder.GetLLVMType(Type->BaseType), Array->Elements.size());
 
         llvm::AllocaInst* Arr = Builder.CreateAlloca(ArrType);
         llvm::Value* FirstElPtr = nullptr;
@@ -245,7 +246,7 @@ namespace Volt
         if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
         {
             TypedValue* Var = Iter->second;
-            return Create<TypedValue>(Builder.CreateLoad(Var->GetDataType(),
+            return Create<TypedValue>(Builder.CreateLoad(CompilerBuilder.GetLLVMType(Var->GetDataType()),
                         Var->GetValue(), Value + "_val"), Var->GetDataType());
         }
 
@@ -258,7 +259,7 @@ namespace Volt
         if (!LValue)
             ERROR("Cannot apply operator '$' to l-value")
 
-       return Create<TypedValue>(LValue->GetValue(), DataType::CreatePtr(LValue->GetDataType(), CompilerArena));
+       return Create<TypedValue>(LValue->GetValue(), CompilerBuilder.GetPointerType(LValue->GetDataType()));
     }
 
     TypedValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
@@ -268,7 +269,7 @@ namespace Volt
             ERROR("Cannot apply prefix operator to r-value")
 
         llvm::Value* Value = LValue->GetValue();
-        Value = Builder.CreateLoad(LValue->GetDataType(), Value);
+        Value = Builder.CreateLoad(CompilerBuilder.GetLLVMType(LValue->GetDataType()), Value);
         switch (Prefix->Type)
         {
             case Operator::INC:
@@ -293,7 +294,7 @@ namespace Volt
             ERROR("Cannot apply suffix operator to r-value")
 
         llvm::Value* Value = LValue->GetValue();
-        Value = Builder.CreateLoad(LValue->GetDataType(), Value);
+        Value = Builder.CreateLoad(CompilerBuilder.GetLLVMType(LValue->GetDataType()), Value);
         llvm::Value* Temp = Value;
         switch (Suffix->Type)
         {
@@ -316,11 +317,11 @@ namespace Volt
     {
         TypedValue* TValue = CompileNode(Unary->Operand);
         llvm::Value* Value = TValue->GetValue();
-        DataType Type = TValue->GetDataType();
+        DataTypeBase* Type = TValue->GetDataType();
 
-        DataType BoolType = DataType::CreateBoolean(CompilerArena);
+        DataTypeBase* BoolType = CompilerBuilder.GetBoolType();
 
-        bool IsFP = Type.GetFloatingPointType();
+        bool IsFP = Cast<FloatingPointType>(Type);
 
         switch (Unary->Type)
         {
@@ -343,16 +344,16 @@ namespace Volt
         Left = ImplicitCast(Left, Comparison->OperandsType);
         Right = ImplicitCast(Right, Comparison->OperandsType);
 
-        DataType Type = Left->GetDataType();
+        DataTypeBase* Type = Left->GetDataType();
 
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
 
-        bool IsFP = Type.GetFloatingPointType();
+        bool IsFP = Cast<FloatingPointType>(Type);
 
         bool IsSigned = false;
         if (!IsFP)
-            if (auto IntType = Type.GetIntegerType())
+            if (auto IntType = Cast<IntegerType>(Type))
                 IsSigned = IntType->IsSigned;
 
         switch (Comparison->Type)
@@ -458,20 +459,20 @@ namespace Volt
 
         llvm::Value* Value = LValue->GetValue();
 
-        DataType Type = LValue->GetDataType();
+        DataTypeBase* Type = LValue->GetDataType();
         TypedValue* Right = ImplicitCast(CompileNode(Assignment->Right), Type);
         llvm::Value* RightVal = Right->GetValue();
 
         if (Assignment->Type == Operator::ASSIGN)
             return Create<TypedValue>(Builder.CreateStore(RightVal, Value), Right->GetDataType());
 
-        llvm::Value* Left = Builder.CreateLoad(Type, Value);
+        llvm::Value* Left = Builder.CreateLoad(CompilerBuilder.GetLLVMType(Type), Value);
 
-        bool IsFP = Type.GetFloatingPointType();
+        bool IsFP = Cast<FloatingPointType>(Type);
 
         bool IsSigned = false;
         if (!IsFP)
-            if (auto IntType = Type.GetIntegerType())
+            if (auto IntType = Cast<IntegerType>(Type))
                 IsSigned = IntType->IsSigned;
 
         switch (Assignment->Type)
@@ -512,14 +513,14 @@ namespace Volt
         Left = ImplicitCast(Left, BinaryOp->OperandsType);
         Right = ImplicitCast(Right, BinaryOp->OperandsType);
 
-        DataType Type = Left->GetDataType();
+        DataTypeBase* Type = Left->GetDataType();
 
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
 
-        bool IsFP = Type.GetFloatingPointType();
+        bool IsFP = Cast<FloatingPointType>(Type);
         bool IsSigned = false;
-        if (auto IntType = Type.GetIntegerType())
+        if (auto IntType = Cast<IntegerType>(Type))
             IsSigned = IntType->IsSigned;
 
         switch (BinaryOp->Type)
@@ -562,7 +563,7 @@ namespace Volt
             const std::string& FuncName = Identifier->Value.ToString();
 
             llvm::SmallVector<llvm::Value*, 8> LLVMArgs;
-            llvm::SmallVector<DataType, 8> ArgTypes;
+            llvm::SmallVector<DataTypeBase*, 8> ArgTypes;
             llvm::SmallVector<TypedValue*, 8> ArgValues;
 
             const auto& Args = Call->Arguments;
@@ -592,67 +593,67 @@ namespace Volt
                 FuncData->ReturnType );
             }
 
-            int MinDiffRank = std::numeric_limits<int>::max();
-            TypedFunction* Function = nullptr;
-            const FunctionSignature* BestFunctionSignature = nullptr;
-            for (const auto& [FuncSignature, Func] : FunctionSignatures)
-            {
-                if (FuncSignature.Name != Signature.Name)
-                    continue;
+            // int MinDiffRank = std::numeric_limits<int>::max();
+            // TypedFunction* Function = nullptr;
+            // const FunctionSignature* BestFunctionSignature = nullptr;
+            // for (const auto& [FuncSignature, Func] : FunctionSignatures)
+            // {
+            //     if (FuncSignature.Name != Signature.Name)
+            //         continue;
+            //
+            //     if (FuncSignature.Params.size() != Signature.Params.size())
+            //         continue;
+            //
+            //     int DiffRank = 0;
+            //     bool HasNonImplicitCastTypes = false;
+            //     for (size_t i = 0; i < FuncSignature.Params.size(); i++)
+            //     {
+            //         DataTypeBase* ParamType1 = FuncSignature.Params[i];
+            //         DataTypeBase* ParamType2 = Signature.Params[i];
+            //         if (!CanImplicitCast(ParamType1, ParamType2))
+            //         {
+            //             HasNonImplicitCastTypes = true;
+            //             break;
+            //         }
+            //
+            //         int Rank1 = DataType::GetPrimitiveTypeRank(Cast<PrimitiveDataType>(ParamType1)); //ParamType1.GetPrimitiveTypeRank();
+            //         int Rank2 = DataType::GetPrimitiveTypeRank(Cast<PrimitiveDataType>(ParamType1));
+            //
+            //         if (Rank1 == -1 || Rank2 == -1)
+            //         {
+            //             HasNonImplicitCastTypes = true;
+            //             break;
+            //         }
+            //
+            //         DiffRank += std::abs(Rank1 - Rank2);
+            //     }
+            //
+            //     if (HasNonImplicitCastTypes)
+            //         continue;
+            //
+            //     if (MinDiffRank > DiffRank)
+            //     {
+            //         Function = Func;
+            //         MinDiffRank = DiffRank;
+            //         BestFunctionSignature = &FuncSignature;
+            //     }
+            // }
 
-                if (FuncSignature.Params.size() != Signature.Params.size())
-                    continue;
-
-                int DiffRank = 0;
-                bool HasNonImplicitCastTypes = false;
-                for (size_t i = 0; i < FuncSignature.Params.size(); i++)
-                {
-                    DataType ParamType1 = FuncSignature.Params[i];
-                    DataType ParamType2 = Signature.Params[i];
-                    if (!CanImplicitCast(ParamType1, ParamType2))
-                    {
-                        HasNonImplicitCastTypes = true;
-                        break;
-                    }
-
-                    int Rank1 = ParamType1.GetPrimitiveTypeRank();
-                    int Rank2 = ParamType2.GetPrimitiveTypeRank();
-
-                    if (Rank1 == -1 || Rank2 == -1)
-                    {
-                        HasNonImplicitCastTypes = true;
-                        break;
-                    }
-
-                    DiffRank += std::abs(Rank1 - Rank2);
-                }
-
-                if (HasNonImplicitCastTypes)
-                    continue;
-
-                if (MinDiffRank > DiffRank)
-                {
-                    Function = Func;
-                    MinDiffRank = DiffRank;
-                    BestFunctionSignature = &FuncSignature;
-                }
-            }
-
-            if (BestFunctionSignature && Function)
-            {
-                for (size_t i = 0; i < BestFunctionSignature->Params.size(); i++)
-                {
-                    DataType ParamType = BestFunctionSignature->Params[i];
-
-                    TypedValue* Value = ArgValues[i];
-                    Value = ImplicitCast(Value, ParamType);
-
-                    LLVMArgs[i] = Value->GetValue();
-                }
-
-                return Create<TypedValue>(Builder.CreateCall(
-                           Function->GetFunction(), LLVMArgs), Function->GetReturnType());
-            }
+            // if (BestFunctionSignature && Function)
+            // {
+            //     for (size_t i = 0; i < BestFunctionSignature->Params.size(); i++)
+            //     {
+            //         DataTypeBase* ParamType = BestFunctionSignature->Params[i];
+            //
+            //         TypedValue* Value = ArgValues[i];
+            //         Value = ImplicitCast(Value, ParamType);
+            //
+            //         LLVMArgs[i] = Value->GetValue();
+            //     }
+            //
+            //     return Create<TypedValue>(Builder.CreateCall(
+            //                Function->GetFunction(), LLVMArgs), Function->GetReturnType());
+            // }
 
             ERROR("Function '" + FuncName + "' not found");
         }
@@ -664,7 +665,7 @@ namespace Volt
     {
         TypedValue* Ptr = GetLValue(Subscript->Target);
         llvm::Value* Value = Ptr->GetValue();
-        ArrayType* Type = Ptr->GetDataType().GetArrayType();
+        auto Type = Cast<ArrayType>(Ptr->GetDataType());
 
         auto Alloca = llvm::cast<llvm::AllocaInst>(Value);
 
@@ -697,19 +698,15 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
     {
-        DataType VarType = Var->Type->ResolvedType; //DataType::CreateFromAST(Var->Type, CompilerArena);
+        DataTypeBase* VarType = Var->Type->ResolvedType;
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
         llvm::Type* Type = DataType::GetLLVMType(VarType, Context);
 
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
-        // if (VarType.GetArrayType() && Var->Value)
-        //     Alloca = llvm::cast<llvm::AllocaInst>(CompileArray(Cast<ArrayNode>(Var->Value))->GetValue());
-        // else
-        //     Alloca = TmpBuilder.CreateAlloca(Type);
 
-        auto ArrType = VarType.GetArrayType();
+        auto ArrType = Cast<ArrayType>(VarType);
         if (ArrType && Var->Value)
         {
             if (auto Arr = Cast<ArrayNode>(Var->Value))
@@ -739,7 +736,7 @@ namespace Volt
 
         for (const auto Param : Function->Params)
         {
-            DataType ParamType = Param->Type->ResolvedType; //DataType::CreateFromAST(Param->Type, CompilerArena);
+            DataTypeBase* ParamType = Param->Type->ResolvedType; //DataType::CreateFromAST(Param->Type, CompilerArena);
             Params.push_back(DataType::GetLLVMType(ParamType, Context));
         }
 
@@ -752,13 +749,13 @@ namespace Volt
         llvm::Function* Func = llvm::Function::Create(
             FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
 
-        llvm::SmallVector<DataType, 8> ParamsTypes;
+        llvm::SmallVector<DataTypeBase*, 8> ParamsTypes;
 
         const auto& FuncParams = Function->Params;
         ParamsTypes.reserve(FuncParams.size());
         for (size_t i = 0; i < FuncParams.size(); i++)
         {
-            DataType ParamType = FuncParams[i]->Type->ResolvedType; //DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
+            DataTypeBase* ParamType = FuncParams[i]->Type->ResolvedType; //DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
             auto Arg = Func->args().begin() + i;
             Arg->setName(FuncParams[i]->Name.ToString());
             ParamsTypes.push_back(ParamType);
@@ -798,16 +795,17 @@ namespace Volt
         {
             TypedValue* RetVal = CompileNode(Return->ReturnValue);
             Builder.CreateRet(RetVal->GetValue());
+            return nullptr;
         }
-        else
-            Builder.CreateRetVoid();
+
+        Builder.CreateRetVoid();
         return nullptr;
     }
 
     TypedValue *LLVMCompiler::CompileIf(const IfNode *If)
     {
         TypedValue* Cond = CompileNode(If->Condition);
-        Cond = ImplicitCast(Cond,DataType::CreateBoolean(CompilerArena));
+        Cond = ImplicitCast(Cond,CompilerBuilder.GetBoolType());
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -844,7 +842,7 @@ namespace Volt
         Builder.CreateBr(LoopHeader);
         Builder.SetInsertPoint(LoopHeader);
         TypedValue* Cond = CompileNode(While->Condition);
-        Cond = ImplicitCast(Cond, DataType::CreateBoolean(CompilerArena));
+        Cond = ImplicitCast(Cond, CompilerBuilder.GetBoolType());
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
         llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
@@ -867,8 +865,6 @@ namespace Volt
 
         Builder.SetInsertPoint(EndBB);
         return nullptr;
-
-        ERROR("Unsupported operation: while")
     }
 
     TypedValue *LLVMCompiler::CompileFor(const ForNode *For)
@@ -887,7 +883,7 @@ namespace Volt
         Builder.CreateBr(ForHeader);
         Builder.SetInsertPoint(ForHeader);
         TypedValue* Cond = CompileNode(For->Condition);
-        Cond = ImplicitCast(Cond, DataType::CreateBoolean(CompilerArena));
+        Cond = ImplicitCast(Cond, CompilerBuilder.GetBoolType());
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
         llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
@@ -915,8 +911,6 @@ namespace Volt
 
         ExitScope();
         return nullptr;
-
-        ERROR("Unsupported operation: for");
     }
 
     TypedValue *LLVMCompiler::CompileBreak()
@@ -1003,7 +997,7 @@ namespace Volt
             TypedValue* Ptr = GetLValue(Subscript->Target);
             llvm::Value* Value = Ptr->GetValue();
 
-            ArrayType* Type = Ptr->GetDataType().GetArrayType();
+            auto Type = Cast<ArrayType>(Ptr->GetDataType());
 
             auto Alloca = llvm::cast<llvm::AllocaInst>(Value);
 
@@ -1022,72 +1016,75 @@ namespace Volt
         return nullptr;
     }
 
-    TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataType Target)
+    TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataTypeBase* Target)
     {
-        DataType SrcType = Value->GetDataType();
+        DataTypeBase* SrcType = Value->GetDataType();
+        llvm::Type* TargetLLVMType = CompilerBuilder.GetLLVMType(Target);
+        llvm::Type* SrcLLVMType = CompilerBuilder.GetLLVMType(SrcType);
 
-        if (SrcType.IsEqual(Target))
+        if (DataType::IsEqual(SrcType, Target))
             return Value;
 
-        if (SrcType.GetBooleanType())
+        if (Cast<BoolType>(SrcType))
         {
-            if (Target.GetIntegerType())
+            if (Cast<IntegerType>(Target))
                 return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
-                            Target.GetLLVMType(Context)), Target);
+                    TargetLLVMType), Target);
 
-            if (Target.GetFloatingPointType())
+            if (Cast<FloatingPointType>(Target))
                 return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
-                            Target), Target);
+                    TargetLLVMType), Target);
 
-            if (Target.GetPtrType())
+            if (Cast<PointerType>(Target))
                 return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
                             llvm::ConstantPointerNull::get(
-                            llvm::cast<llvm::PointerType>(SrcType.GetLLVMType()))), Target);
+                            llvm::cast<llvm::PointerType>(SrcLLVMType))), Target);
         }
 
-        if (SrcType.GetIntegerType())
+        if (auto SrcIntType = Cast<IntegerType>(SrcType))
         {
-            if (Target.GetBooleanType())
+            if (Cast<BoolType>(Target))
                 return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
-                            llvm::ConstantInt::get(SrcType.GetLLVMType(), 0)), Target);
+                            llvm::ConstantInt::get(SrcLLVMType, 0)), Target);
 
-            if (Target.GetIntegerType())
+            if (auto TargetIntType = Cast<IntegerType>(Target))
             {
-                if (SrcType.GetTypeBitWidth() < Target.GetTypeBitWidth())
+                if (SrcIntType->BitWidth < TargetIntType->BitWidth)
                     return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
-                        Target.GetLLVMType()), Target);
+                        TargetLLVMType), Target);
 
                 return Create<TypedValue>(Builder.CreateTrunc(Value->GetValue(),
-                    Target.GetLLVMType()), Target);
+                    TargetLLVMType), Target);
             }
 
-            if (Target.GetFloatingPointType())
+            if (Cast<FloatingPointType>(Target))
                 return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
-                    Target.GetLLVMType()), Target);
+                    TargetLLVMType), Target);
         }
 
-        if (SrcType.GetFloatingPointType())
+        if (auto SrcFloatType = Cast<FloatingPointType>(SrcType))
         {
-            if (Target.GetBooleanType())
+            if (Cast<BoolType>(Target))
                 return Create<TypedValue>(Builder.CreateFCmpONE(Value->GetValue(),
-                            llvm::ConstantFP::get(SrcType.GetLLVMType(), 0.0 )), Target);
+                            llvm::ConstantFP::get(SrcLLVMType, 0.0 )), Target);
 
-            if (Target.GetIntegerType())
+            if (Cast<IntegerType>(Target))
                 return Create<TypedValue>(Builder.CreateFPToSI(Value->GetValue(),
-                    Target.GetLLVMType()), Target);
+                    TargetLLVMType), Target);
 
-            if (Target.GetFloatingPointType())
+            if (auto TargetFloatType = Cast<FloatingPointType>(Target))
             {
-                if (SrcType.GetTypeBitWidth() < Target.GetTypeBitWidth())
+                if (SrcFloatType->BitWidth < TargetFloatType->BitWidth)
                     return Create<TypedValue>(Builder.CreateFPExt(Value->GetValue(),
-                        Target.GetLLVMType()), Target);
+                        TargetLLVMType), Target);
 
                 return Create<TypedValue>(Builder.CreateFPTrunc(Value->GetValue(),
-                    Target.GetLLVMType()), Target);
+                    TargetLLVMType), Target);
             }
         }
 
-        ERROR(std::format("Cannot conver '{}' to '{}'", SrcType.ToString(), Target.ToString()))
+        ERROR(std::format("Cannot convert '{}' to '{}'",
+            DataType::TypeToString(SrcType), DataType::TypeToString(Target)))
     }
 
     bool LLVMCompiler::CanImplicitCast(DataType Src, DataType Dst)

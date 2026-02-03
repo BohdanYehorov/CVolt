@@ -17,7 +17,17 @@ namespace Volt
         if (Type->CachedHash != 0)
             return Type->CachedHash;
 
-        if (const auto PrimitiveType = Cast<const PrimitiveDataType>(Type))
+        if (const auto IntType = Cast<const class IntegerType>(Type))
+        {
+            IntType->CachedHash = std::hash<size_t>{}(IntType->Object_GetType());
+            CombineHashes(IntType->CachedHash, std::hash<size_t>{}(IntType->BitWidth));
+        }
+        else if (const auto FloatType = Cast<const FloatingPointType>(Type))
+        {
+            FloatType->CachedHash = std::hash<size_t>{}(FloatType->Object_GetType());
+            CombineHashes(FloatType->CachedHash, std::hash<size_t>{}(FloatType->BitWidth));
+        }
+        else if (const auto PrimitiveType = Cast<const PrimitiveDataType>(Type))
             Type->CachedHash = std::hash<size_t>{}(PrimitiveType->Object_GetType());
         else if (const auto ArrType = Cast<const ArrayType>(Type))
         {

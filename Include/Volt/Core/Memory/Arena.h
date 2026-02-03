@@ -24,6 +24,12 @@ namespace Volt
         [[nodiscard]] T* Create(Args_&&... Args);
         [[nodiscard]] size_t Size() const { return Objects.size(); }
 
+        Arena() = default;
+        Arena(const Arena&) = delete;
+        Arena(Arena&&) = delete;
+        Arena& operator=(const Arena&) = delete;
+        Arena& operator=(Arena&&) = delete;
+
         ~Arena()
         {
             for (Object* Obj : Objects)

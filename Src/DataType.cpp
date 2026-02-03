@@ -134,21 +134,15 @@ namespace Volt
             return Primitive->Type;
         if (const auto Ptr = Cast<const PointerTypeNode>(Node))
             return CreatePtr(CreateFromAST(Ptr->BaseType, TypesArena), TypesArena);
-        // if (const auto Ref = Cast<const ReferenceTypeNode>(Node))
-        //
+        if (const auto Ref = Cast<const ReferenceTypeNode>(Node))
+
         if (const auto Array = Cast<const ArrayTypeNode>(Node))
         {
-            // if (auto Int = Cast<IntegerNode>(Array->Length))
-            // {
-            //     return CreateArray(CreateFromAST(
-            //         Array->BaseType, TypesArena), Int->Value, TypesArena);
-            // }
-
             if (ASTNode* LengthNode = Array->Length;
                 LengthNode->CompileTimeValue && LengthNode->CompileTimeValue->IsValid)
             {
                 CTimeValue* Length = LengthNode->CompileTimeValue;
-                if (Length->Type.GetTypeCategory() == TypeCategory::INTEGER)
+                if (GetTypeCategory(Length->Type) == TypeCategory::INTEGER)
                     return CreateArray(CreateFromAST(
                      Array->BaseType, TypesArena), Length->Int, TypesArena);
             }
@@ -230,14 +224,9 @@ namespace Volt
 
     int DataType::GetPrimitiveTypeRank(const PrimitiveDataType *Type)
     {
-        if (Cast<const VoidType>(Type))
-            return 0;
-
-        if (Cast<const BoolType>(Type))
-            return 1;
-
-        if (Cast<const CharType>(Type))
-            return 2;
+        if (Cast<const VoidType>(Type)) return 0;
+        if (Cast<const BoolType>(Type)) return 1;
+        if (Cast<const CharType>(Type)) return 2;
 
         if (const auto IntType = Cast<const IntegerType>(Type))
         {
@@ -278,6 +267,24 @@ namespace Volt
             return MaxPrimitiveTypeRank + 1;
 
         return -1;
+    }
+
+    TypeCategory DataType::GetTypeCategory(DataTypeBase *Type)
+    {
+        if (Cast<VoidType>(Type))
+            return TypeCategory::VOID;
+        if (Cast<BoolType>(Type))
+            return TypeCategory::BOOLEAN;
+        if (Cast<IntegerType>(Type))
+            return TypeCategory::INTEGER;
+        if (Cast<FloatingPointType>(Type))
+            return TypeCategory::FLOATING_POINT;
+        if (Cast<PointerType>(Type))
+            return TypeCategory::POINTER;
+        if (Cast<ReferenceType>(Type))
+            return TypeCategory::REFERENCE;
+
+        return TypeCategory::INVALID;
     }
 
     int DataType::GetTypeBitWidth() const

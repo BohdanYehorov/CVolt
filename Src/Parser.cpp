@@ -36,7 +36,7 @@ namespace Volt
 
             CTimeValue* Value = Node->CompileTimeValue;
 
-            switch (Value->Type.GetTypeCategory())
+            switch (DataType::GetTypeCategory(Value->Type))
             {
                 case TypeCategory::INTEGER:
                     Os << Value->Int;

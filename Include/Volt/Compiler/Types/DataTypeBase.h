@@ -5,8 +5,6 @@
 #ifndef CVOLT_DATATYPEBASE_H
 #define CVOLT_DATATYPEBASE_H
 
-#include <llvm/ADT/Hashing.h>
-
 #include "Volt/Core/Object/Object.h"
 #include <llvm/IR/Type.h>
 

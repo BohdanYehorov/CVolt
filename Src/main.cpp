@@ -9,8 +9,8 @@
 int main(int Argc, char* Argv[])
 {
     Volt::Arena MainArena;
-
-    Volt::BuiltinFunctionTable FuncTable(MainArena);
+    Volt::BuilderBase Builder(MainArena);
+    Volt::BuiltinFunctionTable FuncTable(Builder);
     FuncTable.AddFunction("Out", "OutBool", &OutBool);
     FuncTable.AddFunction("Out", "OutChar", &OutChar);
     FuncTable.AddFunction("Out", "OutByte", &OutByte);
@@ -50,7 +50,7 @@ int main(int Argc, char* Argv[])
     if (MyParser.PrintErrors())
         return -1;
 
-    Volt::TypeChecker MyTypeChecker(MyParser, MainArena, FuncTable);
+    Volt::TypeChecker MyTypeChecker(MyParser, MainArena, Builder, FuncTable);
     MyTypeChecker.Check();
 
     if (MyTypeChecker.PrintErrors())
@@ -68,6 +68,17 @@ int main(int Argc, char* Argv[])
 
     std::cout << "\n====================================================\n";
     std::cout << "Exited With Code: " << Res << std::endl;
+
+    // Volt::DataTypeBase* I32Type = Builder.GetIntegerType(32);
+    // Volt::DataTypeBase* I64Type = Builder.GetIntegerType(64);
+    //
+    // // std::cout << std::boolalpha << (I32Type == I64Type) << std::endl;
+    // // std::cout << Volt::DataTypeHash{}(I32Type) << " " << Volt::DataTypeHash{}(I64Type) << std::endl;
+    //
+    // Volt::FunctionSignature Signature1{ "Hello", {I32Type} };
+    // Volt::FunctionSignature Signature2{ "Hello", {I64Type} };
+    //
+    // std::cout << std::boolalpha << (Signature1 == Signature2) << std::endl;
 
 #else
     if (Argc < 2)

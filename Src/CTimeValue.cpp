@@ -6,7 +6,7 @@
 
 namespace Volt
 {
-	CTimeValue *CTimeValue::CreateInteger(DataType IntType, Int64 Integer, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateInteger(DataTypeBase* IntType, Int64 Integer, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = IntType;
@@ -14,7 +14,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateFloat(DataType FloatType, double Float, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateFloat(DataTypeBase* FloatType, double Float, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = FloatType;
@@ -22,7 +22,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateBool(DataType BoolType, bool Bool, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateBool(DataTypeBase* BoolType, bool Bool, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = BoolType;
@@ -30,7 +30,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateChar(DataType CharType, char Char, Arena &MainArena)
+	CTimeValue *CTimeValue::CreateChar(DataTypeBase* CharType, char Char, Arena &MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = CharType;
@@ -38,7 +38,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreatePointer(DataType PtrType, void *Ptr, Arena& MainArena)
+	CTimeValue *CTimeValue::CreatePointer(DataTypeBase* PtrType, void *Ptr, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = PtrType;
@@ -46,7 +46,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateNull(DataType Type, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateNull(DataTypeBase* Type, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = Type;

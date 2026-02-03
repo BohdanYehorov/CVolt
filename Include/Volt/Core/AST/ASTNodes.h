@@ -10,6 +10,7 @@
 #include "Volt/Core/Memory/BufferView.h"
 #include "Volt/Compiler/Types/DataType.h"
 #include "Volt/Compiler/CompileTime/CTimeValue.h"
+#include "Volt/Core/Functions/Callee.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
 #include <vector>
@@ -21,7 +22,7 @@ namespace Volt
     {
         GENERATED_BODY(ASTNode, Object)
     public:
-        DataType ResolvedType = nullptr;
+        DataTypeBase* ResolvedType = nullptr;
         CTimeValue* CompileTimeValue = nullptr;
         size_t Pos, Line, Column;
         ASTNode(size_t Pos, size_t Line, size_t Column)
@@ -177,7 +178,7 @@ namespace Volt
     {
         GENERATED_BODY(BinaryOpNode, ASTNode)
     public:
-        DataType OperandsType = nullptr;
+        DataTypeBase* OperandsType = nullptr;
 
         Operator::Type Type;
         ASTNode* Left;
@@ -218,6 +219,7 @@ namespace Volt
     {
         GENERATED_BODY(CallNode, ASTNode)
     public:
+        CalleeBase* ResolvedCallee = nullptr;
         ASTNode* Callee;
         llvm::TinyPtrVector<ASTNode*> Arguments;
         CallNode(ASTNode* Callee, size_t Pos, size_t Line, size_t Column)

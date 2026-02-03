@@ -6,15 +6,15 @@
 
 namespace Volt
 {
-	void BuiltinFunctionTable::CreateLLVMFunctions(llvm::Module *Module)
+	void BuiltinFunctionTable::CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context)
 	{
 		for (auto& [Signature, Data] : Functions)
 		{
-			llvm::Type* RetType = Data.ReturnType.GetLLVMType();
+			llvm::Type* RetType = DataType::GetLLVMType(Data.ReturnType, Context);
 			llvm::SmallVector<llvm::Type*, 8> LLVMParams;
 			LLVMParams.reserve(Signature.Params.size());
 			for (const auto& Param : Signature.Params)
-				LLVMParams.push_back(Param.GetLLVMType());
+				LLVMParams.push_back(DataType::GetLLVMType(Param, Context));
 
 			llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, LLVMParams, false);
 			llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Data.BaseName, Module);

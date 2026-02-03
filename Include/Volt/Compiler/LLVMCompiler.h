@@ -32,32 +32,29 @@ namespace Volt
         std::unique_ptr<llvm::Module> Module = nullptr;
         llvm::IRBuilder<> Builder;
         Arena& CompilerArena;
+        LLVMBuilder CompilerBuilder;
 
         ASTNode* ASTTree;
         BuiltinFunctionTable& BuiltinFuncTable;
 
-        std::unordered_map<std::string, llvm::Function*> Functions;
         FunctionTable FunctionSignatures;
         VariableTable SymbolTable;
-        std::unordered_map<std::string, llvm::orc::ExecutorSymbolDef> DefaultSymbols;
-        std::unordered_map<FunctionSignature,
-        std::pair<std::string, DataType>, FunctionSignatureHash> DefaultFunctionSignatures;
 
         std::vector<std::vector<ScopeEntry>> ScopeStack;
         std::stack<llvm::BasicBlock*> LoopEndStack;
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
         llvm::Function* CurrentFunction = nullptr;
-        llvm::ArrayRef<DataType> FunctionParams;
+        llvm::ArrayRef<DataTypeBase*> FunctionParams;
 
     public:
         LLVMCompiler(Arena& CompilerArena, TypeChecker& TyChecker)
             : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context),
-            CompilerArena(CompilerArena), ASTTree(TyChecker.GetASTTree()),
-            BuiltinFuncTable(TyChecker.GetBuiltinFunctionTable()),
+            CompilerArena(CompilerArena), CompilerBuilder(TyChecker.Builder, Context),
+            ASTTree(TyChecker.GetASTTree()), BuiltinFuncTable(TyChecker.GetBuiltinFunctionTable()),
             FunctionSignatures(TyChecker.GetFunctions())
         {
-            BuiltinFuncTable.CreateLLVMFunctions(Module.get());
+            BuiltinFuncTable.CreateLLVMFunctions(Module.get(), Context);
         }
 
         void Compile();
@@ -103,7 +100,7 @@ namespace Volt
 
         TypedValue *GetLValue(const ASTNode *Node);
 
-        TypedValue *ImplicitCast(TypedValue *Value, DataType Target);
+        TypedValue *ImplicitCast(TypedValue *Value, DataTypeBase* Target);
         static bool CanImplicitCast(DataType Src, DataType Dst);
 
         static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);

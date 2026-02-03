@@ -14,15 +14,15 @@ namespace Volt
 	{
 		GENERATED_BODY(CTimeValue, Object)
 	public:
-		static CTimeValue* CreateInteger(DataType IntType, Int64 Integer, Arena& MainArena);
-		static CTimeValue* CreateFloat(DataType FloatType, double Float, Arena& MainArena);
-		static CTimeValue* CreateBool(DataType BoolType, bool Bool, Arena& MainArena);
-		static CTimeValue* CreateChar(DataType CharType, char Char, Arena& MainArena);
-		static CTimeValue* CreatePointer(DataType PtrType, void* Ptr, Arena& MainArena);
-		static CTimeValue* CreateNull(DataType Type, Arena& MainArena);
+		static CTimeValue* CreateInteger(DataTypeBase* IntType, Int64 Integer, Arena& MainArena);
+		static CTimeValue* CreateFloat(DataTypeBase* FloatType, double Float, Arena& MainArena);
+		static CTimeValue* CreateBool(DataTypeBase* BoolType, bool Bool, Arena& MainArena);
+		static CTimeValue* CreateChar(DataTypeBase* CharType, char Char, Arena& MainArena);
+		static CTimeValue* CreatePointer(DataTypeBase* PtrType, void* Ptr, Arena& MainArena);
+		static CTimeValue* CreateNull(DataTypeBase* Type, Arena& MainArena);
 
 	public:
-		DataType Type;
+		DataTypeBase* Type;
 		union
 		{
 			Int64 Int;

@@ -7,6 +7,7 @@
 #include "Volt/Compiler/Types/DataType.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Compiler/Hash/FunctionSignatureHash.h"
+#include "Volt/Core/Builder/Builder.h"
 #include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h>
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
@@ -16,7 +17,7 @@ namespace Volt
 {
 	struct FunctionData
 	{
-		DataType ReturnType;
+		DataTypeBase* ReturnType;
 		std::string BaseName;
 		llvm::orc::ExecutorAddr ExeAddr;
 		llvm::orc::ExecutorSymbolDef SymbolDef;
@@ -26,10 +27,10 @@ namespace Volt
 	{
 	private:
 		std::unordered_map<FunctionSignature, FunctionData, FunctionSignatureHash> Functions;
-		Arena& TypesArena;
+		BuilderBase& Builder;
 
 	public:
-		BuiltinFunctionTable(Arena& TypesArena) : TypesArena(TypesArena) {}
+		BuiltinFunctionTable(BuilderBase& Builder) : Builder(Builder) {}
 
 		template <typename Ret, typename ...Args>
 		void AddFunction(const std::string& Name, const std::string& BaseName, Ret(*FuncPtr)(Args...));
@@ -37,85 +38,85 @@ namespace Volt
 		template <typename Ret>
 		void AddFunction(const std::string& Name, const std::string& BaseName, Ret(*FuncPtr)());
 
-		void CreateLLVMFunctions(llvm::Module *Module);
+		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
 
 		FunctionData* Get(const FunctionSignature& Signature);
 
 	private:
 		template <typename T, typename ...Rest>
-		void FillParams(llvm::SmallVector<DataType, 8>& Params);
+		void FillParams(llvm::SmallVector<DataTypeBase*, 8>& Params);
 	};
 
 	template <typename T>
-	DataType GetBaseType(Arena& TypesArena);
+	DataTypeBase* GetBaseType(BuilderBase& Builder);
 
-	template<> inline DataType GetBaseType<void>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<void>(BuilderBase& Builder)
 	{
-		return DataType::CreateVoid(TypesArena);
+		return Builder.GetVoidType();
 	}
 
-	template<> inline DataType GetBaseType<bool>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<bool>(BuilderBase& Builder)
 	{
-		return DataType::CreateBoolean(TypesArena);
+		return Builder.GetBoolType();
 	}
 
-	template<> inline DataType GetBaseType<char>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<char>(BuilderBase& Builder)
 	{
-		return DataType::CreateChar(TypesArena);
+		return Builder.GetCharType();
 	}
 
-	template<> inline DataType GetBaseType<std::byte>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<std::byte>(BuilderBase& Builder)
 	{
-		return DataType::CreateInteger(8, TypesArena);
+		return Builder.GetIntegerType(8);
 	}
 
-	template<> inline DataType GetBaseType<short>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<short>(BuilderBase& Builder)
 	{
-		return DataType::CreateInteger(16, TypesArena);
+		return Builder.GetIntegerType(16);
 	}
 
-	template<> inline DataType GetBaseType<int>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<int>(BuilderBase& Builder)
 	{
-		return DataType::CreateInteger(32, TypesArena);
+		return Builder.GetIntegerType(32);
 	}
 
-	template<> inline DataType GetBaseType<long>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<long>(BuilderBase& Builder)
 	{
-		return DataType::CreateInteger(64, TypesArena);
+		return Builder.GetIntegerType(64);
 	}
 
-	template<> inline DataType GetBaseType<long long>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<long long>(BuilderBase& Builder)
 	{
-		return DataType::CreateInteger(64, TypesArena);
+		return Builder.GetIntegerType(64);
 	}
 
-	template<> inline DataType GetBaseType<float>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<float>(BuilderBase& Builder)
 	{
-		return DataType::CreateFloatingPoint(32, TypesArena);
+		return Builder.GetFPType(32);
 	}
 
-	template<> inline DataType GetBaseType<double>(Arena& TypesArena)
+	template<> inline DataTypeBase* GetBaseType<double>(BuilderBase& Builder)
 	{
-		return DataType::CreateFloatingPoint(64, TypesArena);
+		return Builder.GetFPType(64);
 	}
 
 	template <typename T>
-	DataType GetDataType(Arena& TypesArena)
+	DataTypeBase* GetDataType(BuilderBase& Builder)
 	{
 		if constexpr (std::is_pointer_v<T>)
 		{
 			using BaseType = std::remove_pointer_t<T>;
-			return DataType::CreatePtr(GetDataType<BaseType>(TypesArena), TypesArena);
+			return Builder.GetPointerType(GetDataType<BaseType>(Builder));
 		}
 
-		return GetBaseType<T>(TypesArena);
+		return GetBaseType<T>(Builder);
 	}
 
 	template<typename T, typename ... Rest>
-	void BuiltinFunctionTable::FillParams(llvm::SmallVector<DataType, 8> &Params)
+	void BuiltinFunctionTable::FillParams(llvm::SmallVector<DataTypeBase*, 8> &Params)
 	{
-		Params.push_back(GetDataType<T>(TypesArena));
+		Params.push_back(GetDataType<T>(Builder));
 		if constexpr (sizeof...(Rest) > 0)
 			FillParams<Rest...>(Params);
 	}
@@ -123,8 +124,8 @@ namespace Volt
 	template<typename Ret, typename ... Args>
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)(Args...))
 	{
-		DataType RetType = GetDataType<Ret>(TypesArena);
-		llvm::SmallVector<DataType, 8> Params;
+		DataTypeBase* RetType = GetDataType<Ret>(Builder);
+		llvm::SmallVector<DataTypeBase*, 8> Params;
 		FillParams<Args...>(Params);
 		FunctionSignature Signature{ Name, Params };
 		Functions[Signature] = { RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr) };
@@ -133,7 +134,7 @@ namespace Volt
 	template<typename Ret>
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)())
 	{
-		DataType RetType = GetDataType<Ret>(TypesArena);
+		DataTypeBase* RetType = GetDataType<Ret>(Builder);
 		FunctionSignature Signature{ Name, {} };
 		Functions[Signature] = { RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr) };
 	}

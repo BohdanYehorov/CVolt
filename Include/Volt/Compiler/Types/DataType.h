@@ -66,13 +66,15 @@ namespace Volt
         static bool IsEqual(const DataTypeBase *Left, const DataTypeBase *Right);
         static int GetPrimitiveTypeRank(const PrimitiveDataType *Type);
         static int GetTypeRank(const DataTypeBase* Type, Arena &TypesArena);
+        static std::string TypeToString(DataTypeBase* Type);
+        static TypeCategory GetTypeCategory(DataTypeBase* Type);
 
     private:
         DataTypeBase *Type = nullptr;
 
     public:
         DataType() = default;
-        DataType(DataTypeBase *Type) : Type(Type) {}
+        //DataType(DataTypeBase *Type) : Type(Type) {}
 
         [[nodiscard]] VoidType *GetVoidType() const { return Cast<VoidType>(Type); }
         [[nodiscard]] BoolType *GetBooleanType() const { return Cast<BoolType>(Type); }
@@ -112,7 +114,6 @@ namespace Volt
         [[nodiscard]] std::string ToString() const;
 
     private:
-        static std::string TypeToString(DataTypeBase* Type);
 
         friend class LLVMContextScope;
     };
