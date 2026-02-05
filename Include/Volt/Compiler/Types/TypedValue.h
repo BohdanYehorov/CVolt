@@ -4,8 +4,9 @@
 
 #ifndef CVOLT_TYPEDVALUE_H
 #define CVOLT_TYPEDVALUE_H
-#include <llvm/IR/Value.h>
+#include "Volt/Core/Functions/Callee.h"
 #include "DataType.h"
+#include <llvm/IR/Value.h>
 
 namespace Volt
 {
@@ -45,7 +46,7 @@ namespace Volt
 
     public:
         TypedFunction() = default;
-        TypedFunction(DataType ReturnType)
+        TypedFunction(DataTypeBase* ReturnType)
             : ReturnType(ReturnType) {}
         TypedFunction(llvm::Function* Function, DataTypeBase* ReturnType)
             : Function(Function), ReturnType(ReturnType) {}

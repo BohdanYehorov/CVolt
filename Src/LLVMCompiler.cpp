@@ -1089,8 +1089,7 @@ namespace Volt
 
     bool LLVMCompiler::CanImplicitCast(DataType Src, DataType Dst)
     {
-        return Src.GetPrimitiveType() && !Src.GetVoidType() &&
-               Dst.GetPrimitiveType() && !Dst.GetVoidType();
+        return false;
     }
 
     bool LLVMCompiler::GetIntegerValue(const ASTNode *Node, Int64 &Num)

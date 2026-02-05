@@ -13,19 +13,19 @@ namespace Volt
 		GENERATED_BODY(CalleeBase, Object)
 
 	public:
-		DataType ReturnType;
-		CalleeBase(DataType ReturnType)
+		DataTypeBase* ReturnType;
+		CalleeBase(DataTypeBase* ReturnType)
 			: ReturnType(ReturnType) {}
 	};
 
-	class FunctionCallee : public CalleeBase
-	{
-		GENERATED_BODY(FunctionCallee, CalleeBase);
-
-	public:
-		FunctionCallee(DataType ReturnType)
-			: CalleeBase(ReturnType) {}
-	};
+	// class FunctionCallee : public CalleeBase
+	// {
+	// 	GENERATED_BODY(FunctionCallee, CalleeBase);
+	//
+	// public:
+	// 	FunctionCallee(DataType ReturnType)
+	// 		: CalleeBase(ReturnType) {}
+	// };
 }
 
 #endif //CVOLT_CALLEE_H

@@ -531,7 +531,7 @@ namespace Volt
         switch (Tok.Type)
         {
             case Token::TYPE_VOID:
-                Type = DataType::CreateVoid(NodesArena);
+                Type = NodesArena.Create<VoidType>();
                 break;
             case Token::TYPE_BOOL:
                 Type = NodesArena.Create<BoolType>();

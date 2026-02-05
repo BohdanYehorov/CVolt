@@ -1,5 +1,6 @@
 fun:int Main()
 {
-	Out("Hello, World!");
+	let:long Num = 4l;
+	Out(Num);
 	return 0;
 }

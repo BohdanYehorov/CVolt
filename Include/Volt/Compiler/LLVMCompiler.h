@@ -28,7 +28,6 @@ namespace Volt
     {
     private:
         llvm::LLVMContext Context;
-        LLVMContextScope ContextScope{ Context };
         std::unique_ptr<llvm::Module> Module = nullptr;
         llvm::IRBuilder<> Builder;
         Arena& CompilerArena;
