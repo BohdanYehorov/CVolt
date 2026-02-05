@@ -59,7 +59,7 @@ namespace Volt
         if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
         {
             CTimeValue* Value = Node->CompileTimeValue;
-            switch (DataType::GetTypeCategory(Value->Type))
+            switch (DataTypeUtils::GetTypeCategory(Value->Type))
             {
                 case TypeCategory::INTEGER:
                     return Create<TypedValue>(llvm::ConstantInt::get(
@@ -701,7 +701,7 @@ namespace Volt
         DataTypeBase* VarType = Var->Type->ResolvedType;
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        llvm::Type* Type = DataType::GetLLVMType(VarType, Context);
+        llvm::Type* Type = DataTypeUtils::GetLLVMType(VarType, Context);
 
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
@@ -737,10 +737,10 @@ namespace Volt
         for (const auto Param : Function->Params)
         {
             DataTypeBase* ParamType = Param->Type->ResolvedType; //DataType::CreateFromAST(Param->Type, CompilerArena);
-            Params.push_back(DataType::GetLLVMType(ParamType, Context));
+            Params.push_back(DataTypeUtils::GetLLVMType(ParamType, Context));
         }
 
-        llvm::Type* RetType = DataType::GetLLVMType(Function->ReturnType->ResolvedType
+        llvm::Type* RetType = DataTypeUtils::GetLLVMType(Function->ReturnType->ResolvedType
             /*DataType::CreateFromAST(Function->ReturnType, CompilerArena)*/, Context);
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
@@ -1022,7 +1022,7 @@ namespace Volt
         llvm::Type* TargetLLVMType = CompilerBuilder.GetLLVMType(Target);
         llvm::Type* SrcLLVMType = CompilerBuilder.GetLLVMType(SrcType);
 
-        if (DataType::IsEqual(SrcType, Target))
+        if (DataTypeUtils::IsEqual(SrcType, Target))
             return Value;
 
         if (Cast<BoolType>(SrcType))
@@ -1084,10 +1084,10 @@ namespace Volt
         }
 
         ERROR(std::format("Cannot convert '{}' to '{}'",
-            DataType::TypeToString(SrcType), DataType::TypeToString(Target)))
+            DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target)))
     }
 
-    bool LLVMCompiler::CanImplicitCast(DataType Src, DataType Dst)
+    bool LLVMCompiler::CanImplicitCast(DataTypeBase* Src, DataTypeBase* Dst)
     {
         return false;
     }

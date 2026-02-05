@@ -91,9 +91,9 @@ namespace Volt
 	int BuilderBase::GetTypeRank(DataTypeBase *Type)
 	{
 		if (const auto PrimitiveType =  Cast<const PrimitiveDataType>(Type))
-			return DataType::GetPrimitiveTypeRank(PrimitiveType);
+			return DataTypeUtils::GetPrimitiveTypeRank(PrimitiveType);
 
-		static int MaxPrimitiveTypeRank = DataType::GetPrimitiveTypeRank(
+		static int MaxPrimitiveTypeRank = DataTypeUtils::GetPrimitiveTypeRank(
 			Cast<PrimitiveDataType>(GetFPType(128)));
 
 		if (Cast<const PointerType>(Type))

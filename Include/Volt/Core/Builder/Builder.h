@@ -23,7 +23,7 @@ namespace Volt
 
 			bool operator==(const DataTypeNodeWrap& Other) const
 			{
-				return DataType::IsEqual(Type, Other.Type);
+				return DataTypeUtils::IsEqual(Type, Other.Type);
 			}
 		};
 
@@ -73,7 +73,7 @@ namespace Volt
 
 		[[nodiscard]] llvm::Type* GetLLVMType(DataTypeBase* Type) const
 		{
-			return DataType::GetLLVMType(Type, Context);
+			return DataTypeUtils::GetLLVMType(Type, Context);
 		}
 	};
 }

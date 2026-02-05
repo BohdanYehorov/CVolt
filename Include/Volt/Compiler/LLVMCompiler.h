@@ -100,7 +100,7 @@ namespace Volt
         TypedValue *GetLValue(const ASTNode *Node);
 
         TypedValue *ImplicitCast(TypedValue *Value, DataTypeBase* Target);
-        static bool CanImplicitCast(DataType Src, DataType Dst);
+        static bool CanImplicitCast(DataTypeBase* Src, DataTypeBase* Dst);
 
         static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);
 

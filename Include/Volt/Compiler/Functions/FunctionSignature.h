@@ -27,7 +27,7 @@ namespace Volt
 
             for (size_t i = 0; i < Params.size(); i++)
                 // if (Params[i] != Other.Params[i])
-                if (!DataType::IsEqual(Params[i], Other.Params[i]))
+                if (!DataTypeUtils::IsEqual(Params[i], Other.Params[i]))
                     return false;
 
             return true;

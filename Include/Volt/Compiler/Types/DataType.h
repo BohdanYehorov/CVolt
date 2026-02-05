@@ -24,7 +24,7 @@ namespace Volt
         REFERENCE
     };
 
-    class DataType
+    class DataTypeUtils
     {
     public:
         static llvm::Type *GetLLVMType(const DataTypeBase *Type, llvm::LLVMContext &Context);
