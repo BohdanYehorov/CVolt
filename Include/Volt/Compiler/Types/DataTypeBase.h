@@ -10,7 +10,7 @@
 
 namespace Volt
 {
-    class DataTypeBase : public Object
+    class DataType : public Object
     {
         GENERATED_BODY(DataTypeBase, Object)
     private:
@@ -20,9 +20,9 @@ namespace Volt
         friend class DataType;
     };
 
-    class PrimitiveDataType : public DataTypeBase
+    class PrimitiveDataType : public DataType
     {
-        GENERATED_BODY(PrimitiveDataType, DataTypeBase)
+        GENERATED_BODY(PrimitiveDataType, DataType)
     };
 
     class VoidType : public PrimitiveDataType
@@ -58,35 +58,35 @@ namespace Volt
         FloatingPointType(size_t BitWidth) : BitWidth(BitWidth) {}
     };
 
-    class PointerType : public DataTypeBase
+    class PointerType : public DataType
     {
-        GENERATED_BODY(PointerType, DataTypeBase)
+        GENERATED_BODY(PointerType, DataType)
     public:
-        DataTypeBase* BaseType;
-        PointerType(DataTypeBase* BaseType)
+        DataType* BaseType;
+        PointerType(DataType* BaseType)
             : BaseType(BaseType) {}
     };
 
-    class ArrayType : public DataTypeBase
+    class ArrayType : public DataType
     {
-        GENERATED_BODY(ArrayType, DataTypeBase)
+        GENERATED_BODY(ArrayType, DataType)
     public:
-        DataTypeBase* BaseType;
+        DataType* BaseType;
         size_t Length;
         bool LengthInit;
 
-        ArrayType(DataTypeBase* BaseType, size_t Length)
+        ArrayType(DataType* BaseType, size_t Length)
             : BaseType(BaseType), Length(Length), LengthInit(true) {}
-        ArrayType(DataTypeBase* BaseType)
+        ArrayType(DataType* BaseType)
             : BaseType(BaseType), Length(0), LengthInit(false) {}
     };
 
-    class ReferenceType : public DataTypeBase
+    class ReferenceType : public DataType
     {
-        GENERATED_BODY(ReferenceType, DataTypeBase)
+        GENERATED_BODY(ReferenceType, DataType)
     public:
-        DataTypeBase* BaseType;
-        ReferenceType(DataTypeBase* BaseType)
+        DataType* BaseType;
+        ReferenceType(DataType* BaseType)
             : BaseType(BaseType) {}
     };
 }

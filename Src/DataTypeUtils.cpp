@@ -2,16 +2,14 @@
 // Created by bohdan on 08.01.26.
 //
 
-#include "Volt/Compiler/Types/DataType.h"
+#include "Volt/Compiler/Types/DataTypeUtils.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
 #include "Volt/Core/AST/ASTNodes.h"
-#include <complex>
-#include <unordered_set>
 #include <llvm/IR/DerivedTypes.h>
 
 namespace Volt
 {
-    llvm::Type* DataTypeUtils::GetLLVMType(const DataTypeBase* Type, llvm::LLVMContext &Context)
+    llvm::Type* DataTypeUtils::GetLLVMType(const DataType* Type, llvm::LLVMContext &Context)
     {
         if (Cast<const VoidType>(Type))
             return llvm::Type::getVoidTy(Context);
@@ -41,7 +39,7 @@ namespace Volt
         throw std::runtime_error("Unsupported data type");
     }
 
-    bool DataTypeUtils::IsEqual(const DataTypeBase *Left, const DataTypeBase *Right)
+    bool DataTypeUtils::IsEqual(const DataType *Left, const DataType *Right)
     {
         if (Left == Right) return true;
         if (!Left || !Right) return false;
@@ -112,7 +110,7 @@ namespace Volt
         return -1;
     }
 
-    TypeCategory DataTypeUtils::GetTypeCategory(DataTypeBase *Type)
+    TypeCategory DataTypeUtils::GetTypeCategory(DataType *Type)
     {
         if (Cast<VoidType>(Type))
             return TypeCategory::VOID;
@@ -130,7 +128,7 @@ namespace Volt
         return TypeCategory::INVALID;
     }
 
-    std::string DataTypeUtils::TypeToString(DataTypeBase *Type)
+    std::string DataTypeUtils::TypeToString(DataType *Type)
     {
         if (Cast<const VoidType>(Type))
             return "void";

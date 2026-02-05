@@ -62,7 +62,7 @@ namespace Volt
 		return CachedFPTypes[Index];
 	}
 
-	PointerType *BuilderBase::GetPointerType(DataTypeBase *BaseType) const
+	PointerType *BuilderBase::GetPointerType(DataType *BaseType) const
 	{
 		PointerType PtrDataType(BaseType);
 
@@ -75,7 +75,7 @@ namespace Volt
 		return PtrTypeNode;
 	}
 
-	ArrayType *BuilderBase::GetArrayType(DataTypeBase *BaseType, size_t Length) const
+	ArrayType *BuilderBase::GetArrayType(DataType *BaseType, size_t Length) const
 	{
 		ArrayType ArrDataType(BaseType, Length);
 
@@ -88,7 +88,7 @@ namespace Volt
 		return ArrType;
 	}
 
-	int BuilderBase::GetTypeRank(DataTypeBase *Type)
+	int BuilderBase::GetTypeRank(DataType *Type)
 	{
 		if (const auto PrimitiveType =  Cast<const PrimitiveDataType>(Type))
 			return DataTypeUtils::GetPrimitiveTypeRank(PrimitiveType);

@@ -6,7 +6,7 @@
 #define CVOLT_FUNCTIONSIGNATURE_H
 
 #include <llvm/ADT/SmallVector.h>
-#include "Volt/Compiler/Types/DataType.h"
+#include "Volt/Compiler/Types/DataTypeUtils.h"
 #include <string>
 
 namespace Volt
@@ -14,10 +14,10 @@ namespace Volt
     struct FunctionSignature
     {
         std::string Name;
-        llvm::SmallVector<DataTypeBase*, 8> Params;
+        llvm::SmallVector<DataType*, 8> Params;
 
         FunctionSignature() = default;
-        FunctionSignature(const std::string& Name, llvm::ArrayRef<DataTypeBase*> Params)
+        FunctionSignature(const std::string& Name, llvm::ArrayRef<DataType*> Params)
                 : Name(Name), Params(Params) {}
 
         [[nodiscard]] bool operator==(const FunctionSignature& Other) const

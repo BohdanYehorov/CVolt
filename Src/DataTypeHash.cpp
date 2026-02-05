@@ -5,11 +5,11 @@
 #include "Volt/Compiler/Hash/DataTypeHash.h"
 
 #include "Volt/Compiler/Hash/Hash.h"
-#include "Volt/Compiler/Types/DataType.h"
+#include "Volt/Compiler/Types/DataTypeUtils.h"
 
 namespace Volt
 {
-    size_t DataTypeHash::operator()(const DataTypeBase *Type) const
+    size_t DataTypeHash::operator()(const DataType *Type) const
     {
         if (!Type)
             throw std::runtime_error("Type is nullptr");

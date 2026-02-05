@@ -5,7 +5,7 @@
 #ifndef CVOLT_TYPEDVALUE_H
 #define CVOLT_TYPEDVALUE_H
 #include "Volt/Core/Functions/Callee.h"
-#include "DataType.h"
+#include "DataTypeUtils.h"
 #include <llvm/IR/Value.h>
 
 namespace Volt
@@ -15,18 +15,18 @@ namespace Volt
         GENERATED_BODY(TypedValue, Object)
     private:
         llvm::Value* Value = nullptr;
-        DataTypeBase* Type = nullptr;
+        DataType* Type = nullptr;
         bool IsLValue = false;
 
     public:
         TypedValue() = default;
-        TypedValue(DataTypeBase* Type, bool IsLValue = false)
+        TypedValue(DataType* Type, bool IsLValue = false)
             : Type(Type), IsLValue(IsLValue) {}
-        TypedValue(llvm::Value* Value, DataTypeBase* Type, bool IsLValue = false)
+        TypedValue(llvm::Value* Value, DataType* Type, bool IsLValue = false)
             : Value(Value), Type(Type), IsLValue(IsLValue) {}
 
         [[nodiscard]] llvm::Value* GetValue() const { return Value; }
-        [[nodiscard]] DataTypeBase* GetDataType() const { return Type; }
+        [[nodiscard]] DataType* GetDataType() const { return Type; }
 
         void InitValue(llvm::Value* InValue)
         {
@@ -42,17 +42,17 @@ namespace Volt
         GENERATED_BODY(TypedValue, Object)
     private:
         llvm::Function* Function = nullptr;
-        DataTypeBase* ReturnType = nullptr;
+        DataType* ReturnType = nullptr;
 
     public:
         TypedFunction() = default;
-        TypedFunction(DataTypeBase* ReturnType)
+        TypedFunction(DataType* ReturnType)
             : ReturnType(ReturnType) {}
-        TypedFunction(llvm::Function* Function, DataTypeBase* ReturnType)
+        TypedFunction(llvm::Function* Function, DataType* ReturnType)
             : Function(Function), ReturnType(ReturnType) {}
 
         [[nodiscard]] llvm::Function* GetFunction() const { return Function; }
-        [[nodiscard]] DataTypeBase* GetReturnType() const { return ReturnType; }
+        [[nodiscard]] DataType* GetReturnType() const { return ReturnType; }
 
         void InitFunction(llvm::Function* InFunction)
         {

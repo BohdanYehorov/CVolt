@@ -11,7 +11,7 @@ namespace Volt
     class DataTypeHash
     {
     public:
-        size_t operator()(const DataTypeBase* Type) const;
+        size_t operator()(const DataType* Type) const;
     };
 }
 

@@ -317,9 +317,9 @@ namespace Volt
     {
         TypedValue* TValue = CompileNode(Unary->Operand);
         llvm::Value* Value = TValue->GetValue();
-        DataTypeBase* Type = TValue->GetDataType();
+        DataType* Type = TValue->GetDataType();
 
-        DataTypeBase* BoolType = CompilerBuilder.GetBoolType();
+        DataType* BoolType = CompilerBuilder.GetBoolType();
 
         bool IsFP = Cast<FloatingPointType>(Type);
 
@@ -344,7 +344,7 @@ namespace Volt
         Left = ImplicitCast(Left, Comparison->OperandsType);
         Right = ImplicitCast(Right, Comparison->OperandsType);
 
-        DataTypeBase* Type = Left->GetDataType();
+        DataType* Type = Left->GetDataType();
 
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
@@ -459,7 +459,7 @@ namespace Volt
 
         llvm::Value* Value = LValue->GetValue();
 
-        DataTypeBase* Type = LValue->GetDataType();
+        DataType* Type = LValue->GetDataType();
         TypedValue* Right = ImplicitCast(CompileNode(Assignment->Right), Type);
         llvm::Value* RightVal = Right->GetValue();
 
@@ -513,7 +513,7 @@ namespace Volt
         Left = ImplicitCast(Left, BinaryOp->OperandsType);
         Right = ImplicitCast(Right, BinaryOp->OperandsType);
 
-        DataTypeBase* Type = Left->GetDataType();
+        DataType* Type = Left->GetDataType();
 
         llvm::Value* LeftVal = Left->GetValue();
         llvm::Value* RightVal = Right->GetValue();
@@ -563,7 +563,7 @@ namespace Volt
             const std::string& FuncName = Identifier->Value.ToString();
 
             llvm::SmallVector<llvm::Value*, 8> LLVMArgs;
-            llvm::SmallVector<DataTypeBase*, 8> ArgTypes;
+            llvm::SmallVector<DataType*, 8> ArgTypes;
             llvm::SmallVector<TypedValue*, 8> ArgValues;
 
             const auto& Args = Call->Arguments;
@@ -608,8 +608,8 @@ namespace Volt
             //     bool HasNonImplicitCastTypes = false;
             //     for (size_t i = 0; i < FuncSignature.Params.size(); i++)
             //     {
-            //         DataTypeBase* ParamType1 = FuncSignature.Params[i];
-            //         DataTypeBase* ParamType2 = Signature.Params[i];
+            //         DataType* ParamType1 = FuncSignature.Params[i];
+            //         DataType* ParamType2 = Signature.Params[i];
             //         if (!CanImplicitCast(ParamType1, ParamType2))
             //         {
             //             HasNonImplicitCastTypes = true;
@@ -643,7 +643,7 @@ namespace Volt
             // {
             //     for (size_t i = 0; i < BestFunctionSignature->Params.size(); i++)
             //     {
-            //         DataTypeBase* ParamType = BestFunctionSignature->Params[i];
+            //         DataType* ParamType = BestFunctionSignature->Params[i];
             //
             //         TypedValue* Value = ArgValues[i];
             //         Value = ImplicitCast(Value, ParamType);
@@ -698,7 +698,7 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
     {
-        DataTypeBase* VarType = Var->Type->ResolvedType;
+        DataType* VarType = Var->Type->ResolvedType;
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
         llvm::Type* Type = DataTypeUtils::GetLLVMType(VarType, Context);
@@ -736,7 +736,7 @@ namespace Volt
 
         for (const auto Param : Function->Params)
         {
-            DataTypeBase* ParamType = Param->Type->ResolvedType; //DataType::CreateFromAST(Param->Type, CompilerArena);
+            DataType* ParamType = Param->Type->ResolvedType; //DataType::CreateFromAST(Param->Type, CompilerArena);
             Params.push_back(DataTypeUtils::GetLLVMType(ParamType, Context));
         }
 
@@ -749,13 +749,13 @@ namespace Volt
         llvm::Function* Func = llvm::Function::Create(
             FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
 
-        llvm::SmallVector<DataTypeBase*, 8> ParamsTypes;
+        llvm::SmallVector<DataType*, 8> ParamsTypes;
 
         const auto& FuncParams = Function->Params;
         ParamsTypes.reserve(FuncParams.size());
         for (size_t i = 0; i < FuncParams.size(); i++)
         {
-            DataTypeBase* ParamType = FuncParams[i]->Type->ResolvedType; //DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
+            DataType* ParamType = FuncParams[i]->Type->ResolvedType; //DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
             auto Arg = Func->args().begin() + i;
             Arg->setName(FuncParams[i]->Name.ToString());
             ParamsTypes.push_back(ParamType);
@@ -1016,9 +1016,9 @@ namespace Volt
         return nullptr;
     }
 
-    TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataTypeBase* Target)
+    TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataType* Target)
     {
-        DataTypeBase* SrcType = Value->GetDataType();
+        DataType* SrcType = Value->GetDataType();
         llvm::Type* TargetLLVMType = CompilerBuilder.GetLLVMType(Target);
         llvm::Type* SrcLLVMType = CompilerBuilder.GetLLVMType(SrcType);
 
@@ -1087,7 +1087,7 @@ namespace Volt
             DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target)))
     }
 
-    bool LLVMCompiler::CanImplicitCast(DataTypeBase* Src, DataTypeBase* Dst)
+    bool LLVMCompiler::CanImplicitCast(DataType* Src, DataType* Dst)
     {
         return false;
     }

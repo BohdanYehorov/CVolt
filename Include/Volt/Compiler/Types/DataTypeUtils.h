@@ -5,10 +5,8 @@
 #ifndef CVOLT_DATA_TYPE_H
 #define CVOLT_DATA_TYPE_H
 
-#include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Compiler/Hash/DataTypeHash.h"
-#include <unordered_set>
 #include <llvm/IR/Type.h>
 
 namespace Volt
@@ -27,11 +25,11 @@ namespace Volt
     class DataTypeUtils
     {
     public:
-        static llvm::Type *GetLLVMType(const DataTypeBase *Type, llvm::LLVMContext &Context);
-        static bool IsEqual(const DataTypeBase *Left, const DataTypeBase *Right);
+        static llvm::Type *GetLLVMType(const DataType *Type, llvm::LLVMContext &Context);
+        static bool IsEqual(const DataType *Left, const DataType *Right);
         static int GetPrimitiveTypeRank(const PrimitiveDataType *Type);
-        static std::string TypeToString(DataTypeBase* Type);
-        static TypeCategory GetTypeCategory(DataTypeBase* Type);
+        static std::string TypeToString(DataType* Type);
+        static TypeCategory GetTypeCategory(DataType* Type);
     };
 }
 

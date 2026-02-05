@@ -22,7 +22,7 @@ add_executable(CVolt
         Src/BufferView.cpp
         Src/LLVMCompiler.cpp
         Src/Hash.cpp
-        Src/DataType.cpp
+        Src/DataTypeUtils.cpp
         Src/DataTypeHash.cpp
         Src/FunctionSignatureHash.cpp
         Src/ParserFuzzer.cpp

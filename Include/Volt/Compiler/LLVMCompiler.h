@@ -44,7 +44,7 @@ namespace Volt
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
         llvm::Function* CurrentFunction = nullptr;
-        llvm::ArrayRef<DataTypeBase*> FunctionParams;
+        llvm::ArrayRef<DataType*> FunctionParams;
 
     public:
         LLVMCompiler(Arena& CompilerArena, TypeChecker& TyChecker)
@@ -99,8 +99,8 @@ namespace Volt
 
         TypedValue *GetLValue(const ASTNode *Node);
 
-        TypedValue *ImplicitCast(TypedValue *Value, DataTypeBase* Target);
-        static bool CanImplicitCast(DataTypeBase* Src, DataTypeBase* Dst);
+        TypedValue *ImplicitCast(TypedValue *Value, DataType* Target);
+        static bool CanImplicitCast(DataType* Src, DataType* Dst);
 
         static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);
 

@@ -6,7 +6,8 @@
 #define CVOLT_BUILDER_H
 
 #include "Volt/Core/Memory/Arena.h"
-#include "Volt/Compiler/Types/DataType.h"
+#include "Volt/Compiler/Types/DataTypeUtils.h"
+#include <unordered_set>
 #include <llvm/IR/LLVMContext.h>
 
 namespace Volt
@@ -16,10 +17,10 @@ namespace Volt
 	private:
 		struct DataTypeNodeWrap
 		{
-			DataTypeBase* Type;
+			DataType* Type;
 
-			DataTypeNodeWrap(DataTypeBase* Type) : Type(Type) {}
-			operator DataTypeBase*() const { return Type; }
+			DataTypeNodeWrap(DataType* Type) : Type(Type) {}
+			operator DataType*() const { return Type; }
 
 			bool operator==(const DataTypeNodeWrap& Other) const
 			{
@@ -52,10 +53,10 @@ namespace Volt
 		[[nodiscard]] CharType* GetCharType() const;
 		[[nodiscard]] IntegerType* GetIntegerType(size_t BitWidth) const;
 		[[nodiscard]] FloatingPointType* GetFPType(size_t BitWidth) const;
-		[[nodiscard]] PointerType* GetPointerType(DataTypeBase *BaseType) const;
-		[[nodiscard]] ArrayType* GetArrayType(DataTypeBase *BaseType, size_t Length) const;
+		[[nodiscard]] PointerType* GetPointerType(DataType *BaseType) const;
+		[[nodiscard]] ArrayType* GetArrayType(DataType *BaseType, size_t Length) const;
 
-		[[nodiscard]] int GetTypeRank(DataTypeBase* Type);
+		[[nodiscard]] int GetTypeRank(DataType* Type);
 
 		friend class LLVMBuilder;
 	};
@@ -71,7 +72,7 @@ namespace Volt
 
 		LLVMBuilder(BuilderBase& Other, llvm::LLVMContext& Context);
 
-		[[nodiscard]] llvm::Type* GetLLVMType(DataTypeBase* Type) const
+		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type) const
 		{
 			return DataTypeUtils::GetLLVMType(Type, Context);
 		}
