@@ -136,7 +136,7 @@ namespace Volt
                 return nullptr;
         }
 
-        Int->ResolvedType = Builder.GetIntegerType(BitWidth);
+        Int->ResolvedType = CContext.GetIntegerType(BitWidth);
         Int->CompileTimeValue = CTimeValue::CreateInteger(Int->ResolvedType, Int->Value, MainArena);
         return Int->CompileTimeValue;
     }
@@ -156,28 +156,28 @@ namespace Volt
                 return nullptr;
         }
 
-        Float->ResolvedType = Builder.GetFPType(BitWidth);
+        Float->ResolvedType = CContext.GetFPType(BitWidth);
         Float->CompileTimeValue = CTimeValue::CreateFloat(Float->ResolvedType, Float->Value, MainArena);
         return Float->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitBool(BoolNode *Bool)
     {
-        Bool->ResolvedType = Builder.GetBoolType();
+        Bool->ResolvedType = CContext.GetBoolType();
         Bool->CompileTimeValue = CTimeValue::CreateBool(Bool->ResolvedType, Bool->Value, MainArena);
         return Bool->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitChar(CharNode *Char)
     {
-        Char->ResolvedType = Builder.GetCharType();
+        Char->ResolvedType = CContext.GetCharType();
         return CTimeValue::CreateChar(Char->ResolvedType, Char->Value, MainArena);
     }
 
     CTimeValue *TypeChecker::VisitString(StringNode *String)
     {
-        String->ResolvedType = Builder.GetPointerType(Builder.GetCharType());
-        return CTimeValue::CreatePointer(String->ResolvedType, String->Value.Data(), MainArena);
+        String->ResolvedType = CContext.GetPointerType(CContext.GetCharType());
+        return CTimeValue::CreateNull(String->ResolvedType, MainArena);
     }
 
     CTimeValue *TypeChecker::VisitArray(ArrayNode *Array)
@@ -208,15 +208,15 @@ namespace Volt
         if (HasErrors)
             return nullptr;
 
-        Array->ResolvedType = Builder.GetArrayType(ElementsType, Elements.size());
+        Array->ResolvedType = CContext.GetArrayType(ElementsType, Elements.size());
         return CTimeValue::CreateNull(Array->ResolvedType, MainArena);
     }
 
     CTimeValue *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        DataType* VarType = GetVariable(Identifier->Value.ToString());;
+        DataType* VarType = GetVariable(Identifier->Value.str());;
         if (!VarType)
-            SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.ToString() });
+            SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
 
         Identifier->ResolvedType = VarType;
         return CTimeValue::CreateNull(VarType, MainArena);
@@ -227,7 +227,7 @@ namespace Volt
         DataType* RefType = VisitNode(Ref->Target)->Type;
         if (!RefType)
             return nullptr;
-        return CTimeValue::CreateNull(Builder.GetPointerType(RefType), MainArena);
+        return CTimeValue::CreateNull(CContext.GetPointerType(RefType), MainArena);
     }
 
     CTimeValue *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
@@ -307,7 +307,7 @@ namespace Volt
             }
             case Operator::LOGICAL_NOT:
             {
-                if (ImplicitCast(OperandType, Builder.GetBoolType()))
+                if (ImplicitCast(OperandType, CContext.GetBoolType()))
                 {
                     Unary->ResolvedType = OperandType;
                     Unary->CompileTimeValue = CalculateUnary(Operand, Unary->Type);
@@ -343,7 +343,7 @@ namespace Volt
 
         if (CastToJointType(Left, Right, Comparison->Type, Comparison->Line, Comparison->Column))
         {
-            Comparison->ResolvedType = Builder.GetBoolType();
+            Comparison->ResolvedType = CContext.GetBoolType();
             Comparison->OperandsType = LeftType;
             Comparison->CompileTimeValue = CalculateBinary(Left, Right, Comparison->Type);
             return Comparison->CompileTimeValue;
@@ -378,9 +378,9 @@ namespace Volt
     {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
-            const std::string& Name = Identifier->Value.ToString();
+            const std::string& Name = Identifier->Value.str();
             size_t ArgsCount = Call->Arguments.size();
-            llvm::SmallVector<DataType*, 8> ArgTypes;
+            SmallVec8<DataType*> ArgTypes;
             ArgTypes.reserve(ArgsCount);
 
             for (auto Arg : Call->Arguments)
@@ -444,7 +444,7 @@ namespace Volt
         DataType* TargetType = VisitNode(Subscript->Target)->Type;
         DataType* IndexType = VisitNode(Subscript->Index)->Type;
 
-        DataType* Int32Type = Builder.GetIntegerType(32);
+        DataType* Int32Type = CContext.GetIntegerType(32);
         // if (!CanImplicitCast(IndexType, Int32Type))
         // {
         //     SendError(TypeErrorKind::TypeMissmatch,
@@ -477,28 +477,28 @@ namespace Volt
         if (Value && !ImplicitCast(Value->Type, VarType))
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
-                Variable,{Variable->Name.ToString(),
+                Variable,{Variable->Name.str(),
                 DataTypeUtils::TypeToString(VarType), DataTypeUtils::TypeToString(Value->Type)});
             return nullptr;
         }
 
-        DeclareVariable(Variable->Name.ToString(), VarType);
+        DeclareVariable(Variable->Name.str(), VarType);
         return nullptr;
     }
 
     CTimeValue *TypeChecker::VisitFunction(FunctionNode *Function)
     {
-        llvm::SmallVector<DataType*, 8> Params;
+        SmallVec8<DataType*> Params;
         Params.reserve(Function->Params.size());
         FunctionParams.reserve(Function->Params.size());
         for (const auto& Param : Function->Params)
         {
             DataType* ParamType = VisitType(Param->Type);
             Params.push_back(ParamType);
-            FunctionParams.emplace_back(Param->Name.ToString(), ParamType);
+            FunctionParams.emplace_back(Param->Name.str(), ParamType);
         }
 
-        FunctionSignature Signature(Function->Name.ToString(), Params);
+        FunctionSignature Signature(Function->Name.str(), Params);
         DataType* ReturnType = VisitType(Function->ReturnType);
         Functions[Signature] = MainArena.Create<TypedFunction>(nullptr, ReturnType);
 
@@ -515,7 +515,7 @@ namespace Volt
         if (!CondType)
             return nullptr;
 
-        if (!CanImplicitCast(CondType, Builder.GetBoolType()))
+        if (!CanImplicitCast(CondType, CContext.GetBoolType()))
         {
             SendError(TypeErrorKind::ConditionNotBool, If->Condition);
             return nullptr;
@@ -535,7 +535,7 @@ namespace Volt
         if (!CondType)
             return nullptr;
 
-        if (!CanImplicitCast(CondType, Builder.GetBoolType()))
+        if (!CanImplicitCast(CondType, CContext.GetBoolType()))
         {
             SendError(TypeErrorKind::ConditionNotBool, While->Condition);
             return nullptr;
@@ -552,7 +552,7 @@ namespace Volt
         if (!CondType)
             return nullptr;
 
-        if (!CanImplicitCast(CondType, Builder.GetBoolType()))
+        if (!CanImplicitCast(CondType, CContext.GetBoolType()))
         {
             SendError(TypeErrorKind::ConditionNotBool, For->Condition);
             return nullptr;
@@ -567,7 +567,7 @@ namespace Volt
     {
         if (Return->ReturnValue)
         {
-            if (FunctionReturnType == Builder.GetVoidType())
+            if (FunctionReturnType == CContext.GetVoidType())
             {
                 SendError(TypeErrorKind::VoidReturnValue, Return->ReturnValue);
                 return nullptr;
@@ -580,7 +580,7 @@ namespace Volt
             return nullptr;
         }
 
-        if (FunctionReturnType != Builder.GetVoidType())
+        if (FunctionReturnType != CContext.GetVoidType())
             SendError(TypeErrorKind::NonVoidMissingReturn, Return);
 
         return nullptr;
@@ -595,7 +595,7 @@ namespace Volt
         }
         if (auto Ptr = Cast<PointerTypeNode>(Type))
         {
-            Ptr->ResolvedType = Builder.GetPointerType(VisitType(Ptr->BaseType));
+            Ptr->ResolvedType = CContext.GetPointerType(VisitType(Ptr->BaseType));
             return Ptr->ResolvedType;
         }
         if (auto Array = Cast<ArrayTypeNode>(Type))
@@ -603,7 +603,7 @@ namespace Volt
             CTimeValue* Length = VisitNode(Array->Length);
             if (Length && DataTypeUtils::GetTypeCategory(Length->Type) == TypeCategory::INTEGER)
             {
-                Array->ResolvedType = Builder.GetArrayType(VisitType(Array->BaseType), Length->Int);
+                Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
                 return Array->ResolvedType;
             }
 
@@ -739,7 +739,7 @@ namespace Volt
 
     bool TypeChecker::CanCastLogical(DataType* Left, DataType* Right, Operator::Type Type) const
     {
-        DataType* BoolType = Builder.GetBoolType();
+        DataType* BoolType = CContext.GetBoolType();
 
         switch (Type)
         {
@@ -816,8 +816,8 @@ namespace Volt
             return false;
         }
 
-        int LeftTypeRank = Builder.GetTypeRank(Left);
-        int RightTypeRank = Builder.GetTypeRank(Right);
+        int LeftTypeRank = DataTypeUtils::GetTypeRank(Left);
+        int RightTypeRank = DataTypeUtils::GetTypeRank(Right);
 
         if (LeftTypeRank == -1 || RightTypeRank == -1)
             return false;
@@ -955,8 +955,8 @@ namespace Volt
             return false;
         }
 
-        int LeftTypeRank = Builder.GetTypeRank(LeftType);
-        int RightTypeRank = Builder.GetTypeRank(RightType);
+        int LeftTypeRank = DataTypeUtils::GetTypeRank(LeftType);
+        int RightTypeRank = DataTypeUtils::GetTypeRank(RightType);
 
         if (LeftTypeRank == -1 || RightTypeRank == -1)
             return false;
@@ -1070,9 +1070,9 @@ namespace Volt
 #define CREATE_CMP_FOR_ALL_TYPES(Op) switch (DataTypeUtils::GetTypeCategory(Left->Type)) \
     { \
         case TypeCategory::INTEGER: \
-            return CTimeValue::CreateBool(Builder.GetBoolType(), Left->Int Op Right->Int, MainArena); \
+            return CTimeValue::CreateBool(CContext.GetBoolType(), Left->Int Op Right->Int, MainArena); \
         case TypeCategory::FLOATING_POINT: \
-            return CTimeValue::CreateBool(Builder.GetBoolType(), Left->Float Op Right->Float, MainArena); \
+            return CTimeValue::CreateBool(CContext.GetBoolType(), Left->Float Op Right->Float, MainArena); \
         case TypeCategory::BOOLEAN: \
             return CTimeValue::CreateBool(Left->Type, Left->Bool Op Right->Bool, MainArena); \
         default: return nullptr; \

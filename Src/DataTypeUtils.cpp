@@ -2,7 +2,7 @@
 // Created by bohdan on 08.01.26.
 //
 
-#include "Volt/Compiler/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataTypeUtils.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
 #include "Volt/Core/AST/ASTNodes.h"
 #include <llvm/IR/DerivedTypes.h>
@@ -106,6 +106,47 @@ namespace Volt
                 default:  return -1;
             }
         }
+
+        return -1;
+    }
+
+    int DataTypeUtils::GetTypeRank(const DataType *Type)
+    {
+        if (!Type) return -1;
+
+        if (Cast<const VoidType>(Type)) return 0;
+        if (Cast<const BoolType>(Type)) return 1;
+        if (Cast<const CharType>(Type)) return 2;
+
+        if (const auto IntType = Cast<const IntegerType>(Type))
+        {
+            switch (IntType->BitWidth)
+            {
+                case 8:  return  3;
+                case 16: return  4;
+                case 32: return  5;
+                case 64: return  6;
+                default: return -1;
+            }
+        }
+
+        if (const auto FloatType = Cast<const FloatingPointType>(Type))
+        {
+            switch (FloatType->BitWidth)
+            {
+                case 16:  return  7;
+                case 32:  return  8;
+                case 64:  return  9;
+                case 128: return 10;
+                default:  return -1;
+            }
+        }
+
+        if (Cast<const PointerType>(Type))
+            return 11;
+
+        if (Cast<const ArrayType>(Type))
+            return 12;
 
         return -1;
     }

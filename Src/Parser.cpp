@@ -6,7 +6,6 @@
 
 #include <charconv>
 #include <complex>
-#include <iostream>
 #include <stdexcept>
 
 namespace Volt
@@ -67,7 +66,7 @@ namespace Volt
                 WriteASTTree(Os, Statement, Tabs + 1);
         }
         else if (auto Identifier = Cast<IdentifierNode>(Node))
-            Os << Identifier->Value.ToString() << std::endl;
+            Os << Identifier->Value.str() << std::endl;
         else if (auto Float = Cast<FloatingPointNode>(Node))
             Os << Float->Value << std::endl;
         else if (auto Int = Cast<IntegerNode>(Node))
@@ -77,7 +76,7 @@ namespace Volt
         else if (auto Char = Cast<CharNode>(Node))
             Os << Char->Value << std::endl;
         else if (auto String = Cast<StringNode>(Node))
-            Os << String->Value.ToString() << std::endl;
+            Os << String->Value.str() << std::endl;
         else if (auto Array = Cast<ArrayNode>(Node))
         {
             Os << "Elements:\n";
@@ -134,7 +133,7 @@ namespace Volt
             Os << "DataType:\n";
             WriteASTTree(Os, Variable->Type, Tabs + 1);
             PrintTabs(Tabs);
-            Os << "Name: " << Variable->Name.ToString() << std::endl;
+            Os << "Name: " << Variable->Name.str() << std::endl;
             PrintTabs(Tabs);
             Os << "Value:\n";
             WriteASTTree(Os, Variable->Value, Tabs + 1);
@@ -146,7 +145,7 @@ namespace Volt
             Os << "DataType:\n";
             WriteASTTree(Os, Param->Type, Tabs + 1);
             PrintTabs(Tabs);
-            Os << "Name: " << Param->Name.ToString() << std::endl;
+            Os << "Name: " << Param->Name.str() << std::endl;
             PrintTabs(Tabs);
             Os << "DefaultValue:\n";
             WriteASTTree(Os, Param->DefaultValue, Tabs + 1);
@@ -158,7 +157,7 @@ namespace Volt
             Os << "ReturnType:\n";
             WriteASTTree(Os, Function->ReturnType, Tabs + 1);
             PrintTabs(Tabs);
-            Os << "Name: " << Function->Name.ToString() << std::endl;
+            Os << "Name: " << Function->Name.str() << std::endl;
             PrintTabs(Tabs);
             Os << "Parameters:\n";
 
@@ -392,7 +391,7 @@ namespace Volt
                 const Token& Tok = CurrentToken();
 
                 SendError(ParseErrorType::ExpectedToken, Tok.Line, Tok.Column,
-                    { Lexer::GetOperatorLexeme(Type), GetTokenLexeme(Tok).ToString() });
+                    { Lexer::GetOperatorLexeme(Type), GetTokenLexeme(Tok).str() });
 
                 return false;
             }
@@ -611,7 +610,7 @@ namespace Volt
             return nullptr;
         }
 
-        BufferStringView Name = GetTokenLexeme(*TokPtr);
+        llvm::StringRef Name = GetTokenLexeme(*TokPtr);
 
         if (!ConsumeIf(Token::OP_ASSIGN))
             return NodesArena.Create<ParamNode>(
@@ -652,7 +651,7 @@ namespace Volt
             JumpToNextGlobalDeclaration();
             return nullptr;
         }
-        BufferStringView Name = GetTokenLexeme(*TokPtr);
+        llvm::StringRef Name = GetTokenLexeme(*TokPtr);
 
         if (!Expect(Token::OP_LPAREN))
         {
@@ -718,7 +717,7 @@ namespace Volt
             Synchronize();
             return nullptr;
         }
-        BufferStringView Name = GetTokenLexeme(*TokPtr);
+        llvm::StringRef Name = GetTokenLexeme(*TokPtr);
 
         if (ConsumeIf(Token::OP_ASSIGN))
         {
@@ -1476,40 +1475,42 @@ namespace Volt
             case Token::BYTE_NUMBER:
             {
                 UInt8 Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(),
-                    GetTokenLexeme(Tok).CEnd(), Value);
+                llvm::StringRef NumStr = GetTokenLexeme(Tok);
+                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
                 return NodesArena.Create<IntegerNode>(
                     IntegerNode::BYTE, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::INT_NUMBER:
             {
                 UInt32 Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(),
-                    GetTokenLexeme(Tok).CEnd(), Value);
+                llvm::StringRef NumStr = GetTokenLexeme(Tok);
+                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
                 return NodesArena.Create<IntegerNode>(
                     IntegerNode::INT, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::LONG_NUMBER:
             {
                 UInt64 Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(),
-                    GetTokenLexeme(Tok).CEnd(), Value);
+
+                llvm::StringRef NumStr = GetTokenLexeme(Tok);
+                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
                 return NodesArena.Create<IntegerNode>(
                     IntegerNode::LONG, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::FLOAT_NUMBER:
             {
                 float Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(),
-                    GetTokenLexeme(Tok).CEnd(), Value);
+
+                llvm::StringRef NumStr = GetTokenLexeme(Tok);
+                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
                 return NodesArena.Create<FloatingPointNode>(
                     FloatingPointNode::FLOAT, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case Token::DOUBLE_NUMBER:
             {
                 double Value;
-                std::from_chars(GetTokenLexeme(Tok).CBegin(),
-                    GetTokenLexeme(Tok).CEnd(), Value);
+                llvm::StringRef NumStr = GetTokenLexeme(Tok);
+                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
                 return NodesArena.Create<FloatingPointNode>(
                     FloatingPointNode::DOUBLE, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
@@ -1556,7 +1557,7 @@ namespace Volt
         }
 
         SendError(ParseErrorType::UnexpectedToken, Tok.Line, Tok.Column,
-            { std::string(GetTokenLexeme(Tok).ToString()) });
+            { std::string(GetTokenLexeme(Tok).str()) });
         return nullptr;
     }
 }

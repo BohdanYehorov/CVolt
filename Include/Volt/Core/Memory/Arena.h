@@ -6,7 +6,7 @@
 #define CVOLT_ARENA_H
 
 #include "Volt/Core/Object/Object.h"
-#include "Volt/Core/Types/IntTypeDefs.h"
+#include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include "Volt/Core/Memory/BufferView.h"
 #include <vector>
 #include <stdexcept>

@@ -17,7 +17,7 @@ namespace Volt
         mutable size_t CachedHash = 0;
         llvm::Type* CachedType = nullptr;
         friend class DataTypeHash;
-        friend class DataType;
+        friend class CompilationContext;
     };
 
     class PrimitiveDataType : public DataType

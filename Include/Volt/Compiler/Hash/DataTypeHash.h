@@ -4,7 +4,7 @@
 
 #ifndef CVOLT_DATATYPEHASH_H
 #define CVOLT_DATATYPEHASH_H
-#include "Volt/Compiler/Types/DataTypeBase.h"
+#include "Volt/Core/Types/DataType.h"
 
 namespace Volt
 {

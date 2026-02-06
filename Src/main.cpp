@@ -3,14 +3,22 @@
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctions.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <fstream>
 #include <sstream>
 
 int main(int Argc, char* Argv[])
 {
-    Volt::Arena MainArena;
-    Volt::BuilderBase Builder(MainArena);
-    Volt::BuiltinFunctionTable FuncTable(Builder);
+#ifdef _DEBUG
+    std::ifstream File("../Resources/test.volt");
+    if (!File.is_open())
+        return -1;
+
+    std::stringstream SStr;
+    SStr << File.rdbuf();
+
+    Volt::CompilationContext CContext(SStr.str());
+    Volt::BuiltinFunctionTable FuncTable(CContext);
     FuncTable.AddFunction("Out", "OutBool", &OutBool);
     FuncTable.AddFunction("Out", "OutChar", &OutChar);
     FuncTable.AddFunction("Out", "OutByte", &OutByte);
@@ -28,29 +36,21 @@ int main(int Argc, char* Argv[])
     FuncTable.AddFunction("RandomInt", "RandomInt", &RandomInt);
     FuncTable.AddFunction("System", "System", &System);
 
-#ifdef _DEBUG
-    std::ifstream File("../Resources/test.volt");
-    if (!File.is_open())
-        return -1;
-
-    std::stringstream SStr;
-    SStr << File.rdbuf();
-
-    Volt::Lexer MyLexer(SStr.str());
+    Volt::Lexer MyLexer(CContext);
     MyLexer.Lex();
     MyLexer.PrintTokens();
 
     if (MyLexer.PrintErrors())
         return -1;
 
-    Volt::Parser MyParser(MainArena, MyLexer);
+    Volt::Parser MyParser(CContext);
     MyParser.Parse();
     MyParser.PrintASTTree();
 
     if (MyParser.PrintErrors())
         return -1;
 
-    Volt::TypeChecker MyTypeChecker(MyParser, MainArena, Builder, FuncTable);
+    Volt::TypeChecker MyTypeChecker(CContext, FuncTable);
     MyTypeChecker.Check();
 
     if (MyTypeChecker.PrintErrors())
@@ -58,7 +58,7 @@ int main(int Argc, char* Argv[])
 
     MyParser.PrintASTTree();
 
-    Volt::LLVMCompiler MyCompiler(MainArena, MyTypeChecker);
+    Volt::LLVMCompiler MyCompiler(CContext, FuncTable, MyTypeChecker.GetFunctions());
     MyCompiler.Compile();
     MyCompiler.Print();
 
@@ -68,18 +68,6 @@ int main(int Argc, char* Argv[])
 
     std::cout << "\n====================================================\n";
     std::cout << "Exited With Code: " << Res << std::endl;
-
-    // Volt::DataTypeBase* I32Type = Builder.GetIntegerType(32);
-    // Volt::DataTypeBase* I64Type = Builder.GetIntegerType(64);
-    //
-    // // std::cout << std::boolalpha << (I32Type == I64Type) << std::endl;
-    // // std::cout << Volt::DataTypeHash{}(I32Type) << " " << Volt::DataTypeHash{}(I64Type) << std::endl;
-    //
-    // Volt::FunctionSignature Signature1{ "Hello", {I32Type} };
-    // Volt::FunctionSignature Signature2{ "Hello", {I64Type} };
-    //
-    // std::cout << std::boolalpha << (Signature1 == Signature2) << std::endl;
-
 #else
     if (Argc < 2)
     {

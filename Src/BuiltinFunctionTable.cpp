@@ -11,7 +11,7 @@ namespace Volt
 		for (auto& [Signature, Data] : Functions)
 		{
 			llvm::Type* RetType = DataTypeUtils::GetLLVMType(Data.ReturnType, Context);
-			llvm::SmallVector<llvm::Type*, 8> LLVMParams;
+			SmallVec8<llvm::Type*> LLVMParams;
 			LLVMParams.reserve(Signature.Params.size());
 			for (const auto& Param : Signature.Params)
 				LLVMParams.push_back(DataTypeUtils::GetLLVMType(Param, Context));

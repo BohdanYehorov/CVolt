@@ -8,6 +8,7 @@
 #include "Volt/Core/Lexer/Lexer.h"
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/Core/Errors/Errors.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <ostream>
 
 namespace Volt
@@ -31,14 +32,16 @@ namespace Volt
         };
 
     private:
+        CompilationContext& CContext;
+
         Arena& NodesArena;
-        const ArenaStream& TokensArena;
+        // const ArenaStream& TokensArena;
 
         const std::vector<Token>& Tokens;
         std::vector<ParseError> Errors;
 
         size_t Index = 0;
-        ASTNode* Root = nullptr;
+        ASTNode*& Root;
 
         bool LastNodeIsBlock = false;
         bool InBlock = false;
@@ -51,8 +54,12 @@ namespace Volt
         static void WriteASTTree(std::ostream& Os, ASTNode* Node, int Tabs = 0);
 
     public:
-        Parser(Arena& NodesArena, const Lexer& L)
-            : NodesArena(NodesArena), TokensArena(L.GetTokensArena()), Tokens(L.GetTokens()) {}
+        // Parser(Arena& NodesArena, const Lexer& L)
+        //     : NodesArena(NodesArena), TokensArena(L.GetTokensArena()), Tokens(L.GetTokens()) {}
+
+        Parser(CompilationContext& CContext)
+            : CContext(CContext), NodesArena(CContext.MainArena),
+            Tokens(CContext.Tokens), Root(CContext.ASTTree) {}
 
         void Parse();
         [[nodiscard]] ASTNode* GetASTTree() const { return Root; }
@@ -62,7 +69,8 @@ namespace Volt
         {
             WriteErrors(std::cout);
             return HasErrors();
-        };
+        }
+
         void WriteErrors(std::ostream& Os) const;
 
         void WriteASTTree(std::ostream& Os) const { WriteASTTree(Os, Root); }
@@ -83,7 +91,13 @@ namespace Volt
         bool ConsumeIf(Token::TokenType Type, const Token*& TokPtr);
         bool ConsumeIf(Token::TokenType Type);
         bool Expect(Token::TokenType Type);
-        [[nodiscard]] BufferStringView GetTokenLexeme(const Token& Tok) const { return TokensArena.Read(Tok.Lexeme); }
+
+        // [[nodiscard]] BufferStringView GetTokenLexeme(const Token& Tok) const { return TokensArena.Read(Tok.Lexeme); }
+        [[nodiscard]] llvm::StringRef GetTokenLexeme(const Token& Tok) const
+        {
+            return CContext.GetTokenLexeme(Tok.Lexeme);
+        }
+
         void SendError(ParseErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context = {});
         void SendError(ParseErrorType Type, std::vector<std::string>&& Context = {});
 

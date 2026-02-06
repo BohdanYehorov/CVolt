@@ -9,11 +9,8 @@
 #include "Types/CompilerTypes.h"
 #include "Volt/Core/Memory/Arena.h"
 #include "Types/TypedValue.h"
-#include "Functions/FunctionSignature.h"
-#include "Hash/FunctionSignatureHash.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeChecker/TypeChecker.h"
-#include "Volt/Core/Types/TypeDefs.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -27,11 +24,13 @@ namespace Volt
     class LLVMCompiler
     {
     private:
-        llvm::LLVMContext Context;
+        llvm::LLVMContext& Context;
         std::unique_ptr<llvm::Module> Module = nullptr;
         llvm::IRBuilder<> Builder;
         Arena& CompilerArena;
-        LLVMBuilder CompilerBuilder;
+        // LLVMBuilder CompilerBuilder;
+
+        CompilationContext& CContext;
 
         ASTNode* ASTTree;
         BuiltinFunctionTable& BuiltinFuncTable;
@@ -47,11 +46,11 @@ namespace Volt
         llvm::ArrayRef<DataType*> FunctionParams;
 
     public:
-        LLVMCompiler(Arena& CompilerArena, TypeChecker& TyChecker)
-            : Module(std::make_unique<llvm::Module>("volt", Context)), Builder(Context),
-            CompilerArena(CompilerArena), CompilerBuilder(TyChecker.Builder, Context),
-            ASTTree(TyChecker.GetASTTree()), BuiltinFuncTable(TyChecker.GetBuiltinFunctionTable()),
-            FunctionSignatures(TyChecker.GetFunctions())
+        LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable, FunctionTable& Functions)
+            : CContext(CContext), Context(CContext.Context),
+            Module(std::make_unique<llvm::Module>("volt", Context)),
+            Builder(Context), CompilerArena(CContext.MainArena), ASTTree(CContext.ASTTree),
+            BuiltinFuncTable(BuiltinFuncTable), FunctionSignatures(Functions)
         {
             BuiltinFuncTable.CreateLLVMFunctions(Module.get(), Context);
         }

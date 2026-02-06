@@ -1,13 +1,21 @@
 //
-// Created by bohdan on 03.02.26.
+// Created by bohdan on 06.02.26.
 //
 
-#include "Volt/Core/Builder/Builder.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <cmath>
 
 namespace Volt
 {
-	VoidType *BuilderBase::GetVoidType() const
+	llvm::StringRef CompilationContext::GetTokenLexeme(StringRef Ref) const
+	{
+		if (Ref.Ptr + Ref.Length > Code.size())
+			throw std::runtime_error("Ref out of code length");
+
+		return { Code.c_str() + Ref.Ptr, Ref.Length };
+	}
+
+	VoidType *CompilationContext::GetVoidType()
 	{
 		if (!CachedVoidType)
 			CachedVoidType = MainArena.Create<VoidType>();
@@ -15,7 +23,7 @@ namespace Volt
 		return CachedVoidType;
 	}
 
-	BoolType *BuilderBase::GetBoolType() const
+	BoolType *CompilationContext::GetBoolType()
 	{
 		if (!CachedBoolType)
 			CachedBoolType = MainArena.Create<BoolType>();
@@ -23,7 +31,7 @@ namespace Volt
 		return CachedBoolType;
 	}
 
-	CharType *BuilderBase::GetCharType() const
+	CharType *CompilationContext::GetCharType()
 	{
 		if (!CachedCharType)
 			CachedCharType = MainArena.Create<CharType>();
@@ -31,7 +39,7 @@ namespace Volt
 		return CachedCharType;
 	}
 
-	IntegerType *BuilderBase::GetIntegerType(size_t BitWidth) const
+	IntegerType *CompilationContext::GetIntegerType(size_t BitWidth)
 	{
 		static size_t MinBitWidth = 8;
 
@@ -47,7 +55,7 @@ namespace Volt
 		return CachedIntegerTypes[Index];
 	}
 
-	FloatingPointType *BuilderBase::GetFPType(size_t BitWidth) const
+	FloatingPointType *CompilationContext::GetFPType(size_t BitWidth)
 	{
 		static size_t MinBitWidth = 16;
 		assert(BitWidth % 8 == 0 && BitWidth >= MinBitWidth && BitWidth <= 128);
@@ -62,7 +70,7 @@ namespace Volt
 		return CachedFPTypes[Index];
 	}
 
-	PointerType *BuilderBase::GetPointerType(DataType *BaseType) const
+	PointerType *CompilationContext::GetPointerType(DataType *BaseType)
 	{
 		PointerType PtrDataType(BaseType);
 
@@ -75,7 +83,7 @@ namespace Volt
 		return PtrTypeNode;
 	}
 
-	ArrayType *BuilderBase::GetArrayType(DataType *BaseType, size_t Length) const
+	ArrayType *CompilationContext::GetArrayType(DataType *BaseType, size_t Length)
 	{
 		ArrayType ArrDataType(BaseType, Length);
 
@@ -88,39 +96,11 @@ namespace Volt
 		return ArrType;
 	}
 
-	int BuilderBase::GetTypeRank(DataType *Type)
+	llvm::Type *CompilationContext::GetLLVMType(DataType *Type)
 	{
-		if (const auto PrimitiveType =  Cast<const PrimitiveDataType>(Type))
-			return DataTypeUtils::GetPrimitiveTypeRank(PrimitiveType);
+		if (!Type->CachedType)
+			Type->CachedType = DataTypeUtils::GetLLVMType(Type, Context);
 
-		static int MaxPrimitiveTypeRank = DataTypeUtils::GetPrimitiveTypeRank(
-			Cast<PrimitiveDataType>(GetFPType(128)));
-
-		if (Cast<const PointerType>(Type))
-			return MaxPrimitiveTypeRank + 1;
-
-		if (Cast<const ArrayType>(Type))
-			return MaxPrimitiveTypeRank + 2;
-
-		return -1;
-	}
-
-	LLVMBuilder::LLVMBuilder(BuilderBase &Other, llvm::LLVMContext &Context)
-		: BuilderBase(Other.MainArena), Context(Context)
-	{
-		if (&MainArena == &Other.MainArena)
-		{
-			CachedTypes = Other.CachedTypes;
-
-			CachedVoidType = Other.CachedVoidType;
-			CachedBoolType = Other.CachedBoolType;
-			CachedCharType = Other.CachedCharType;
-
-			for (size_t i = 0; i < std::size(CachedIntegerTypes); i++)
-				CachedIntegerTypes[i] = Other.CachedIntegerTypes[i];
-
-			for (size_t i = 0; i < std::size(CachedFPTypes); i++)
-				CachedFPTypes[i] = Other.CachedFPTypes[i];
-		}
+		return Type->CachedType;
 	}
 }

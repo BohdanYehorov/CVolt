@@ -129,48 +129,48 @@ namespace Volt
 
             try
             {
-                Lexer TestLexer(Expr);
-                TestLexer.Lex();
-
-                if (TestLexer.HasErrors())
-                {
-                    OutFile.open("../Tests/LexErrors/" + std::to_string(i) + ".errs");
-                    for (const LexError& Error : TestLexer.GetErrors())
-                    {
-                        OutFile << "LexError: " << Error.ToString() << " At position: [" <<
-                            Error.Line << ":" << Error.Column << "]\n";
-                    }
-                    OutFile.close();
-                    std::cout << "Test " << i << ": LexErrors\n";
-                    continue;
-                }
-
-                OutFile.open("../Tests/Tokens/" + std::to_string(i) + ".tok");
-                TestLexer.WriteErrors(OutFile);
-                OutFile.close();
-
-                Arena MainArena;
-                Parser TestParser(MainArena, TestLexer);
-                TestParser.Parse();
-
-                if (TestParser.HasErrors())
-                {
-                    OutFile.open("../Tests/ParseErrors/" + std::to_string(i) + ".errs");
-                    for (const ParseError& Error : TestParser.GetErrorList())
-                    {
-                        OutFile << "ParseError: " << Error.ToString() << " At position: [" <<
-                            Error.Line << ":" << Error.Column << "]\n";
-                    }
-                    OutFile.close();
-                    std::cout << "Test " << i << ": ParseErrors\n";
-                    continue;
-                }
-
-                OutFile.open("../Tests/AST/" + std::to_string(i) + ".ast");
-                TestParser.WriteASTTree(OutFile);
-                OutFile.close();
-
-                std::cout << "Test " << i << ": Success\n";
+                // Lexer TestLexer(Expr);
+                // TestLexer.Lex();
+                //
+                // if (TestLexer.HasErrors())
+                // {
+                //     OutFile.open("../Tests/LexErrors/" + std::to_string(i) + ".errs");
+                //     for (const LexError& Error : TestLexer.GetErrors())
+                //     {
+                //         OutFile << "LexError: " << Error.ToString() << " At position: [" <<
+                //             Error.Line << ":" << Error.Column << "]\n";
+                //     }
+                //     OutFile.close();
+                //     std::cout << "Test " << i << ": LexErrors\n";
+                //     continue;
+                // }
+                //
+                // OutFile.open("../Tests/Tokens/" + std::to_string(i) + ".tok");
+                // TestLexer.WriteErrors(OutFile);
+                // OutFile.close();
+                //
+                // Arena MainArena;
+                // Parser TestParser(MainArena, TestLexer);
+                // TestParser.Parse();
+                //
+                // if (TestParser.HasErrors())
+                // {
+                //     OutFile.open("../Tests/ParseErrors/" + std::to_string(i) + ".errs");
+                //     for (const ParseError& Error : TestParser.GetErrorList())
+                //     {
+                //         OutFile << "ParseError: " << Error.ToString() << " At position: [" <<
+                //             Error.Line << ":" << Error.Column << "]\n";
+                //     }
+                //     OutFile.close();
+                //     std::cout << "Test " << i << ": ParseErrors\n";
+                //     continue;
+                // }
+                //
+                // OutFile.open("../Tests/AST/" + std::to_string(i) + ".ast");
+                // TestParser.WriteASTTree(OutFile);
+                // OutFile.close();
+                //
+                // std::cout << "Test " << i << ": Success\n";
             }
             catch (const std::exception& Ex)
             {

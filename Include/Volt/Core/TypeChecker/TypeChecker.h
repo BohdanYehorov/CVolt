@@ -6,14 +6,16 @@
 #define CVOLT_TYPECHECKER_H
 
 #include "Volt/Core/Parser/Parser.h"
-#include "Volt/Compiler/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataTypeUtils.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Core/Errors/Errors.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
-#include "Volt/Core/Types/TypeDefs.h"
+#include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
 #include "Volt/Compiler/CompileTime/CTimeValue.h"
-#include "Volt/Core/Builder/Builder.h"
+#include "Volt/Core/TypeDefs/FunctionTable.h"
+#include "Volt/Core/TypeDefs/VariableTable.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 
@@ -31,10 +33,12 @@ namespace Volt
         static llvm::DenseMap<TypeCategory, llvm::DenseSet<TypeCategory>> ImplicitCastTypes;
 
     private:
-        ASTNode* ASTTree;
+        CompilationContext& CContext;
+
+        ASTNode*& ASTTree;
         Arena& MainArena;
 
-        BuilderBase& Builder;
+        // BuilderBase& Builder;
 
         BuiltinFunctionTable& BuiltinFuncTable;
 
@@ -45,13 +49,17 @@ namespace Volt
 
         std::vector<std::vector<ScopeEntry>> ScopeStack;
 
-        llvm::SmallVector<std::pair<std::string, DataType*>, 8> FunctionParams;
+        SmallVec8<std::pair<std::string, DataType*>> FunctionParams;
         DataType* FunctionReturnType = nullptr;
 
     public:
-        TypeChecker(const Parser& Psr, Arena& MainArena, BuilderBase& Builder, BuiltinFunctionTable& BuiltinFuncTable)
-            : ASTTree(Psr.GetASTTree()), MainArena(MainArena),
-            Builder(Builder), BuiltinFuncTable(BuiltinFuncTable) {}
+        // TypeChecker(const Parser& Psr, Arena& MainArena, BuilderBase& Builder, BuiltinFunctionTable& BuiltinFuncTable)
+        //     : ASTTree(Psr.GetASTTree()), MainArena(MainArena),
+        //     Builder(Builder), BuiltinFuncTable(BuiltinFuncTable) {}
+
+        TypeChecker(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
+            : CContext(CContext), ASTTree(CContext.ASTTree),
+            MainArena(CContext.MainArena), BuiltinFuncTable(BuiltinFuncTable) {}
 
         void Check() { VisitNode(ASTTree); }
         [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }

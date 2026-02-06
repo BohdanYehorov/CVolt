@@ -29,9 +29,8 @@ add_executable(CVolt
         Src/TypeChecker.cpp
         Src/BuiltinFunctionTable.cpp
         Src/CTimeValue.cpp
-        Include/Volt/Core/Functions/Callee.h
-        Include/Volt/Core/Builder/Builder.h
-        Src/Builder.cpp
+        Src/CompilationContext.cpp
+        Src/Token.cpp
 )
 
 target_link_libraries(CVolt PRIVATE LLVM)

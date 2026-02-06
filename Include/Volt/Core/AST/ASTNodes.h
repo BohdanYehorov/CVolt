@@ -7,10 +7,10 @@
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Parser/Operators/Operator.h"
-#include "Volt/Core/Memory/BufferView.h"
-#include "Volt/Compiler/Types/DataTypeUtils.h"
+//#include "Volt/Core/Memory/BufferView.h"
 #include "Volt/Compiler/CompileTime/CTimeValue.h"
 #include "Volt/Core/Functions/Callee.h"
+#include "Volt/Core/TypeDefs/TypeDefs.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
 #include <vector>
@@ -58,8 +58,8 @@ namespace Volt
     {
         GENERATED_BODY(IdentifierNode, ASTNode);
     public:
-        BufferStringView Value;
-        IdentifierNode(BufferStringView Value, size_t Pos, size_t Line, size_t Column)
+        llvm::StringRef Value;
+        IdentifierNode(llvm::StringRef Value, size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Value(Value) {}
     };
 
@@ -117,8 +117,8 @@ namespace Volt
     {
         GENERATED_BODY(StringNode, ASTNode)
     public:
-        BufferStringView Value;
-        StringNode(BufferStringView Value, size_t Pos, size_t Line, size_t Column)
+        llvm::StringRef Value;
+        StringNode(llvm::StringRef Value, size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Value(Value) {}
     };
 
@@ -126,7 +126,7 @@ namespace Volt
     {
         GENERATED_BODY(ArrayNode, ASTNode)
     public:
-        llvm::SmallVector<ASTNode*, 16> Elements;
+        SmallVec16<ASTNode*> Elements;
         ArrayNode(size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column) {}
 
@@ -307,9 +307,9 @@ namespace Volt
         GENERATED_BODY(VariableNode, ASTNode)
     public:
         DataTypeNodeBase* Type;
-        BufferStringView Name;
+        llvm::StringRef Name;
         ASTNode* Value;
-        VariableNode(DataTypeNodeBase* Type, BufferStringView Name, ASTNode* Value,
+        VariableNode(DataTypeNodeBase* Type, llvm::StringRef Name, ASTNode* Value,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Type(Type), Name(Name), Value(Value) {}
     };
@@ -319,9 +319,9 @@ namespace Volt
         GENERATED_BODY(ParamNode, ASTNode)
     public:
         DataTypeNodeBase* Type;
-        BufferStringView Name;
+        llvm::StringRef Name;
         ASTNode* DefaultValue;
-        ParamNode(DataTypeNodeBase* Type, BufferStringView Name, ASTNode* Value,
+        ParamNode(DataTypeNodeBase* Type, llvm::StringRef Name, ASTNode* Value,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Type(Type), Name(Name), DefaultValue(Value) {}
     };
@@ -331,10 +331,10 @@ namespace Volt
         GENERATED_BODY(FunctionNode, ASTNode)
     public:
         DataTypeNodeBase* ReturnType;
-        BufferStringView Name;
+        llvm::StringRef Name;
         llvm::TinyPtrVector<ParamNode*> Params;
         ASTNode* Body = nullptr;
-        FunctionNode(DataTypeNodeBase* Type, BufferStringView Name,
+        FunctionNode(DataTypeNodeBase* Type, llvm::StringRef Name,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), ReturnType(Type), Name(Name) {}
 

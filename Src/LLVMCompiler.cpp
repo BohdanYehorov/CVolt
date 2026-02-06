@@ -63,10 +63,10 @@ namespace Volt
             {
                 case TypeCategory::INTEGER:
                     return Create<TypedValue>(llvm::ConstantInt::get(
-                    CompilerBuilder.GetLLVMType(Value->Type), Value->Int), Value->Type);
+                    CContext.GetLLVMType(Value->Type), Value->Int), Value->Type);
                 case TypeCategory::FLOATING_POINT:
                     return Create<TypedValue>(llvm::ConstantFP::get(
-                        CompilerBuilder.GetLLVMType(Value->Type), Value->Float), Value->Type);
+                        CContext.GetLLVMType(Value->Type), Value->Float), Value->Type);
                 case TypeCategory::BOOLEAN:
                     return Create<TypedValue>(llvm::ConstantInt::get(
                         llvm::Type::getInt1Ty(Context), Value->Bool), Value->Type);
@@ -176,32 +176,32 @@ namespace Volt
     TypedValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
         return Create<TypedValue>(llvm::ConstantInt::get(
-            CompilerBuilder.GetLLVMType(Int->ResolvedType), Int->Value), Int->ResolvedType);
+            CContext.GetLLVMType(Int->ResolvedType), Int->Value), Int->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
     {
         return Create<TypedValue>(llvm::ConstantFP::get(
-            CompilerBuilder.GetLLVMType(Float->ResolvedType), Float->Value), Float->ResolvedType);
+            CContext.GetLLVMType(Float->ResolvedType), Float->Value), Float->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompileBool(const BoolNode *Bool)
     {
         return Create<TypedValue>(
             llvm::ConstantInt::get(llvm::Type::getInt1Ty(Context), Bool->Value),
-            CompilerBuilder.GetBoolType());
+            CContext.GetBoolType());
     }
 
     TypedValue *LLVMCompiler::CompileChar(const CharNode *Char)
     {
         return Create<TypedValue>(
-            llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value), CompilerBuilder.GetCharType());
+            llvm::ConstantInt::get(llvm::Type::getInt8Ty(Context), Char->Value), CContext.GetCharType());
     }
 
     TypedValue *LLVMCompiler::CompileString(const StringNode *String)
     {
-        return Create<TypedValue>(Builder.CreateGlobalString(String->Value.ToString()),
-            CompilerBuilder.GetPointerType(CompilerBuilder.GetCharType()));
+        return Create<TypedValue>(Builder.CreateGlobalString(String->Value.str()),
+            CContext.GetPointerType(CContext.GetCharType()));
     }
 
     TypedValue *LLVMCompiler::CompileArray(const ArrayNode *Array)
@@ -213,7 +213,7 @@ namespace Volt
 
         if (auto Type = Cast<ArrayType>(Array->ResolvedType))
             ArrType = llvm::ArrayType::get(
-                CompilerBuilder.GetLLVMType(Type->BaseType), Array->Elements.size());
+                CContext.GetLLVMType(Type->BaseType), Array->Elements.size());
 
         llvm::AllocaInst* Arr = Builder.CreateAlloca(ArrType);
         llvm::Value* FirstElPtr = nullptr;
@@ -241,12 +241,12 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
     {
-        const std::string Value = Identifier->Value.ToString();
+        const std::string Value = Identifier->Value.str();
 
         if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
         {
             TypedValue* Var = Iter->second;
-            return Create<TypedValue>(Builder.CreateLoad(CompilerBuilder.GetLLVMType(Var->GetDataType()),
+            return Create<TypedValue>(Builder.CreateLoad(CContext.GetLLVMType(Var->GetDataType()),
                         Var->GetValue(), Value + "_val"), Var->GetDataType());
         }
 
@@ -259,7 +259,7 @@ namespace Volt
         if (!LValue)
             ERROR("Cannot apply operator '$' to l-value")
 
-       return Create<TypedValue>(LValue->GetValue(), CompilerBuilder.GetPointerType(LValue->GetDataType()));
+       return Create<TypedValue>(LValue->GetValue(), CContext.GetPointerType(LValue->GetDataType()));
     }
 
     TypedValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
@@ -269,7 +269,7 @@ namespace Volt
             ERROR("Cannot apply prefix operator to r-value")
 
         llvm::Value* Value = LValue->GetValue();
-        Value = Builder.CreateLoad(CompilerBuilder.GetLLVMType(LValue->GetDataType()), Value);
+        Value = Builder.CreateLoad(CContext.GetLLVMType(LValue->GetDataType()), Value);
         switch (Prefix->Type)
         {
             case Operator::INC:
@@ -294,7 +294,7 @@ namespace Volt
             ERROR("Cannot apply suffix operator to r-value")
 
         llvm::Value* Value = LValue->GetValue();
-        Value = Builder.CreateLoad(CompilerBuilder.GetLLVMType(LValue->GetDataType()), Value);
+        Value = Builder.CreateLoad(CContext.GetLLVMType(LValue->GetDataType()), Value);
         llvm::Value* Temp = Value;
         switch (Suffix->Type)
         {
@@ -319,7 +319,7 @@ namespace Volt
         llvm::Value* Value = TValue->GetValue();
         DataType* Type = TValue->GetDataType();
 
-        DataType* BoolType = CompilerBuilder.GetBoolType();
+        DataType* BoolType = CContext.GetBoolType();
 
         bool IsFP = Cast<FloatingPointType>(Type);
 
@@ -466,7 +466,7 @@ namespace Volt
         if (Assignment->Type == Operator::ASSIGN)
             return Create<TypedValue>(Builder.CreateStore(RightVal, Value), Right->GetDataType());
 
-        llvm::Value* Left = Builder.CreateLoad(CompilerBuilder.GetLLVMType(Type), Value);
+        llvm::Value* Left = Builder.CreateLoad(CContext.GetLLVMType(Type), Value);
 
         bool IsFP = Cast<FloatingPointType>(Type);
 
@@ -560,11 +560,11 @@ namespace Volt
     {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
-            const std::string& FuncName = Identifier->Value.ToString();
+            const std::string& FuncName = Identifier->Value.str();
 
-            llvm::SmallVector<llvm::Value*, 8> LLVMArgs;
-            llvm::SmallVector<DataType*, 8> ArgTypes;
-            llvm::SmallVector<TypedValue*, 8> ArgValues;
+            SmallVec8<llvm::Value*> LLVMArgs;
+            SmallVec8<DataType*> ArgTypes;
+            SmallVec8<TypedValue*> ArgValues;
 
             const auto& Args = Call->Arguments;
             LLVMArgs.reserve(Args.size());
@@ -723,7 +723,7 @@ namespace Volt
             Builder.CreateStore(Value->GetValue(), Alloca);
         }
 
-        DeclareVariable(Var->Name.ToString(),
+        DeclareVariable(Var->Name.str(),
             Create<TypedValue>(Alloca, VarType, true));
 
         return nullptr;
@@ -731,7 +731,7 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileFunction(const FunctionNode *Function)
     {
-        llvm::SmallVector<llvm::Type*, 8> Params;
+        SmallVec8<llvm::Type*> Params;
         Params.reserve(Function->Params.size());
 
         for (const auto Param : Function->Params)
@@ -745,11 +745,11 @@ namespace Volt
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
 
-        const std::string& FuncName = Function->Name.ToString();
+        const std::string& FuncName = Function->Name.str();
         llvm::Function* Func = llvm::Function::Create(
             FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
 
-        llvm::SmallVector<DataType*, 8> ParamsTypes;
+        SmallVec8<DataType*> ParamsTypes;
 
         const auto& FuncParams = Function->Params;
         ParamsTypes.reserve(FuncParams.size());
@@ -757,7 +757,7 @@ namespace Volt
         {
             DataType* ParamType = FuncParams[i]->Type->ResolvedType; //DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
             auto Arg = Func->args().begin() + i;
-            Arg->setName(FuncParams[i]->Name.ToString());
+            Arg->setName(FuncParams[i]->Name.str());
             ParamsTypes.push_back(ParamType);
         }
 
@@ -805,7 +805,7 @@ namespace Volt
     TypedValue *LLVMCompiler::CompileIf(const IfNode *If)
     {
         TypedValue* Cond = CompileNode(If->Condition);
-        Cond = ImplicitCast(Cond,CompilerBuilder.GetBoolType());
+        Cond = ImplicitCast(Cond,CContext.GetBoolType());
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -842,7 +842,7 @@ namespace Volt
         Builder.CreateBr(LoopHeader);
         Builder.SetInsertPoint(LoopHeader);
         TypedValue* Cond = CompileNode(While->Condition);
-        Cond = ImplicitCast(Cond, CompilerBuilder.GetBoolType());
+        Cond = ImplicitCast(Cond, CContext.GetBoolType());
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
         llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
@@ -883,7 +883,7 @@ namespace Volt
         Builder.CreateBr(ForHeader);
         Builder.SetInsertPoint(ForHeader);
         TypedValue* Cond = CompileNode(For->Condition);
-        Cond = ImplicitCast(Cond, CompilerBuilder.GetBoolType());
+        Cond = ImplicitCast(Cond, CContext.GetBoolType());
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
         llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
@@ -980,7 +980,7 @@ namespace Volt
     TypedValue *LLVMCompiler::GetLValue(const ASTNode *Node)
     {
         if (const auto Identifier = Cast<const IdentifierNode>(Node))
-            return GetVariable(Identifier->Value.ToString());
+            return GetVariable(Identifier->Value.str());
 
         if (const auto Subscript = Cast<const SubscriptNode>(Node))
         {
@@ -1019,8 +1019,8 @@ namespace Volt
     TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataType* Target)
     {
         DataType* SrcType = Value->GetDataType();
-        llvm::Type* TargetLLVMType = CompilerBuilder.GetLLVMType(Target);
-        llvm::Type* SrcLLVMType = CompilerBuilder.GetLLVMType(SrcType);
+        llvm::Type* TargetLLVMType = CContext.GetLLVMType(Target);
+        llvm::Type* SrcLLVMType = CContext.GetLLVMType(SrcType);
 
         if (DataTypeUtils::IsEqual(SrcType, Target))
             return Value;

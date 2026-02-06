@@ -4,10 +4,10 @@
 
 #ifndef CVOLT_BUILTINFUNCTIONTABLE_H
 #define CVOLT_BUILTINFUNCTIONTABLE_H
-#include "Volt/Compiler/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataTypeUtils.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Compiler/Hash/FunctionSignatureHash.h"
-#include "Volt/Core/Builder/Builder.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h>
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
@@ -27,10 +27,10 @@ namespace Volt
 	{
 	private:
 		std::unordered_map<FunctionSignature, FunctionData, FunctionSignatureHash> Functions;
-		BuilderBase& Builder;
+		CompilationContext& CContext;
 
 	public:
-		BuiltinFunctionTable(BuilderBase& Builder) : Builder(Builder) {}
+		BuiltinFunctionTable(CompilationContext& CContext) : CContext(CContext) {}
 
 		template <typename Ret, typename ...Args>
 		void AddFunction(const std::string& Name, const std::string& BaseName, Ret(*FuncPtr)(Args...));
@@ -45,78 +45,78 @@ namespace Volt
 
 	private:
 		template <typename T, typename ...Rest>
-		void FillParams(llvm::SmallVector<DataType*, 8>& Params);
+		void FillParams(SmallVec8<DataType*>& Params);
 	};
 
 	template <typename T>
-	DataType* GetBaseType(BuilderBase& Builder);
+	DataType* GetBaseType(CompilationContext& CContext);
 
-	template<> inline DataType* GetBaseType<void>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<void>(CompilationContext& CContext)
 	{
-		return Builder.GetVoidType();
+		return CContext.GetVoidType();
 	}
 
-	template<> inline DataType* GetBaseType<bool>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<bool>(CompilationContext& CContext)
 	{
-		return Builder.GetBoolType();
+		return CContext.GetBoolType();
 	}
 
-	template<> inline DataType* GetBaseType<char>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<char>(CompilationContext& CContext)
 	{
-		return Builder.GetCharType();
+		return CContext.GetCharType();
 	}
 
-	template<> inline DataType* GetBaseType<std::byte>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<std::byte>(CompilationContext& CContext)
 	{
-		return Builder.GetIntegerType(8);
+		return CContext.GetIntegerType(8);
 	}
 
-	template<> inline DataType* GetBaseType<short>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<short>(CompilationContext& CContext)
 	{
-		return Builder.GetIntegerType(16);
+		return CContext.GetIntegerType(16);
 	}
 
-	template<> inline DataType* GetBaseType<int>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<int>(CompilationContext& CContext)
 	{
-		return Builder.GetIntegerType(32);
+		return CContext.GetIntegerType(32);
 	}
 
-	template<> inline DataType* GetBaseType<long>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<long>(CompilationContext& CContext)
 	{
-		return Builder.GetIntegerType(64);
+		return CContext.GetIntegerType(64);
 	}
 
-	template<> inline DataType* GetBaseType<long long>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<long long>(CompilationContext& CContext)
 	{
-		return Builder.GetIntegerType(64);
+		return CContext.GetIntegerType(64);
 	}
 
-	template<> inline DataType* GetBaseType<float>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<float>(CompilationContext& CContext)
 	{
-		return Builder.GetFPType(32);
+		return CContext.GetFPType(32);
 	}
 
-	template<> inline DataType* GetBaseType<double>(BuilderBase& Builder)
+	template<> inline DataType* GetBaseType<double>(CompilationContext& CContext)
 	{
-		return Builder.GetFPType(64);
+		return CContext.GetFPType(64);
 	}
 
 	template <typename T>
-	DataType* GetDataType(BuilderBase& Builder)
+	DataType* GetDataType(CompilationContext& CContext)
 	{
 		if constexpr (std::is_pointer_v<T>)
 		{
 			using BaseType = std::remove_pointer_t<T>;
-			return Builder.GetPointerType(GetDataType<BaseType>(Builder));
+			return CContext.GetPointerType(GetDataType<BaseType>(CContext));
 		}
 
-		return GetBaseType<T>(Builder);
+		return GetBaseType<T>(CContext);
 	}
 
 	template<typename T, typename ... Rest>
-	void BuiltinFunctionTable::FillParams(llvm::SmallVector<DataType*, 8> &Params)
+	void BuiltinFunctionTable::FillParams(SmallVec8<DataType*> &Params)
 	{
-		Params.push_back(GetDataType<T>(Builder));
+		Params.push_back(GetDataType<T>(CContext));
 		if constexpr (sizeof...(Rest) > 0)
 			FillParams<Rest...>(Params);
 	}
@@ -124,8 +124,8 @@ namespace Volt
 	template<typename Ret, typename ... Args>
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)(Args...))
 	{
-		DataType* RetType = GetDataType<Ret>(Builder);
-		llvm::SmallVector<DataType*, 8> Params;
+		DataType* RetType = GetDataType<Ret>(CContext);
+		SmallVec8<DataType*> Params;
 		FillParams<Args...>(Params);
 		FunctionSignature Signature{ Name, Params };
 		Functions[Signature] = { RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr) };
@@ -134,7 +134,7 @@ namespace Volt
 	template<typename Ret>
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)())
 	{
-		DataType* RetType = GetDataType<Ret>(Builder);
+		DataType* RetType = GetDataType<Ret>(CContext);
 		FunctionSignature Signature{ Name, {} };
 		Functions[Signature] = { RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr) };
 	}

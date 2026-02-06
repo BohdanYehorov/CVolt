@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
-#include "Volt/Core/Types/IntTypeDefs.h"
+#include "Volt/Core/TypeDefs/IntTypeDefs.h"
 
 namespace Volt
 {

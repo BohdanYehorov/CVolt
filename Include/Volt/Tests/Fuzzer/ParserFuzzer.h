@@ -5,7 +5,7 @@
 #ifndef CVOLT_PARSERFUZZER_H
 #define CVOLT_PARSERFUZZER_H
 #include "Volt/Core/Parser/Parser.h"
-#include "Volt/Core/Types/IntTypeDefs.h"
+#include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include <string>
 #include <random>
 #include <fstream>

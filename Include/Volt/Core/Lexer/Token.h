@@ -1,0 +1,125 @@
+//
+// Created by bohdan on 06.02.26.
+//
+
+#ifndef CVOLT_TOKEN_H
+#define CVOLT_TOKEN_H
+
+#include "Volt/Core/Memory/BufferView.h"
+
+
+namespace Volt
+{
+    class CompilationContext;
+
+	struct Token
+    {
+        enum TokenType
+        {
+            IDENTIFIER,
+
+            BYTE_NUMBER,
+            INT_NUMBER,
+            LONG_NUMBER,
+
+            FLOAT_NUMBER,
+            DOUBLE_NUMBER,
+
+            STRING,
+            BOOL_TRUE,
+            BOOL_FALSE,
+            CHAR,
+
+            OP_ADD,
+            OP_SUB,
+            OP_MUL,
+            OP_DIV,
+            OP_MOD,
+            OP_INC,
+            OP_DEC,
+
+            OP_ASSIGN,
+            OP_ADD_ASSIGN,
+            OP_SUB_ASSIGN,
+            OP_MUL_ASSIGN,
+            OP_DIV_ASSIGN,
+            OP_MOD_ASSIGN,
+            OP_AND_ASSIGN,
+            OP_OR_ASSIGN,
+            OP_XOR_ASSIGN,
+            OP_LSHIFT_ASSIGN,
+            OP_RSHIFT_ASSIGN,
+
+            OP_EQ,
+            OP_NEQ,
+            OP_GT,
+            OP_GTE,
+            OP_LT,
+            OP_LTE,
+
+            OP_LOGICAL_AND,
+            OP_LOGICAL_OR,
+            OP_LOGICAL_NOT,
+
+            OP_BIT_AND,
+            OP_BIT_OR,
+            OP_BIT_XOR,
+            OP_BIT_NOT,
+            OP_LSHIFT,
+            OP_RSHIFT,
+
+            OP_DOT,
+            OP_ARROW,
+            OP_SCOPE,
+            OP_QUESTION,
+            OP_COLON,
+            OP_COMMA,
+            OP_SEMICOLON,
+
+            OP_LPAREN,
+            OP_RPAREN,
+            OP_LBRACKET,
+            OP_RBRACKET,
+            OP_LBRACE,
+            OP_RBRACE,
+            OP_REFERENCE,
+
+            KW_IF,
+            KW_ELSE,
+            KW_WHILE,
+            KW_FOR,
+            KW_FUN,
+            KW_LET,
+            KW_RETURN,
+            KW_BREAK,
+            KW_CONTINUE,
+
+            TYPE_VOID,
+
+            TYPE_BOOL,
+            TYPE_CHAR,
+
+            TYPE_BYTE,
+            TYPE_INT,
+            TYPE_LONG,
+
+            TYPE_FLOAT,
+            TYPE_DOUBLE,
+
+            INVALID,
+            UNKNOWN
+        };
+
+        TokenType Type = UNKNOWN;
+        StringRef Lexeme;
+        size_t Pos = 0, Line = 1, Column = 1;
+
+        Token() = default;
+        Token(TokenType Type, StringRef Lexeme, size_t Pos, size_t Line, size_t Column)
+            : Type(Type), Lexeme(Lexeme), Pos(Pos), Line(Line), Column(Column) {}
+
+        [[nodiscard]] std::string ToString(const CompilationContext& Context) const;
+    };
+}
+
+#endif //CVOLT_TOKEN_H

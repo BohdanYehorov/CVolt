@@ -5,7 +5,7 @@
 #ifndef CVOLT_TYPEDVALUE_H
 #define CVOLT_TYPEDVALUE_H
 #include "Volt/Core/Functions/Callee.h"
-#include "DataTypeUtils.h"
+#include "Volt/Core/Types/DataTypeUtils.h"
 #include <llvm/IR/Value.h>
 
 namespace Volt

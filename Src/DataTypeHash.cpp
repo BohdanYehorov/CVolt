@@ -5,7 +5,7 @@
 #include "Volt/Compiler/Hash/DataTypeHash.h"
 
 #include "Volt/Compiler/Hash/Hash.h"
-#include "Volt/Compiler/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataTypeUtils.h"
 
 namespace Volt
 {
