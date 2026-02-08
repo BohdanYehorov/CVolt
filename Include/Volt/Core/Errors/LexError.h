@@ -13,7 +13,7 @@ namespace Volt
 	struct LexError : Error
 	{
 		LexErrorType Type;
-		LexError(LexErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context)
+		LexError(LexErrorType Type, size_t Line, size_t Column, Array<std::string>&& Context)
 			: Error(Line, Column, std::move(Context)), Type(Type) {}
 
 		[[nodiscard]] std::string ToString() const override;

@@ -21,12 +21,6 @@
 
 namespace Volt
 {
-    // struct TypeScopeEntry
-    // {
-    //     std::string Name;
-    //     DataType Previous = nullptr;
-    // };
-
     class TypeChecker
     {
     private:
@@ -38,31 +32,25 @@ namespace Volt
         ASTNode*& ASTTree;
         Arena& MainArena;
 
-        // BuilderBase& Builder;
-
         BuiltinFunctionTable& BuiltinFuncTable;
 
-        std::vector<TypeError> Errors;
+        Array<TypeError> Errors;
 
         FunctionTable Functions;
         VariableTable Variables;
 
-        std::vector<std::vector<ScopeEntry>> ScopeStack;
+        Array<Array<ScopeEntry>> ScopeStack;
 
         SmallVec8<std::pair<std::string, DataType*>> FunctionParams;
         DataType* FunctionReturnType = nullptr;
 
     public:
-        // TypeChecker(const Parser& Psr, Arena& MainArena, BuilderBase& Builder, BuiltinFunctionTable& BuiltinFuncTable)
-        //     : ASTTree(Psr.GetASTTree()), MainArena(MainArena),
-        //     Builder(Builder), BuiltinFuncTable(BuiltinFuncTable) {}
-
         TypeChecker(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
             : CContext(CContext), ASTTree(CContext.ASTTree),
             MainArena(CContext.MainArena), BuiltinFuncTable(BuiltinFuncTable) {}
 
         void Check() { VisitNode(ASTTree); }
-        [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
+        [[nodiscard]] bool HasErrors() const { return !Errors.Empty(); }
         void WriteErrors(std::ostream& Os) const;
         bool PrintErrors() const
         {
@@ -76,14 +64,14 @@ namespace Volt
         [[nodiscard]] BuiltinFunctionTable& GetBuiltinFunctionTable() const { return BuiltinFuncTable; }
 
     private:
-        void SendError(TypeErrorKind Kind, size_t Line, size_t Column, std::vector<std::string>&& Context = {})
+        void SendError(TypeErrorKind Kind, size_t Line, size_t Column, Array<std::string>&& Context = {})
         {
-            Errors.emplace_back(Kind, Line, Column, std::move(Context));
+            Errors.Emplace(Kind, Line, Column, std::move(Context));
         }
 
-        void SendError(TypeErrorKind Kind, ASTNode* Node, std::vector<std::string>&& Context = {})
+        void SendError(TypeErrorKind Kind, ASTNode* Node, Array<std::string>&& Context = {})
         {
-            Errors.emplace_back(Kind, Node->Line, Node->Column, std::move(Context));
+            Errors.Emplace(Kind, Node->Line, Node->Column, std::move(Context));
         }
 
         CTimeValue *VisitNode(ASTNode *Node);

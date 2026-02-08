@@ -7,7 +7,6 @@
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Parser/Operators/Operator.h"
-//#include "Volt/Core/Memory/BufferView.h"
 #include "Volt/Compiler/CompileTime/CTimeValue.h"
 #include "Volt/Core/Functions/Callee.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
@@ -33,7 +32,7 @@ namespace Volt
     {
         GENERATED_BODY(SequenceNode, ASTNode);
     public:
-        std::vector<ASTNode*> Statements;
+        Array<ASTNode*> Statements;
         SequenceNode() : ASTNode(0, 0, 0) {}
     };
 
@@ -41,7 +40,7 @@ namespace Volt
     {
         GENERATED_BODY(BlockNode, ASTNode);
     public:
-        std::vector<ASTNode*> Statements;
+        Array<ASTNode*> Statements;
         BlockNode(size_t Pos, size_t Line, size_t Column) :
             ASTNode(Pos, Line, Column) {}
     };

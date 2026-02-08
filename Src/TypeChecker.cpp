@@ -972,12 +972,12 @@ namespace Volt
 
     void TypeChecker::EnterScope()
     {
-        ScopeStack.emplace_back();
+        ScopeStack.Emplace();
     }
 
     void TypeChecker::ExitScope()
     {
-        for (const ScopeEntry& Entry : ScopeStack.back())
+        for (const ScopeEntry& Entry : ScopeStack.Back())
         {
             if (Entry.Previous)
                 Variables[Entry.Name] = Entry.Previous;
@@ -985,16 +985,16 @@ namespace Volt
                 Variables.erase(Entry.Name);
         }
 
-        ScopeStack.pop_back();
+        ScopeStack.Pop();
     }
 
     void TypeChecker::DeclareVariable(const std::string &Name, DataType* Type)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            ScopeStack.back().push_back({ Name, Iter->second });
+            ScopeStack.Back().Add({ Name, Iter->second });
 
         Variables[Name] = MainArena.Create<TypedValue>(Type);
-        ScopeStack.back().push_back({ Name, nullptr });
+        ScopeStack.Back().Add({ Name, nullptr });
     }
 
     DataType* TypeChecker::GetVariable(const std::string &Name)

@@ -8,6 +8,7 @@
 #include "Volt/Core/Errors/LexError.h"
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
+#include "Volt/ADT/Array.h"
 #include "Token.h"
 #include <string>
 #include <unordered_set>
@@ -31,8 +32,7 @@ namespace Volt
 
     private:
         size_t Pos = 0, Line = 1, Column = 1;
-        std::vector<LexError> Errors;
-        std::vector<char> CharStorage;
+        Array<LexError> Errors;
 
         ArenaStream TokensArena;
         StringRef ExprRef;
@@ -43,11 +43,12 @@ namespace Volt
 
         size_t CodeSize;
 
-        std::vector<Token>& Tokens;
+        Array<Token>& Tokens;
 
     public:
         //Lexer(const std::string& Expr);
-        Lexer(CompilationContext& Context);
+        Lexer(CompilationContext& Context)
+            : Context(Context), Code(Context.Code), CodeSize(Code.size()), Tokens(Context.Tokens) {}
 
         Lexer(const Lexer&) = delete;
         Lexer& operator=(const Lexer&) = delete;
@@ -58,10 +59,9 @@ namespace Volt
         void Lex();
         void PrintTokens() const { WriteTokens(std::cout); }
 
-        [[nodiscard]] const std::vector<Token>& GetTokens() const { return Tokens; }
         [[nodiscard]] const ArenaStream& GetTokensArena() const { return TokensArena; }
-        std::vector<LexError> GetErrors() { return Errors; }
-        [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
+        Array<LexError> GetErrors() { return Errors; }
+        [[nodiscard]] bool HasErrors() const { return !Errors.Empty(); }
         bool PrintErrors() const
         {
             WriteErrors(std::cout);
@@ -98,9 +98,8 @@ namespace Volt
         { return InvalidToken(StringRef(StartPos, Pos - StartPos),
             StartPos, StartLine, StartCol); }
 
-        void SendError(LexErrorType Type, size_t ErrLine, size_t ErrColumn,
-            std::vector<std::string>&& Context = {})
-                { Errors.emplace_back(Type, ErrLine, ErrColumn, std::move(Context)); }
+        void SendError(LexErrorType Type, size_t ErrLine, size_t ErrColumn, Array<std::string>&& Ctx = {})
+                { Errors.Emplace(Type, ErrLine, ErrColumn, std::move(Ctx)); }
     };
 }
 #endif //CVOLT_LEXER_H

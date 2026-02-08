@@ -20,6 +20,7 @@ namespace Volt
 		using DifferenceType = std::ptrdiff_t;
 		using AllocatorType = Alloca;
 		using Iterator = ArrayIterator<T>;
+		using ConstIterator = ArrayIterator<const T>;
 
 	private:
 		T* Data = nullptr;
@@ -38,12 +39,13 @@ namespace Volt
 		Array& operator=(const Array& Other);
 		Array& operator=(Array&& Other) noexcept;
 
-		~Array();
+		~Array() { Deallocate(); }
 
 		void Reserve(SizeType NewCap);
 		void Resize(SizeType NewLen, const ValueType& FillValue);
 
 		void Add(const T& Value);
+		void Pop();
 
 		template <typename ... Args_>
 		void Emplace(Args_ ... Args);
@@ -53,12 +55,22 @@ namespace Volt
 
 		[[nodiscard]] SizeType Length() const { return Len; }
 		[[nodiscard]] SizeType Capacity() const { return Cap; }
+		[[nodiscard]] bool Empty() const { return Len == 0; }
+
+		[[nodiscard]] ValueType& Front() { return Data[0]; }
+		[[nodiscard]] const ValueType& Front() const { return Data[0]; }
+
+		[[nodiscard]] ValueType& Back() { return Data[Len - 1]; }
+		[[nodiscard]] const ValueType& Back() const { return Data[Len - 1]; }
 
 		[[nodiscard]] Iterator Begin() { return Iterator(Data); }
 		[[nodiscard]] Iterator End() { return Iterator(Data + Len); }
 
 		[[nodiscard]] Iterator begin() { return Iterator(Data); }
 		[[nodiscard]] Iterator end() { return Iterator(Data + Len); }
+
+		[[nodiscard]] ConstIterator begin() const { return ConstIterator(Data); }
+		[[nodiscard]] ConstIterator end()   const { return ConstIterator(Data + Len); }
 
 	private:
 		void RawResize(SizeType NewLen);
@@ -157,15 +169,6 @@ namespace Volt
 	}
 
 	template<typename T, typename Alloca>
-	Array<T, Alloca>::~Array()
-	{
-		for (SizeType i = 0; i < Len; i++)
-			Alloc.Destruct(Data + i);
-
-		Alloc.Deallocate(Data);
-	}
-
-	template<typename T, typename Alloca>
 	void Array<T, Alloca>::Reserve(SizeType NewCap)
 	{
 		if (NewCap <= Cap) return;
@@ -213,6 +216,15 @@ namespace Volt
 
 		Alloc.Construct(Data + Len, Value);
 		Len++;
+	}
+
+	template<typename T, typename Alloca>
+	void Array<T, Alloca>::Pop()
+	{
+		if (Len == 0) return;
+
+		Alloc.Destruct(Data + (Len - 1));
+		Len--;
 	}
 
 	template<typename T, typename Alloca>

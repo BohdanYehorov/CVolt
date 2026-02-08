@@ -37,7 +37,7 @@ namespace Volt
         FunctionTable FunctionSignatures;
         VariableTable SymbolTable;
 
-        std::vector<std::vector<ScopeEntry>> ScopeStack;
+        Array<Array<ScopeEntry>> ScopeStack;
         std::stack<llvm::BasicBlock*> LoopEndStack;
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 

@@ -234,7 +234,7 @@ namespace Volt
 
     bool Parser::Consume()
     {
-        if (Index < Tokens.size())
+        if (Index < Tokens.Length())
         {
             Index++;
             return true;
@@ -328,7 +328,7 @@ namespace Volt
 
     bool Parser::GetTokenIf(size_t Index, TokenType Type, const Token*& TokPtr) const
     {
-        if (Index >= Tokens.size())
+        if (Index >= Tokens.Length())
             return false;
 
         const Token& Tok = Tokens[Index];
@@ -404,14 +404,14 @@ namespace Volt
         return true;
     }
 
-    void Parser::SendError(ParseErrorType Type, size_t Line, size_t Column, std::vector<std::string> &&Context)
+    void Parser::SendError(ParseErrorType Type, size_t Line, size_t Column, Array<std::string> &&Context)
     {
-        if (Errors.size() >= 100000)
+        if (Errors.Length() >= 100000)
             throw std::runtime_error("Error list Overload");
-        Errors.emplace_back(Type, Line, Column, std::move(Context));
+        Errors.Emplace(Type, Line, Column, std::move(Context));
     }
 
-    void Parser::SendError(ParseErrorType Type, std::vector<std::string> &&Context)
+    void Parser::SendError(ParseErrorType Type, Array<std::string> &&Context)
     {
         if (IsValidIndex())
         {
@@ -420,7 +420,7 @@ namespace Volt
             return;
         }
 
-        const Token& Tok = Tokens.back();
+        const Token& Tok = Tokens.Back();
         SendError(Type, Tok.Line, Tok.Column, std::move(Context));
     }
 
@@ -456,13 +456,13 @@ namespace Volt
         {
             if (ASTNode* Expr = ParseExpression())
             {
-                if (Sequence->Statements.empty())
+                if (Sequence->Statements.Empty())
                 {
                     Sequence->Pos    = Expr->Pos;
                     Sequence->Line   = Expr->Line;
                     Sequence->Column = Expr->Column;
                 }
-                Sequence->Statements.push_back(Expr);
+                Sequence->Statements.Add(Expr);
             }
 
             if (StartIndex == Index)
@@ -503,7 +503,7 @@ namespace Volt
 
             if (ASTNode* Expr = ParseExpression())
             {
-                Block->Statements.push_back(Expr);
+                Block->Statements.Add(Expr);
                 if (LastNodeIsBlock)
                     LastNodeIsBlock = false;
             }

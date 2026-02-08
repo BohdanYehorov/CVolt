@@ -12,9 +12,9 @@ namespace Volt
 		switch (Type)
 		{
 			case ExpectedToken:
-				return std::format("Expected '{}', but got '{}'.", Context.at(0), Context.at(1));
+				return std::format("Expected '{}', but got '{}'.", Context[0], Context[1]);
 			case UnexpectedToken:
-				return std::format("Unexpected '{}'.", Context.at(0));
+				return std::format("Unexpected '{}'.", Context[0]);
 			case UnexpectedEOF:
 				return "Unexpected end of file.";
 			case ExpectedExpression:

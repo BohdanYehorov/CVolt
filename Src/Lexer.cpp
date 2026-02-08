@@ -112,18 +112,6 @@ namespace Volt
 		return "";
 	}
 
-	// Lexer::Lexer(const std::string &Expr) : Code(Expr)
-	// {
-	// 	TokensArena.SetAutoReallocate(true);
-	// 	ExprRef = TokensArena.Write(Expr);
-	// 	StringStoragePtr = TokensArena.GetWritePtr();
-	// }
-
-	Lexer::Lexer(CompilationContext &Context)
-		: Context(Context), Code(Context.Code), CodeSize(Code.size()), Tokens(Context.Tokens)
-	{
-	}
-
 	void Lexer::Lex()
 	{
 		Token Tok;
@@ -137,15 +125,15 @@ namespace Volt
 				break;
 
 			if (GetIdentifierToken(Tok))
-				Tokens.push_back(Tok);
+				Tokens.Add(Tok);
 			else if (GetNumberToken(Tok))
-				Tokens.push_back(Tok);
+				Tokens.Add(Tok);
 			else if (GetOperatorToken(Tok))
-				Tokens.push_back(Tok);
+				Tokens.Add(Tok);
 			else if (GetStringToken(Tok))
-				Tokens.push_back(Tok);
+				Tokens.Add(Tok);
 			else if (GetChar(Tok))
-				Tokens.push_back(Tok);
+				Tokens.Add(Tok);
 			else
 			{
 				SendError(LexErrorType::InvalidCharacter, Line, Column,

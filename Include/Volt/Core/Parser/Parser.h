@@ -33,12 +33,10 @@ namespace Volt
 
     private:
         CompilationContext& CContext;
-
         Arena& NodesArena;
-        // const ArenaStream& TokensArena;
 
-        const std::vector<Token>& Tokens;
-        std::vector<ParseError> Errors;
+        const Array<Token>& Tokens;
+        Array<ParseError> Errors;
 
         size_t Index = 0;
         ASTNode*& Root;
@@ -54,17 +52,14 @@ namespace Volt
         static void WriteASTTree(std::ostream& Os, ASTNode* Node, int Tabs = 0);
 
     public:
-        // Parser(Arena& NodesArena, const Lexer& L)
-        //     : NodesArena(NodesArena), TokensArena(L.GetTokensArena()), Tokens(L.GetTokens()) {}
-
         Parser(CompilationContext& CContext)
             : CContext(CContext), NodesArena(CContext.MainArena),
             Tokens(CContext.Tokens), Root(CContext.ASTTree) {}
 
         void Parse();
         [[nodiscard]] ASTNode* GetASTTree() const { return Root; }
-        [[nodiscard]] const std::vector<ParseError>& GetErrorList() const { return Errors; }
-        [[nodiscard]] bool HasErrors() const { return !Errors.empty(); }
+        [[nodiscard]] const Array<ParseError>& GetErrorList() const { return Errors; }
+        [[nodiscard]] bool HasErrors() const { return !Errors.Empty(); }
         bool PrintErrors() const
         {
             WriteErrors(std::cout);
@@ -77,7 +72,7 @@ namespace Volt
         void PrintASTTree() const { WriteASTTree(std::cout); };
 
     private:
-        [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.size(); }
+        [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.Length(); }
         [[nodiscard]] const Token& CurrentToken() const { return Tokens[Index]; }
         [[nodiscard]] const Token& PrevToken() const { return Tokens[Index - 1]; }
         bool Consume();
@@ -92,14 +87,13 @@ namespace Volt
         bool ConsumeIf(TokenType Type);
         bool Expect(TokenType Type);
 
-        // [[nodiscard]] BufferStringView GetTokenLexeme(const Token& Tok) const { return TokensArena.Read(Tok.Lexeme); }
         [[nodiscard]] llvm::StringRef GetTokenLexeme(const Token& Tok) const
         {
             return CContext.GetTokenLexeme(Tok.Lexeme);
         }
 
-        void SendError(ParseErrorType Type, size_t Line, size_t Column, std::vector<std::string>&& Context = {});
-        void SendError(ParseErrorType Type, std::vector<std::string>&& Context = {});
+        void SendError(ParseErrorType Type, size_t Line, size_t Column, Array<std::string>&& Context = {});
+        void SendError(ParseErrorType Type, Array<std::string>&& Context = {});
 
         [[nodiscard]] bool CanBeDataType() const;
 

@@ -13,7 +13,7 @@ namespace Volt
 	struct TypeError : Error
 	{
 		TypeErrorKind Kind;
-		TypeError(TypeErrorKind Kind, size_t Line, size_t Column, std::vector<std::string>&& Context)
+		TypeError(TypeErrorKind Kind, size_t Line, size_t Column, Array<std::string>&& Context)
 			: Error(Line, Column, std::move(Context)), Kind(Kind) {}
 		[[nodiscard]] std::string ToString() const override;
 	};

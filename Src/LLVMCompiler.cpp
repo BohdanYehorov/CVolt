@@ -933,12 +933,13 @@ namespace Volt
 
     void LLVMCompiler::DeclareVariable(const std::string &Name, TypedValue *Var)
     {
-        if (auto Iter = std::find_if(ScopeStack.back().begin(), ScopeStack.back().end(),
+        if (auto Iter = std::find_if(
+            ScopeStack.Back().Begin(), ScopeStack.Back().End(),
             [&Name](const ScopeEntry& Entry) -> bool
             {
                 return Entry.Name == Name;
             });
-            Iter != ScopeStack.back().end())
+            Iter != ScopeStack.Back().End())
             ERROR("This variable: '" + Name + "' has already declared in this scope");
 
         ScopeEntry Entry;
@@ -947,7 +948,7 @@ namespace Volt
         if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
             Entry.Previous = Iter->second;
 
-        ScopeStack.back().push_back(Entry);
+        ScopeStack.Back().Add(Entry);
         SymbolTable[Name] = Var;
     }
 
@@ -961,12 +962,12 @@ namespace Volt
 
     void LLVMCompiler::EnterScope()
     {
-        ScopeStack.emplace_back();
+        ScopeStack.Emplace();
     }
 
     void LLVMCompiler::ExitScope()
     {
-        for (const auto& Entry : ScopeStack.back())
+        for (const auto& Entry : ScopeStack.Back())
         {
             if (Entry.Previous)
                 SymbolTable[Entry.Name] = Entry.Previous;
@@ -974,7 +975,7 @@ namespace Volt
                 SymbolTable.erase(Entry.Name);
         }
 
-        ScopeStack.pop_back();
+        ScopeStack.Pop();
     }
 
     TypedValue *LLVMCompiler::GetLValue(const ASTNode *Node)

@@ -13,10 +13,10 @@ namespace Volt
         switch (Type)
         {
             case InvalidCharacter:
-                return std::format("Invalid character '{}'.", Context.at(0));
+                return std::format("Invalid character '{}'.", Context[0]);
 
             case InvalidNumber:
-                return std::format("Invalid numeric literal: '{}'.", Context.at(0));
+                return std::format("Invalid numeric literal: '{}'.", Context[0]);
 
             case UnterminatedNumber:
                 return "Unterminated numeric literal.";
@@ -25,7 +25,7 @@ namespace Volt
                 return "Unterminated string literal.";
 
             case InvalidEscape:
-                return std::format("Invalid escape sequence '\\{}'.", Context.at(0));
+                return std::format("Invalid escape sequence '\\{}'.", Context[0]);
 
             case UnterminatedEscape:
                 return "Unterminated escape sequence in string literal.";
@@ -49,16 +49,16 @@ namespace Volt
                 return "Invalid identifier.";
 
             case KeywordAsIdentifier:
-                return std::format("Keyword '{}' cannot be used as an identifier.", Context.at(0));
+                return std::format("Keyword '{}' cannot be used as an identifier.", Context[0]);
 
             case UnknownOperator:
-                return std::format("Unknown operator '{}'.", Context.at(0));
+                return std::format("Unknown operator '{}'.", Context[0]);
 
             case IncompleteOperator:
-                return std::format("Incomplete operator '{}'.", Context.at(0));
+                return std::format("Incomplete operator '{}'.", Context[0]);
 
             case InvalidDelimiter:
-                return std::format("Invalid delimiter '{}'.", Context.at(0));
+                return std::format("Invalid delimiter '{}'.", Context[0]);
 
             case UnexpectedEOF:
                 return "Unexpected end of file.";

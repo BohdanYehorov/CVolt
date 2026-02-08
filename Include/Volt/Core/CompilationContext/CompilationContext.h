@@ -47,7 +47,8 @@ namespace Volt
 		Arena MainArena;
 		llvm::LLVMContext Context;
 
-		std::vector<Token> Tokens;
+		// std::vector<Token> Tokens;
+		Array<Token> Tokens;
 		ASTNode* ASTTree = nullptr;
 
 	public:
@@ -61,7 +62,7 @@ namespace Volt
 
 		[[nodiscard]] llvm::StringRef GetTokenLexeme(StringRef Ref) const;
 
-		[[nodiscard]] const std::vector<Token>& GetTokens() const { return Tokens; }
+		[[nodiscard]] const Array<Token>& GetTokens() const { return Tokens; }
 		[[nodiscard]] const ASTNode* GetASTTree() const { return ASTTree; }
 
 		[[nodiscard]] VoidType* GetVoidType();

@@ -5,6 +5,7 @@
 #ifndef CVOLT_ERRORS_H
 #define CVOLT_ERRORS_H
 
+#include "Volt/ADT/Array.h"
 #include <vector>
 #include <string>
 #include <format>
@@ -16,9 +17,9 @@ namespace Volt
     {
         size_t Line;
         size_t Column;
-        std::vector<std::string> Context;
+        Array<std::string> Context;
 
-        Error(size_t Line, size_t Column, std::vector<std::string>&& Context)
+        Error(size_t Line, size_t Column, Array<std::string>&& Context)
             : Line(Line), Column(Column), Context(std::move(Context)) {}
         virtual ~Error() = default;
 
