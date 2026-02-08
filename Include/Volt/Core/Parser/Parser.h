@@ -7,7 +7,7 @@
 
 #include "Volt/Core/Lexer/Lexer.h"
 #include "Volt/Core/AST/ASTNodes.h"
-#include "Volt/Core/Errors/Errors.h"
+#include "Volt/Core/Errors/ParseError.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <ostream>
 
@@ -84,13 +84,13 @@ namespace Volt
         void SkipSemicolons();
         void Synchronize();
         void JumpToNextGlobalDeclaration();
-        bool GetTokenIf(size_t Index, Token::TokenType Type, const Token*& TokPtr) const;
-        bool GetNextTokenIf(Token::TokenType Type, const Token*& TokPtr, size_t NextIndexOffset = 1) const;
-        bool Peek(Token::TokenType Type, const Token*& TokPtr) const;
-        [[nodiscard]] bool Peek(Token::TokenType Type) const;
-        bool ConsumeIf(Token::TokenType Type, const Token*& TokPtr);
-        bool ConsumeIf(Token::TokenType Type);
-        bool Expect(Token::TokenType Type);
+        bool GetTokenIf(size_t Index, TokenType Type, const Token*& TokPtr) const;
+        bool GetNextTokenIf(TokenType Type, const Token*& TokPtr, size_t NextIndexOffset = 1) const;
+        bool Peek(TokenType Type, const Token*& TokPtr) const;
+        [[nodiscard]] bool Peek(TokenType Type) const;
+        bool ConsumeIf(TokenType Type, const Token*& TokPtr);
+        bool ConsumeIf(TokenType Type);
+        bool Expect(TokenType Type);
 
         // [[nodiscard]] BufferStringView GetTokenLexeme(const Token& Tok) const { return TokensArena.Read(Tok.Lexeme); }
         [[nodiscard]] llvm::StringRef GetTokenLexeme(const Token& Tok) const

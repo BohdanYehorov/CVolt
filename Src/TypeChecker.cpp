@@ -238,8 +238,8 @@ namespace Volt
 
         switch (Suffix->Type)
         {
-            case Operator::INC:
-            case Operator::DEC:
+            case OperatorType::INC:
+            case OperatorType::DEC:
             {
                 if (DataTypeUtils::GetTypeCategory(SuffixType) == TypeCategory::INTEGER)
                 {
@@ -264,8 +264,8 @@ namespace Volt
 
         switch (Prefix->Type)
         {
-            case Operator::INC:
-            case Operator::DEC:
+            case OperatorType::INC:
+            case OperatorType::DEC:
             {
                 if (DataTypeUtils::GetTypeCategory(PrefixType) == TypeCategory::INTEGER)
                 {
@@ -293,8 +293,8 @@ namespace Volt
 
         switch (Unary->Type)
         {
-            case Operator::ADD:
-            case Operator::SUB:
+            case OperatorType::ADD:
+            case OperatorType::SUB:
             {
                 if (OperandTypeCategory == TypeCategory::INTEGER ||
                    OperandTypeCategory == TypeCategory::FLOATING_POINT)
@@ -305,7 +305,7 @@ namespace Volt
                 }
                 return nullptr;
             }
-            case Operator::LOGICAL_NOT:
+            case OperatorType::LOGICAL_NOT:
             {
                 if (ImplicitCast(OperandType, CContext.GetBoolType()))
                 {
@@ -315,7 +315,7 @@ namespace Volt
                 }
                 return nullptr;
             }
-            case Operator::BIT_NOT:
+            case OperatorType::BIT_NOT:
             {
                 if (OperandTypeCategory == TypeCategory::INTEGER)
                 {
@@ -630,17 +630,17 @@ namespace Volt
         return false;
     }
 
-    bool TypeChecker::CanCastArithmetic(DataType* Left, DataType* Right, Operator::Type Type) const
+    bool TypeChecker::CanCastArithmetic(DataType* Left, DataType* Right, OperatorType Type) const
     {
         TypeCategory LeftTypeCategory = DataTypeUtils::GetTypeCategory(Left);
         TypeCategory RightTypeCategory = DataTypeUtils::GetTypeCategory(Right);
 
         switch (Type)
         {
-            case Operator::ADD:
-            case Operator::SUB:
-            case Operator::MUL:
-            case Operator::DIV:
+            case OperatorType::ADD:
+            case OperatorType::SUB:
+            case OperatorType::MUL:
+            case OperatorType::DIV:
             {
                 switch (LeftTypeCategory)
                 {
@@ -652,7 +652,7 @@ namespace Volt
                             case TypeCategory::FLOATING_POINT:
                                 break;
                             case TypeCategory::POINTER:
-                                if (Type == Operator::ADD)
+                                if (Type == OperatorType::ADD)
                                     return true;
                                 return false;
                             default:
@@ -666,7 +666,7 @@ namespace Volt
 
                     case TypeCategory::POINTER:
                     {
-                        if (Type != Operator::ADD && Type != Operator::SUB)
+                        if (Type != OperatorType::ADD && Type != OperatorType::SUB)
                             return false;
 
                         switch (RightTypeCategory)
@@ -681,7 +681,7 @@ namespace Volt
                         return false;
                 }
             }
-            case Operator::MOD:
+            case OperatorType::MOD:
                 return LeftTypeCategory == TypeCategory::INTEGER &&
                     RightTypeCategory == TypeCategory::INTEGER;
 
@@ -690,15 +690,15 @@ namespace Volt
         }
     }
 
-    bool TypeChecker::CanCastComparison(DataType* Left, DataType* Right, Operator::Type Type) const
+    bool TypeChecker::CanCastComparison(DataType* Left, DataType* Right, OperatorType Type) const
     {
         TypeCategory LeftTypeCategory = DataTypeUtils::GetTypeCategory(Left);
         TypeCategory RightTypeCategory = DataTypeUtils::GetTypeCategory(Right);
 
         switch (Type)
         {
-            case Operator::EQ:
-            case Operator::NEQ:
+            case OperatorType::EQ:
+            case OperatorType::NEQ:
             {
                 switch (LeftTypeCategory)
                 {
@@ -716,10 +716,10 @@ namespace Volt
                 }
             }
 
-            case Operator::LT:
-            case Operator::LTE:
-            case Operator::GT:
-            case Operator::GTE:
+            case OperatorType::LT:
+            case OperatorType::LTE:
+            case OperatorType::GT:
+            case OperatorType::GTE:
             {
                 switch (LeftTypeCategory)
                 {
@@ -737,14 +737,14 @@ namespace Volt
         }
     }
 
-    bool TypeChecker::CanCastLogical(DataType* Left, DataType* Right, Operator::Type Type) const
+    bool TypeChecker::CanCastLogical(DataType* Left, DataType* Right, OperatorType Type) const
     {
         DataType* BoolType = CContext.GetBoolType();
 
         switch (Type)
         {
-            case Operator::LOGICAL_AND:
-            case Operator::LOGICAL_OR:
+            case OperatorType::LOGICAL_AND:
+            case OperatorType::LOGICAL_OR:
                 return CanImplicitCast(Left, BoolType) &&
                     CanImplicitCast(Right, BoolType);
             default:
@@ -752,23 +752,23 @@ namespace Volt
         }
     }
 
-    bool TypeChecker::CanCastBitwise(DataType* Left, DataType* Right, Operator::Type Type) const
+    bool TypeChecker::CanCastBitwise(DataType* Left, DataType* Right, OperatorType Type) const
     {
         TypeCategory LeftTypeCategory = DataTypeUtils::GetTypeCategory(Left);
         TypeCategory RightTypeCategory = DataTypeUtils::GetTypeCategory(Right);
 
         switch (Type)
         {
-            case Operator::BIT_AND:
-            case Operator::BIT_OR:
-            case Operator::BIT_XOR:
+            case OperatorType::BIT_AND:
+            case OperatorType::BIT_OR:
+            case OperatorType::BIT_XOR:
                 return (LeftTypeCategory == TypeCategory::INTEGER ||
                         LeftTypeCategory == TypeCategory::BOOLEAN) &&
                        (RightTypeCategory == TypeCategory::INTEGER ||
                         RightTypeCategory == TypeCategory::BOOLEAN);
 
-            case Operator::LSHIFT:
-            case Operator::RSHIFT:
+            case OperatorType::LSHIFT:
+            case OperatorType::RSHIFT:
                 return LeftTypeCategory == TypeCategory::INTEGER &&
                     RightTypeCategory == TypeCategory::INTEGER;
 
@@ -777,26 +777,26 @@ namespace Volt
         }
     }
 
-    bool TypeChecker::CanCastAssignment(DataType* Left, DataType* Right, Operator::Type Type) const
+    bool TypeChecker::CanCastAssignment(DataType* Left, DataType* Right, OperatorType Type) const
     {
         switch (Type)
         {
-            case Operator::ASSIGN:
+            case OperatorType::ASSIGN:
                 return CanImplicitCast(Right, Left);
-            case Operator::ADD_ASSIGN:
-                return CanCastArithmetic(Right, Left, Operator::ADD);
-            case Operator::SUB_ASSIGN:
-                return CanCastArithmetic(Right, Left, Operator::SUB);
-            case Operator::MUL_ASSIGN:
-                return CanCastArithmetic(Right, Left, Operator::MUL);
-            case Operator::DIV_ASSIGN:
-                return CanCastArithmetic(Right, Left, Operator::DIV);
+            case OperatorType::ADD_ASSIGN:
+                return CanCastArithmetic(Right, Left, OperatorType::ADD);
+            case OperatorType::SUB_ASSIGN:
+                return CanCastArithmetic(Right, Left, OperatorType::SUB);
+            case OperatorType::MUL_ASSIGN:
+                return CanCastArithmetic(Right, Left, OperatorType::MUL);
+            case OperatorType::DIV_ASSIGN:
+                return CanCastArithmetic(Right, Left, OperatorType::DIV);
             default:
                 return false;
         }
     }
 
-    bool TypeChecker::CanCastToJointType(DataType* Left, DataType* Right, Operator::Type Type) const
+    bool TypeChecker::CanCastToJointType(DataType* Left, DataType* Right, OperatorType Type) const
     {
         if (CanCastArithmetic(Left, Right, Type)) return true;
         if (CanCastComparison(Left, Right, Type)) return true;
@@ -807,7 +807,7 @@ namespace Volt
         return false;
     }
 
-    bool TypeChecker::CastToJointType(DataType *&Left, DataType *&Right, Operator::Type Type, size_t Line, size_t Column)
+    bool TypeChecker::CastToJointType(DataType *&Left, DataType *&Right, OperatorType Type, size_t Line, size_t Column)
     {
         if (!CanCastToJointType(Left, Right, Type))
         {
@@ -943,7 +943,7 @@ namespace Volt
         return false;
     }
 
-    bool TypeChecker::CastToJointType(CTimeValue *Left, CTimeValue *Right, Operator::Type Type, size_t Line, size_t Column)
+    bool TypeChecker::CastToJointType(CTimeValue *Left, CTimeValue *Right, OperatorType Type, size_t Line, size_t Column)
     {
         DataType* LeftType = Left->Type;
         DataType* RightType = Right->Type;
@@ -1005,7 +1005,7 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::CalculateUnary(CTimeValue *Operand, Operator::Type Type) const
+    CTimeValue *TypeChecker::CalculateUnary(CTimeValue *Operand, OperatorType Type) const
     {
         if (!Operand)
             return nullptr;
@@ -1016,7 +1016,7 @@ namespace Volt
         TypeCategory OperandTypeCategory = DataTypeUtils::GetTypeCategory(Operand->Type);
         switch (Type)
         {
-            case Operator::ADD:
+            case OperatorType::ADD:
             {
                 switch (OperandTypeCategory)
                 {
@@ -1027,7 +1027,7 @@ namespace Volt
                         return nullptr;
                 }
             }
-            case Operator::SUB:
+            case OperatorType::SUB:
             {
                 switch (OperandTypeCategory)
                 {
@@ -1039,13 +1039,13 @@ namespace Volt
                         return nullptr;
                 }
             }
-            case Operator::BIT_NOT:
+            case OperatorType::BIT_NOT:
             {
                 if (OperandTypeCategory == TypeCategory::INTEGER)
                     return CTimeValue::CreateInteger(Operand->Type, ~Operand->Int, MainArena);
                 return nullptr;
             }
-            case Operator::LOGICAL_NOT:
+            case OperatorType::LOGICAL_NOT:
             {
                 if (OperandTypeCategory == TypeCategory::BOOLEAN)
                     return CTimeValue::CreateBool(Operand->Type, !Operand->Bool, MainArena);
@@ -1092,31 +1092,31 @@ namespace Volt
         default: return nullptr; \
     }
 
-    CTimeValue *TypeChecker::CalculateBinary(CTimeValue *Left, CTimeValue *Right, Operator::Type Type) const
+    CTimeValue *TypeChecker::CalculateBinary(CTimeValue *Left, CTimeValue *Right, OperatorType Type) const
     {
         if (!Left->IsValid || !Right->IsValid)
             return CTimeValue::CreateNull(Left->Type, MainArena);
 
         switch (Type)
         {
-            case Operator::ADD:         CREATE_OP_FOR_ALL_TYPES(+);
-            case Operator::SUB:         CREATE_OP_FOR_ALL_TYPES(-);
-            case Operator::MUL:         CREATE_OP_FOR_ALL_TYPES(*);
-            case Operator::DIV:         CREATE_OP_FOR_ALL_TYPES(/);
-            case Operator::MOD:         CREATE_OP_FOR_INT(%);
-            case Operator::EQ:          CREATE_CMP_FOR_ALL_TYPES(==);
-            case Operator::NEQ:         CREATE_CMP_FOR_ALL_TYPES(!=);
-            case Operator::GT:          CREATE_CMP_FOR_ALL_TYPES(>);
-            case Operator::GTE:         CREATE_CMP_FOR_ALL_TYPES(>=);
-            case Operator::LT:          CREATE_CMP_FOR_ALL_TYPES(<);
-            case Operator::LTE:         CREATE_CMP_FOR_ALL_TYPES(<=);
-            case Operator::LOGICAL_AND: CREATE_OP_FOR_BOOL(&&);
-            case Operator::LOGICAL_OR:  CREATE_OP_FOR_BOOL(||);
-            case Operator::BIT_AND:     CREATE_OP_FOR_INT(&);
-            case Operator::BIT_OR:      CREATE_OP_FOR_INT(|);
-            case Operator::BIT_XOR:     CREATE_OP_FOR_INT(^);
-            case Operator::LSHIFT:      CREATE_OP_FOR_INT(<<);
-            case Operator::RSHIFT:      CREATE_OP_FOR_INT(>>);
+            case OperatorType::ADD:         CREATE_OP_FOR_ALL_TYPES(+);
+            case OperatorType::SUB:         CREATE_OP_FOR_ALL_TYPES(-);
+            case OperatorType::MUL:         CREATE_OP_FOR_ALL_TYPES(*);
+            case OperatorType::DIV:         CREATE_OP_FOR_ALL_TYPES(/);
+            case OperatorType::MOD:         CREATE_OP_FOR_INT(%);
+            case OperatorType::EQ:          CREATE_CMP_FOR_ALL_TYPES(==);
+            case OperatorType::NEQ:         CREATE_CMP_FOR_ALL_TYPES(!=);
+            case OperatorType::GT:          CREATE_CMP_FOR_ALL_TYPES(>);
+            case OperatorType::GTE:         CREATE_CMP_FOR_ALL_TYPES(>=);
+            case OperatorType::LT:          CREATE_CMP_FOR_ALL_TYPES(<);
+            case OperatorType::LTE:         CREATE_CMP_FOR_ALL_TYPES(<=);
+            case OperatorType::LOGICAL_AND: CREATE_OP_FOR_BOOL(&&);
+            case OperatorType::LOGICAL_OR:  CREATE_OP_FOR_BOOL(||);
+            case OperatorType::BIT_AND:     CREATE_OP_FOR_INT(&);
+            case OperatorType::BIT_OR:      CREATE_OP_FOR_INT(|);
+            case OperatorType::BIT_XOR:     CREATE_OP_FOR_INT(^);
+            case OperatorType::LSHIFT:      CREATE_OP_FOR_INT(<<);
+            case OperatorType::RSHIFT:      CREATE_OP_FOR_INT(>>);
             default:                    return CTimeValue::CreateNull(Left->Type, MainArena);
         }
     }

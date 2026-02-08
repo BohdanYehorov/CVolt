@@ -1,0 +1,51 @@
+//
+// Created by bohdan on 07.02.26.
+//
+
+#ifndef CVOLT_OPERATORTYPE_H
+#define CVOLT_OPERATORTYPE_H
+
+namespace Volt
+{
+	enum class OperatorType
+	{
+		UNKNOWN,
+		ADD,
+		SUB,
+		UN_PLS,
+		UN_MNS,
+		MUL,
+		DIV,
+		MOD,
+		INC,
+		DEC,
+		ASSIGN,
+		ADD_ASSIGN,
+		SUB_ASSIGN,
+		MUL_ASSIGN,
+		DIV_ASSIGN,
+		MOD_ASSIGN,
+		AND_ASSIGN,
+		OR_ASSIGN,
+		XOR_ASSIGN,
+		LSHIFT_ASSIGN,
+		RSHIFT_ASSIGN,
+		EQ,
+		NEQ,
+		GT,
+		GTE,
+		LT,
+		LTE,
+		LOGICAL_AND,
+		LOGICAL_OR,
+		LOGICAL_NOT,
+		BIT_AND,
+		BIT_OR,
+		BIT_XOR,
+		BIT_NOT,
+		LSHIFT,
+		RSHIFT
+	};
+}
+
+#endif //CVOLT_OPERATORTYPE_H

@@ -5,7 +5,7 @@
 #ifndef CVOLT_LEXER_H
 #define CVOLT_LEXER_H
 
-#include "Volt/Core/Errors/Errors.h"
+#include "Volt/Core/Errors/LexError.h"
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Token.h"
@@ -22,12 +22,12 @@ namespace Volt
     {
     private:
         static std::unordered_set<char> OperatorChars;
-        static std::unordered_map<std::string, Token::TokenType> Operators;
-        static std::unordered_map<std::string, Token::TokenType> Keywords;
-        static std::unordered_map<std::string, Token::TokenType> DataTypes;
+        static std::unordered_map<std::string, TokenType> Operators;
+        static std::unordered_map<std::string, TokenType> Keywords;
+        static std::unordered_map<std::string, TokenType> DataTypes;
 
     public:
-        static std::string GetOperatorLexeme(Token::TokenType Type);
+        static std::string GetOperatorLexeme(TokenType Type);
 
     private:
         size_t Pos = 0, Line = 1, Column = 1;
@@ -92,7 +92,7 @@ namespace Volt
         bool GetEscape(char Ch, char& Escape);
 
         [[nodiscard]] static Token InvalidToken(StringRef Lexeme, size_t Pos, size_t Line, size_t Col)
-        { return { Token::INVALID, Lexeme, Pos, Line, Col };  }
+        { return { TokenType::INVALID, Lexeme, Pos, Line, Col };  }
 
         [[nodiscard]] Token InvalidToken(size_t StartPos, size_t StartLine, size_t StartCol) const
         { return InvalidToken(StringRef(StartPos, Pos - StartPos),

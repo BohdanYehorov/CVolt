@@ -4,12 +4,12 @@
 
 #include "Volt/Core/Parser/Operators/Operator.h"
 
-#define GEN_CASE(Op) case Token::OP_##Op: return Op;
-#define GEN_CASE_TO_STRING(Op) case Op: return #Op;
+#define GEN_CASE(Op) case TokenType::OP_##Op: return OperatorType::Op;
+#define GEN_CASE_TO_STRING(Op) case OperatorType::Op: return #Op;
 
 namespace Volt
 {
-    Operator::Type Operator::GetAssignmentOp(Token::TokenType Op)
+    OperatorType Operator::GetAssignmentOp(TokenType Op)
     {
         switch (Op)
         {
@@ -24,42 +24,42 @@ namespace Volt
             GEN_CASE(XOR_ASSIGN)
             GEN_CASE(LSHIFT_ASSIGN)
             GEN_CASE(RSHIFT_ASSIGN)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetLogicalOp(Token::TokenType Op)
+    OperatorType Operator::GetLogicalOp(TokenType Op)
     {
         switch (Op)
         {
             GEN_CASE(LOGICAL_AND)
             GEN_CASE(LOGICAL_OR)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetBitwiseOp(Token::TokenType Op)
+    OperatorType Operator::GetBitwiseOp(TokenType Op)
     {
         switch (Op)
         {
             GEN_CASE(BIT_AND)
             GEN_CASE(BIT_OR)
             GEN_CASE(BIT_XOR)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetEqualityOp(Token::TokenType Op)
+    OperatorType Operator::GetEqualityOp(TokenType Op)
     {
         switch (Op)
         {
             GEN_CASE(EQ)
             GEN_CASE(NEQ)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetRelationalOp(Token::TokenType Op)
+    OperatorType Operator::GetRelationalOp(TokenType Op)
     {
         switch (Op)
         {
@@ -67,42 +67,42 @@ namespace Volt
             GEN_CASE(GTE)
             GEN_CASE(LT)
             GEN_CASE(LTE)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetShiftOp(Token::TokenType Op)
+    OperatorType Operator::GetShiftOp(TokenType Op)
     {
         switch (Op)
         {
             GEN_CASE(LSHIFT)
             GEN_CASE(RSHIFT)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetAdditiveOp(Token::TokenType Op)
+    OperatorType Operator::GetAdditiveOp(TokenType Op)
     {
         switch (Op)
         {
             GEN_CASE(ADD)
             GEN_CASE(SUB)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetMultiplicativeOp(Token::TokenType Op)
+    OperatorType Operator::GetMultiplicativeOp(TokenType Op)
     {
         switch (Op)
         {
             GEN_CASE(MUL)
             GEN_CASE(DIV)
             GEN_CASE(MOD)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetUnaryOp(Token::TokenType Op)
+    OperatorType Operator::GetUnaryOp(TokenType Op)
     {
         switch (Op)
         {
@@ -112,21 +112,21 @@ namespace Volt
             GEN_CASE(BIT_NOT)
             GEN_CASE(INC)
             GEN_CASE(DEC)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    Operator::Type Operator::GetPostfix(Token::TokenType Op)
+    OperatorType Operator::GetPostfix(TokenType Op)
     {
         switch (Op)
         {
             GEN_CASE(INC)
             GEN_CASE(DEC)
-            default: return UNKNOWN;
+            default: return OperatorType::UNKNOWN;
         }
     }
 
-    std::string Operator::ToString(Type Op)
+    std::string Operator::ToString(OperatorType Op)
     {
         switch (Op)
         {

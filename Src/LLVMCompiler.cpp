@@ -272,10 +272,10 @@ namespace Volt
         Value = Builder.CreateLoad(CContext.GetLLVMType(LValue->GetDataType()), Value);
         switch (Prefix->Type)
         {
-            case Operator::INC:
+            case OperatorType::INC:
                 Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
                 break;
-            case Operator::DEC:
+            case OperatorType::DEC:
                 Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
                 break;
             default:
@@ -298,10 +298,10 @@ namespace Volt
         llvm::Value* Temp = Value;
         switch (Suffix->Type)
         {
-            case Operator::INC:
+            case OperatorType::INC:
                 Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
                 break;
-            case Operator::DEC:
+            case OperatorType::DEC:
                 Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
                 break;
             default:
@@ -325,13 +325,13 @@ namespace Volt
 
         switch (Unary->Type)
         {
-            case Operator::ADD:         return TValue;
-            case Operator::SUB:         return Create<TypedValue>(IsFP ?
+            case OperatorType::ADD:         return TValue;
+            case OperatorType::SUB:         return Create<TypedValue>(IsFP ?
                                         Builder.CreateNeg(Value) :
                                         Builder.CreateFNeg(Value), Unary->ResolvedType);
-            case Operator::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
+            case OperatorType::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
                                                ImplicitCast(TValue, BoolType)->GetValue()), Unary->ResolvedType);
-            case Operator::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Unary->ResolvedType);
+            case OperatorType::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Unary->ResolvedType);
             default: ERROR("Unknown unary operator")
         }
     }
@@ -358,25 +358,25 @@ namespace Volt
 
         switch (Comparison->Type)
         {
-            case Operator::EQ:  return Create<TypedValue>(IsFP ?
+            case OperatorType::EQ:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOEQ(LeftVal, RightVal) :
                                 Builder.CreateICmpEQ(LeftVal, RightVal), Comparison->ResolvedType);
-            case Operator::NEQ: return Create<TypedValue>(IsFP ?
+            case OperatorType::NEQ: return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpONE(LeftVal, RightVal) :
                                 Builder.CreateICmpNE(LeftVal, RightVal), Comparison->ResolvedType);
-            case Operator::LT:  return Create<TypedValue>(IsFP ?
+            case OperatorType::LT:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOLT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLT(LeftVal, RightVal) :
                                 Builder.CreateICmpULT(LeftVal, RightVal), Comparison->ResolvedType);
-            case Operator::LTE: return Create<TypedValue>( IsFP ?
+            case OperatorType::LTE: return Create<TypedValue>( IsFP ?
                                 Builder.CreateFCmpOLE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLE(LeftVal, RightVal) :
                                 Builder.CreateICmpULE(LeftVal, RightVal), Comparison->ResolvedType);
-            case Operator::GT:  return Create<TypedValue>(IsFP ?
+            case OperatorType::GT:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOGT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGT(LeftVal, RightVal) :
                                 Builder.CreateICmpUGT(LeftVal, RightVal), Comparison->ResolvedType);
-            case Operator::GTE: return Create<TypedValue>(IsFP ?
+            case OperatorType::GTE: return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOGE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGE(LeftVal, RightVal) :
                                 Builder.CreateICmpUGE(LeftVal, RightVal), Comparison->ResolvedType);
@@ -393,7 +393,7 @@ namespace Volt
 
         switch (Logical->Type)
         {
-            case Operator::LOGICAL_OR:
+            case OperatorType::LOGICAL_OR:
             {
                 llvm::BasicBlock* OrRhsBB = llvm::BasicBlock::Create(Context, "or.rhs", Func);
                 llvm::BasicBlock* OrTrueBB = llvm::BasicBlock::Create(Context, "or.true", Func);
@@ -419,7 +419,7 @@ namespace Volt
                 return Create<TypedValue>(
                       Phi, Logical->ResolvedType);
             }
-            case Operator::LOGICAL_AND:
+            case OperatorType::LOGICAL_AND:
             {
                 auto* AndRhsBB   = llvm::BasicBlock::Create(Context, "and.rhs", Func);
                 auto* AndFalseBB= llvm::BasicBlock::Create(Context, "and.false", Func);
@@ -463,7 +463,7 @@ namespace Volt
         TypedValue* Right = ImplicitCast(CompileNode(Assignment->Right), Type);
         llvm::Value* RightVal = Right->GetValue();
 
-        if (Assignment->Type == Operator::ASSIGN)
+        if (Assignment->Type == OperatorType::ASSIGN)
             return Create<TypedValue>(Builder.CreateStore(RightVal, Value), Right->GetDataType());
 
         llvm::Value* Left = Builder.CreateLoad(CContext.GetLLVMType(Type), Value);
@@ -477,24 +477,24 @@ namespace Volt
 
         switch (Assignment->Type)
         {
-            case Operator::ADD_ASSIGN:
+            case OperatorType::ADD_ASSIGN:
                 Left = IsFP ? Builder.CreateFAdd(Left, RightVal) :
                               Builder.CreateAdd(Left, RightVal);
                 break;
-            case Operator::SUB_ASSIGN:
+            case OperatorType::SUB_ASSIGN:
                 Left = IsFP ? Builder.CreateFSub(Left, RightVal) :
                               Builder.CreateSub(Left, RightVal);
                 break;
-            case Operator::MUL_ASSIGN:
+            case OperatorType::MUL_ASSIGN:
                 Left = IsFP ? Builder.CreateFMul(Left, RightVal) :
                               Builder.CreateMul(Left, RightVal);
                 break;
-            case Operator::DIV_ASSIGN:
+            case OperatorType::DIV_ASSIGN:
                 Left = IsFP     ? Builder.CreateFDiv(Left, RightVal) :
                        IsSigned ? Builder.CreateSDiv(Left, RightVal) :
                                   Builder.CreateUDiv(Left, RightVal);
                 break;
-            case Operator::MOD_ASSIGN:
+            case OperatorType::MOD_ASSIGN:
                 Left = IsSigned ? Builder.CreateSRem(Left, RightVal) :
                                   Builder.CreateURem(Left, RightVal);
                 break;
@@ -525,31 +525,31 @@ namespace Volt
 
         switch (BinaryOp->Type)
         {
-            case Operator::ADD:     return Create<TypedValue>(IsFP ?
+            case OperatorType::ADD:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFAdd(LeftVal, RightVal) :
                                     Builder.CreateAdd(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::SUB:     return Create<TypedValue>(IsFP ?
+            case OperatorType::SUB:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFSub(LeftVal, RightVal) :
                                     Builder.CreateSub(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::MUL:     return Create<TypedValue>(IsFP ?
+            case OperatorType::MUL:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFMul(LeftVal, RightVal) :
                                     Builder.CreateMul(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::DIV:     return Create<TypedValue>(IsFP ?
+            case OperatorType::DIV:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFDiv(LeftVal, RightVal) : IsSigned ?
                                     Builder.CreateSDiv(LeftVal, RightVal) :
                                     Builder.CreateUDiv(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::MOD:     return Create<TypedValue>(IsSigned ?
+            case OperatorType::MOD:     return Create<TypedValue>(IsSigned ?
                                     Builder.CreateSRem(LeftVal, RightVal) :
                                     Builder.CreateURem(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::BIT_AND: return Create<TypedValue>(
+            case OperatorType::BIT_AND: return Create<TypedValue>(
                                     Builder.CreateAnd(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::BIT_OR:  return Create<TypedValue>(
+            case OperatorType::BIT_OR:  return Create<TypedValue>(
                                     Builder.CreateOr(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::BIT_XOR: return Create<TypedValue>(
+            case OperatorType::BIT_XOR: return Create<TypedValue>(
                                     Builder.CreateXor(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::LSHIFT:  return  Create<TypedValue>(
+            case OperatorType::LSHIFT:  return  Create<TypedValue>(
                                     Builder.CreateShl(LeftVal, RightVal), BinaryOp->ResolvedType);
-            case Operator::RSHIFT:  return Create<TypedValue>(IsSigned ?
+            case OperatorType::RSHIFT:  return Create<TypedValue>(IsSigned ?
                                     Builder.CreateAShr(LeftVal, RightVal) :
                                     Builder.CreateLShr(LeftVal, RightVal), BinaryOp->ResolvedType);
             default: ERROR("Unknown binary operator")

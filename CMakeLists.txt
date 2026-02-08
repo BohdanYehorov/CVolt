@@ -18,7 +18,6 @@ add_executable(CVolt
         Src/Arena.cpp
         Src/Parser.cpp
         Src/Operator.cpp
-        Src/Errors.cpp
         Src/BufferView.cpp
         Src/LLVMCompiler.cpp
         Src/Hash.cpp
@@ -31,6 +30,10 @@ add_executable(CVolt
         Src/CTimeValue.cpp
         Src/CompilationContext.cpp
         Src/Token.cpp
+        Src/LexError.cpp
+        Src/ParseError.cpp
+        Src/TypeError.cpp
+        Include/Volt/Debug/DebugOutput/DebugOutput.h
 )
 
 target_link_libraries(CVolt PRIVATE LLVM)

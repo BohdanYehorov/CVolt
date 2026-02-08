@@ -8,7 +8,7 @@
 #include "Volt/Core/Parser/Parser.h"
 #include "Volt/Core/Types/DataTypeUtils.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
-#include "Volt/Core/Errors/Errors.h"
+#include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
@@ -116,19 +116,19 @@ namespace Volt
         DataType *VisitType(DataTypeNodeBase *Type);
 
         [[nodiscard]] bool CanImplicitCast(DataType* Src, DataType* Dst) const;
-        [[nodiscard]] bool CanCastArithmetic(DataType* Left, DataType* Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastComparison(DataType* Left, DataType* Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastLogical(DataType* Left, DataType* Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastBitwise(DataType* Left, DataType* Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastAssignment(DataType* Left, DataType* Right, Operator::Type Type) const;
-        [[nodiscard]] bool CanCastToJointType(DataType* Left, DataType* Right, Operator::Type Type) const;
+        [[nodiscard]] bool CanCastArithmetic(DataType* Left, DataType* Right, OperatorType Type) const;
+        [[nodiscard]] bool CanCastComparison(DataType* Left, DataType* Right, OperatorType Type) const;
+        [[nodiscard]] bool CanCastLogical(DataType* Left, DataType* Right, OperatorType Type) const;
+        [[nodiscard]] bool CanCastBitwise(DataType* Left, DataType* Right, OperatorType Type) const;
+        [[nodiscard]] bool CanCastAssignment(DataType* Left, DataType* Right, OperatorType Type) const;
+        [[nodiscard]] bool CanCastToJointType(DataType* Left, DataType* Right, OperatorType Type) const;
 
-        bool CastToJointType(DataType *&Left, DataType *&Right, Operator::Type Type, size_t Line, size_t Column);
+        bool CastToJointType(DataType *&Left, DataType *&Right, OperatorType Type, size_t Line, size_t Column);
         static bool ImplicitCast(DataType *&Src, DataType *Dst);
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
         static bool ImplicitCast(CTimeValue *Src, DataType* DstType);
-        bool CastToJointType(CTimeValue *Left, CTimeValue *Right, Operator::Type Type, size_t Line, size_t Column);
+        bool CastToJointType(CTimeValue *Left, CTimeValue *Right, OperatorType Type, size_t Line, size_t Column);
 
         void EnterScope();
         void ExitScope();
@@ -136,8 +136,8 @@ namespace Volt
         void DeclareVariable(const std::string& Name, DataType* Type);
         DataType* GetVariable(const std::string& Name);
 
-        CTimeValue *CalculateUnary(CTimeValue *Operand, Operator::Type Type) const;
-        CTimeValue *CalculateBinary(CTimeValue *Left, CTimeValue *Right, Operator::Type Type) const;
+        CTimeValue *CalculateUnary(CTimeValue *Operand, OperatorType Type) const;
+        CTimeValue *CalculateBinary(CTimeValue *Left, CTimeValue *Right, OperatorType Type) const;
 
         friend class LLVMCompiler;
     };

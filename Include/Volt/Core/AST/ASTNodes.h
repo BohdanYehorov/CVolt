@@ -149,9 +149,9 @@ namespace Volt
     {
         GENERATED_BODY(UnaryOpNode, ASTNode)
     public:
-        Operator::Type Type;
+        OperatorType Type;
         ASTNode* Operand;
-        UnaryOpNode(Operator::Type Type, ASTNode* Operand,
+        UnaryOpNode(OperatorType Type, ASTNode* Operand,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Type(Type), Operand(Operand) {}
     };
@@ -160,7 +160,7 @@ namespace Volt
     {
         GENERATED_BODY(PreffixOpNode, UnaryOpNode)
     public:
-        PrefixOpNode(Operator::Type Type, ASTNode* Operand,
+        PrefixOpNode(OperatorType Type, ASTNode* Operand,
             size_t Pos, size_t Line, size_t Column)
             : UnaryOpNode(Type, Operand, Pos, Line, Column) {}
     };
@@ -169,7 +169,7 @@ namespace Volt
     {
         GENERATED_BODY(SuffixOpNode, UnaryOpNode)
     public:
-        SuffixOpNode(Operator::Type Type, ASTNode* Operand,
+        SuffixOpNode(OperatorType Type, ASTNode* Operand,
             size_t Pos, size_t Line, size_t Column)
             : UnaryOpNode(Type, Operand, Pos, Line, Column) {}
     };
@@ -180,10 +180,10 @@ namespace Volt
     public:
         DataType* OperandsType = nullptr;
 
-        Operator::Type Type;
+        OperatorType Type;
         ASTNode* Left;
         ASTNode* Right;
-        BinaryOpNode(Operator::Type Type, ASTNode* Left, ASTNode* Right,
+        BinaryOpNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Type(Type), Left(Left), Right(Right) {}
     };
@@ -192,7 +192,7 @@ namespace Volt
     {
         GENERATED_BODY(EqualityNode, BinaryOpNode)
     public:
-        ComparisonNode(Operator::Type Type, ASTNode* Left, ASTNode* Right,
+        ComparisonNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)
             : BinaryOpNode(Type, Left, Right, Pos, Line, Column) {}
     };
@@ -201,7 +201,7 @@ namespace Volt
     {
         GENERATED_BODY(LogicalNode, BinaryOpNode)
     public:
-        LogicalNode(Operator::Type Type, ASTNode* Left, ASTNode* Right,
+        LogicalNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)
             : BinaryOpNode(Type, Left, Right, Pos, Line, Column) {}
     };
@@ -210,7 +210,7 @@ namespace Volt
     {
         GENERATED_BODY(AssignmentNode, BinaryOpNode)
     public:
-        AssignmentNode(Operator::Type Type, ASTNode* Left, ASTNode* Right,
+        AssignmentNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)
             : BinaryOpNode(Type, Left, Right, Pos, Line, Column) {}
     };

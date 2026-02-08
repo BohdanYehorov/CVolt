@@ -6,7 +6,7 @@
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <sstream>
 
-#define GEN_CASE_TO_STRING(Op) case Op: TypeStr = #Op; break;
+#define GEN_CASE_TO_STRING(Op) case TokenType::Op: TypeStr = #Op; break;
 
 namespace Volt
 {

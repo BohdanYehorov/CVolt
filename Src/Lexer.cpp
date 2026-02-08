@@ -15,92 +15,92 @@ namespace Volt
 		'(', ')', '[', ']', '{', '}', '$'
 	};
 
-	std::unordered_map<std::string, Token::TokenType> Lexer::Operators = {
-		{ "+", Token::OP_ADD },
-		{ "-", Token::OP_SUB },
-		{ "*", Token::OP_MUL },
-		{ "/", Token::OP_DIV },
-		{ "%", Token::OP_MOD },
-		{ "++", Token::OP_INC },
-		{ "--", Token::OP_DEC },
+	std::unordered_map<std::string, TokenType> Lexer::Operators = {
+		{ "+", TokenType::OP_ADD },
+		{ "-", TokenType::OP_SUB },
+		{ "*", TokenType::OP_MUL },
+		{ "/", TokenType::OP_DIV },
+		{ "%", TokenType::OP_MOD },
+		{ "++", TokenType::OP_INC },
+		{ "--", TokenType::OP_DEC },
 
-		{ "=", Token::OP_ASSIGN },
-		{ "+=", Token::OP_ADD_ASSIGN },
-		{ "-=", Token::OP_SUB_ASSIGN },
-		{ "*=", Token::OP_MUL_ASSIGN },
-		{ "/=", Token::OP_DIV_ASSIGN },
-		{ "%=", Token::OP_MOD_ASSIGN },
-		{ "&=", Token::OP_AND_ASSIGN },
-		{ "|=", Token::OP_OR_ASSIGN },
-		{ "^=", Token::OP_XOR_ASSIGN },
-		{ "<<=", Token::OP_LSHIFT_ASSIGN },
-		{ ">>=", Token::OP_RSHIFT_ASSIGN },
+		{ "=", TokenType::OP_ASSIGN },
+		{ "+=", TokenType::OP_ADD_ASSIGN },
+		{ "-=", TokenType::OP_SUB_ASSIGN },
+		{ "*=", TokenType::OP_MUL_ASSIGN },
+		{ "/=", TokenType::OP_DIV_ASSIGN },
+		{ "%=", TokenType::OP_MOD_ASSIGN },
+		{ "&=", TokenType::OP_AND_ASSIGN },
+		{ "|=", TokenType::OP_OR_ASSIGN },
+		{ "^=", TokenType::OP_XOR_ASSIGN },
+		{ "<<=", TokenType::OP_LSHIFT_ASSIGN },
+		{ ">>=", TokenType::OP_RSHIFT_ASSIGN },
 
-		{ "==", Token::OP_EQ },
-		{ "!=", Token::OP_NEQ },
-		{ ">", Token::OP_GT },
-		{ ">=", Token::OP_GTE },
-		{ "<", Token::OP_LT} ,
-		{ "<=", Token::OP_LTE },
+		{ "==", TokenType::OP_EQ },
+		{ "!=", TokenType::OP_NEQ },
+		{ ">", TokenType::OP_GT },
+		{ ">=", TokenType::OP_GTE },
+		{ "<", TokenType::OP_LT} ,
+		{ "<=", TokenType::OP_LTE },
 
-		{ "&&", Token::OP_LOGICAL_AND },
-		{ "||", Token::OP_LOGICAL_OR },
-		{ "!", Token::OP_LOGICAL_NOT },
+		{ "&&", TokenType::OP_LOGICAL_AND },
+		{ "||", TokenType::OP_LOGICAL_OR },
+		{ "!", TokenType::OP_LOGICAL_NOT },
 
-		{ "&", Token::OP_BIT_AND },
-		{ "|", Token::OP_BIT_OR },
-		{ "^", Token::OP_BIT_XOR },
-		{ "~", Token::OP_BIT_NOT },
-		{ "<<", Token::OP_LSHIFT },
-		{ ">>", Token::OP_RSHIFT },
+		{ "&", TokenType::OP_BIT_AND },
+		{ "|", TokenType::OP_BIT_OR },
+		{ "^", TokenType::OP_BIT_XOR },
+		{ "~", TokenType::OP_BIT_NOT },
+		{ "<<", TokenType::OP_LSHIFT },
+		{ ">>", TokenType::OP_RSHIFT },
 
-		{ ".", Token::OP_DOT },
-		{ "->", Token::OP_ARROW },
-		{ "::", Token::OP_SCOPE },
-		{ "?", Token::OP_QUESTION },
-		{ ":", Token::OP_COLON },
-		{ ",", Token::OP_COMMA },
-		{ ";", Token::OP_SEMICOLON },
+		{ ".", TokenType::OP_DOT },
+		{ "->", TokenType::OP_ARROW },
+		{ "::", TokenType::OP_SCOPE },
+		{ "?", TokenType::OP_QUESTION },
+		{ ":", TokenType::OP_COLON },
+		{ ",", TokenType::OP_COMMA },
+		{ ";", TokenType::OP_SEMICOLON },
 
-		{ "(", Token::OP_LPAREN },
-		{ ")", Token::OP_RPAREN },
-		{"[", Token::OP_LBRACKET },
-		{ "]", Token::OP_RBRACKET },
-		{ "{", Token::OP_LBRACE },
-		{ "}", Token::OP_RBRACE },
+		{ "(", TokenType::OP_LPAREN },
+		{ ")", TokenType::OP_RPAREN },
+		{"[", TokenType::OP_LBRACKET },
+		{ "]", TokenType::OP_RBRACKET },
+		{ "{", TokenType::OP_LBRACE },
+		{ "}", TokenType::OP_RBRACE },
 
-		{ "$", Token::OP_REFERENCE }
+		{ "$", TokenType::OP_REFERENCE }
 	};
 
-	std::unordered_map<std::string, Token::TokenType> Lexer::Keywords = {
-		{ "if", Token::KW_IF },
-		{ "else", Token::KW_ELSE },
-		{ "while", Token::KW_WHILE },
-		{ "for", Token::KW_FOR },
-		{ "fun", Token::KW_FUN },
-		{ "let", Token::KW_LET },
-		{ "return", Token::KW_RETURN },
-		{ "break", Token::KW_BREAK },
-		{ "continue", Token::KW_CONTINUE }
+	std::unordered_map<std::string, TokenType> Lexer::Keywords = {
+		{ "if", TokenType::KW_IF },
+		{ "else", TokenType::KW_ELSE },
+		{ "while", TokenType::KW_WHILE },
+		{ "for", TokenType::KW_FOR },
+		{ "fun", TokenType::KW_FUN },
+		{ "let", TokenType::KW_LET },
+		{ "return", TokenType::KW_RETURN },
+		{ "break", TokenType::KW_BREAK },
+		{ "continue", TokenType::KW_CONTINUE }
 	};
 
-	std::unordered_map<std::string, Token::TokenType> Lexer::DataTypes = {
-		{ "void", Token::TYPE_VOID },
+	std::unordered_map<std::string, TokenType> Lexer::DataTypes = {
+		{ "void", TokenType::TYPE_VOID },
 
-		{ "bool", Token::TYPE_BOOL },
-		{ "char", Token::TYPE_CHAR },
+		{ "bool", TokenType::TYPE_BOOL },
+		{ "char", TokenType::TYPE_CHAR },
 
-		{ "byte", Token::TYPE_BYTE },
-		{ "int", Token::TYPE_INT },
-		{ "long", Token::TYPE_LONG },
+		{ "byte", TokenType::TYPE_BYTE },
+		{ "int", TokenType::TYPE_INT },
+		{ "long", TokenType::TYPE_LONG },
 
-		{ "float", Token::TYPE_FLOAT },
-		{ "double", Token::TYPE_DOUBLE }
+		{ "float", TokenType::TYPE_FLOAT },
+		{ "double", TokenType::TYPE_DOUBLE }
 	};
 
-	std::string Lexer::GetOperatorLexeme(Token::TokenType Type)
+	std::string Lexer::GetOperatorLexeme(TokenType Type)
 	{
-		static std::unordered_map<Token::TokenType, std::string> ReversedOperatorsMap;
+		static std::unordered_map<TokenType, std::string> ReversedOperatorsMap;
 		if (ReversedOperatorsMap.empty())
 		{
 			for (const auto& [Lexeme, TokenType] : Operators)
@@ -254,7 +254,7 @@ namespace Volt
 			return false;
 
 		StringRef LexemeRef(StartPos, Pos - StartPos);
-		Token::TokenType TokenType = Token::IDENTIFIER;
+		TokenType TokenType = TokenType::IDENTIFIER;
 
 		llvm::StringRef Lexeme{ Code.c_str() + StartPos, Pos - StartPos };
 		if (auto KwIter = Keywords.find(std::string(Lexeme)); KwIter != Keywords.end())
@@ -262,9 +262,9 @@ namespace Volt
 		else if (auto TypeIter = DataTypes.find(std::string(Lexeme)); TypeIter != DataTypes.end())
 			TokenType = TypeIter->second;
 		else if (Lexeme == "true")
-			TokenType = Token::BOOL_TRUE;
+			TokenType = TokenType::BOOL_TRUE;
 		else if (Lexeme == "false")
-			TokenType = Token::BOOL_FALSE;
+			TokenType = TokenType::BOOL_FALSE;
 
 		Tok = Token(
 			TokenType, LexemeRef,
@@ -282,14 +282,14 @@ namespace Volt
 				UChar Ch = NextUChar();
 				if (!isdigit(Ch))
 				{
-					Tok = Token(Token::OP_DOT, { Pos, 1 }, Pos, Line, Column);
+					Tok = Token(TokenType::OP_DOT, { Pos, 1 }, Pos, Line, Column);
 					MovePos();
 					return true;
 				}
 			}
 			else
 			{
-				Tok = Token(Token::OP_DOT, { Pos, 1 }, Pos, Line, Column);
+				Tok = Token(TokenType::OP_DOT, { Pos, 1 }, Pos, Line, Column);
 				MovePos();
 				return true;
 			}
@@ -378,21 +378,21 @@ namespace Volt
 		{
 			SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
 					{ std::string(Code.c_str() + StartPos, Pos - StartPos) });
-			Tok = Token(Token::INVALID, Lexeme,
+			Tok = Token(TokenType::INVALID, Lexeme,
 						StartPos, StartLine, StartCol);
 
 			return true;
 		}
 
-		Token::TokenType TokenType;
+		TokenType TokenType;
 
 		llvm::StringRef SuffixStr{ Code.c_str() + Suffix.Ptr, Suffix.Length };
 		if (HasDot || HasExponent)
 		{
 			if (Suffix.Length == 0)
-				TokenType = Token::DOUBLE_NUMBER;
+				TokenType = TokenType::DOUBLE_NUMBER;
 			else if (SuffixStr == "f")
-				TokenType = Token::FLOAT_NUMBER;
+				TokenType = TokenType::FLOAT_NUMBER;
 			else
 			{
 				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
@@ -404,11 +404,11 @@ namespace Volt
 		else
 		{
 			if (Suffix.Length == 0)
-				TokenType = Token::INT_NUMBER;
+				TokenType = TokenType::INT_NUMBER;
 			else if (SuffixStr == "b")
-				TokenType = Token::BYTE_NUMBER;
+				TokenType = TokenType::BYTE_NUMBER;
 			else if (SuffixStr == "l")
-				TokenType = Token::LONG_NUMBER;
+				TokenType = TokenType::LONG_NUMBER;
 			else
 			{
 				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
@@ -512,7 +512,7 @@ namespace Volt
 		MovePos();
 
 		Code.push_back(Ch);
-		Tok = Token(InvalidEscape ? Token::INVALID : Token::CHAR,
+		Tok = Token(InvalidEscape ? TokenType::INVALID : TokenType::CHAR,
 			StringRef(Code.size() - 1, 1), StartPos, StartLine, StartCol);
 		return true;
 	}
@@ -535,7 +535,7 @@ namespace Volt
 				MovePos();
 				size_t Start = Code.size();
 				Code.append(Str);
-				Tok = Token(Token::STRING,
+				Tok = Token(TokenType::STRING,
 					{ Start, Str.size() }, StartPos, StartLine, StartCol);
 				return true;
 			}
@@ -547,7 +547,7 @@ namespace Volt
 					size_t Start = Code.size();
 					Code.append(Str);
 					SendError(LexErrorType::UnterminatedEscape, StartLine, StartCol);
-					Tok = Token(Token::INVALID,
+					Tok = Token(TokenType::INVALID,
 						{ Start, Str.size() }, StartPos, StartLine, StartCol);
 					return true;
 				}
@@ -572,7 +572,7 @@ namespace Volt
 		size_t Start = Code.size();
 		Code.append(Str);
 		SendError(LexErrorType::UnterminatedString, StartLine, StartCol);
-		Tok = Token(Token::INVALID,
+		Tok = Token(TokenType::INVALID,
 			{Start, Str.size()}, StartPos, StartLine, StartCol);
 		return true;
 	}

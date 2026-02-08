@@ -24,13 +24,12 @@ namespace Volt
     class LLVMCompiler
     {
     private:
+        CompilationContext& CContext;
+
         llvm::LLVMContext& Context;
         std::unique_ptr<llvm::Module> Module = nullptr;
         llvm::IRBuilder<> Builder;
         Arena& CompilerArena;
-        // LLVMBuilder CompilerBuilder;
-
-        CompilationContext& CContext;
 
         ASTNode* ASTTree;
         BuiltinFunctionTable& BuiltinFuncTable;
