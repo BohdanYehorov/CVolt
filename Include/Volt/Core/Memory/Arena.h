@@ -8,6 +8,7 @@
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include "Volt/Core/Memory/BufferView.h"
+#include "Volt/ADT/Array.h"
 #include <vector>
 #include <stdexcept>
 #include <iostream>
@@ -17,12 +18,12 @@ namespace Volt
     class Arena
     {
     private:
-        std::vector<Object*> Objects;
+        Array<Object*> Objects;
 
     public:
         template <typename T, typename ...Args_>
         [[nodiscard]] T* Create(Args_&&... Args);
-        [[nodiscard]] size_t Size() const { return Objects.size(); }
+        [[nodiscard]] size_t Size() const { return Objects.Length(); }
 
         Arena() = default;
         Arena(const Arena&) = delete;
@@ -41,7 +42,7 @@ namespace Volt
     T* Arena::Create(Args_ &&...Args)
     {
         T* Obj = new T(std::forward<Args_>(Args)...);
-        Objects.push_back(Obj);
+        Objects.Add(Obj);
         return Obj;
     }
 

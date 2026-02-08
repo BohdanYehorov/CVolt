@@ -33,7 +33,6 @@ add_executable(CVolt
         Src/LexError.cpp
         Src/ParseError.cpp
         Src/TypeError.cpp
-        Include/Volt/Debug/DebugOutput/DebugOutput.h
 )
 
 target_link_libraries(CVolt PRIVATE LLVM)
