@@ -96,9 +96,9 @@ namespace Volt
 			return ArrayIterator(Left.Ptr - Right);
 		}
 
-		friend ArrayIterator<T> operator-(DifferenceType Left, ArrayIterator Right)
+		friend DifferenceType operator-(ArrayIterator Left, ArrayIterator Right)
 		{
-			return ArrayIterator(Left - Right.Ptr);
+			return Left.Ptr - Right.Ptr;
 		}
 	};
 }
