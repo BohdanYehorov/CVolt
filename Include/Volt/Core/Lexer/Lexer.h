@@ -39,7 +39,7 @@ namespace Volt
         PtrT StringStoragePtr = 0;
 
         CompilationContext& Context;
-        std::string& Code;
+        String& Code;
 
         size_t CodeSize;
 
@@ -48,7 +48,7 @@ namespace Volt
     public:
         //Lexer(const std::string& Expr);
         Lexer(CompilationContext& Context)
-            : Context(Context), Code(Context.Code), CodeSize(Code.size()), Tokens(Context.Tokens) {}
+            : Context(Context), Code(Context.Code), CodeSize(Code.Length()), Tokens(Context.Tokens) {}
 
         Lexer(const Lexer&) = delete;
         Lexer& operator=(const Lexer&) = delete;

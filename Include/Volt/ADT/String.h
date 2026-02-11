@@ -34,6 +34,7 @@ namespace Volt
 		AllocatorType Alloc;
 
 	public:
+		BasicString() = default;
 		BasicString(SizeType Count, ValueType Ch);
 		BasicString(const T* InStr);
 
@@ -261,6 +262,11 @@ namespace Volt
 
 	using String = BasicString<char>;
 	using UString = BasicString<char32_t>;
+
+	inline std::ostream& operator<<(std::ostream& Os, const String& Str)
+	{
+		return Os << Str.CStr();
+	}
 }
 
 #endif //CVOLT_STRING_H

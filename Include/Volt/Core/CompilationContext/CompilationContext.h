@@ -11,6 +11,7 @@
 #include "Volt/Compiler/Hash/DataTypeHash.h"
 #include "Volt/Core/Lexer/Token.h"
 #include "Volt/Core/AST/ASTNodes.h"
+#include "Volt/ADT/String.h"
 #include <llvm/IR/LLVMContext.h>
 #include <unordered_set>
 
@@ -43,7 +44,7 @@ namespace Volt
 		FloatingPointType* CachedFPTypes[4] = { nullptr, nullptr, nullptr, nullptr };
 
 	private:
-		std::string Code;
+		String Code;
 		Arena MainArena;
 		llvm::LLVMContext Context;
 
@@ -52,7 +53,7 @@ namespace Volt
 		ASTNode* ASTTree = nullptr;
 
 	public:
-		CompilationContext(const std::string& Code)
+		CompilationContext(const String& Code)
 			: Code(Code) {}
 
 		CompilationContext(const CompilationContext&) = delete;

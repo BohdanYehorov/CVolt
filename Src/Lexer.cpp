@@ -244,7 +244,7 @@ namespace Volt
 		StringRef LexemeRef(StartPos, Pos - StartPos);
 		TokenType TokenType = TokenType::IDENTIFIER;
 
-		llvm::StringRef Lexeme{ Code.c_str() + StartPos, Pos - StartPos };
+		llvm::StringRef Lexeme{ Code.CStr() + StartPos, Pos - StartPos };
 		if (auto KwIter = Keywords.find(std::string(Lexeme)); KwIter != Keywords.end())
 			TokenType = KwIter->second;
 		else if (auto TypeIter = DataTypes.find(std::string(Lexeme)); TypeIter != DataTypes.end())
@@ -365,7 +365,7 @@ namespace Volt
 		else if (IsInvalidToken)
 		{
 			SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
-					{ std::string(Code.c_str() + StartPos, Pos - StartPos) });
+					{ std::string(Code.CStr() + StartPos, Pos - StartPos) });
 			Tok = Token(TokenType::INVALID, Lexeme,
 						StartPos, StartLine, StartCol);
 
@@ -374,7 +374,7 @@ namespace Volt
 
 		TokenType TokenType;
 
-		llvm::StringRef SuffixStr{ Code.c_str() + Suffix.Ptr, Suffix.Length };
+		llvm::StringRef SuffixStr{ Code.CStr() + Suffix.Ptr, Suffix.Length };
 		if (HasDot || HasExponent)
 		{
 			if (Suffix.Length == 0)
@@ -400,7 +400,7 @@ namespace Volt
 			else
 			{
 				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
-					{ std::string(Code.c_str() + Lexeme.Ptr, Lexeme.Length) });
+					{ std::string(Code.CStr() + Lexeme.Ptr, Lexeme.Length) });
 				Tok = InvalidToken(StartPos, StartLine, StartCol);
 				return true;
 			}
@@ -438,7 +438,7 @@ namespace Volt
 			OperatorLexeme.Length = Len;
 
 			if (auto Iter = Operators.find(std::string(
-				Code.c_str() + OperatorLexeme.Ptr, Len)); Iter != Operators.end())
+				Code.CStr() + OperatorLexeme.Ptr, Len)); Iter != Operators.end())
 			{
 				Tok = Token(Iter->second, OperatorLexeme, StartPos, StartLine, StartCol);
 				MovePos(Len);
@@ -499,9 +499,9 @@ namespace Volt
 
 		MovePos();
 
-		Code.push_back(Ch);
+		Code.Add(Ch);
 		Tok = Token(InvalidEscape ? TokenType::INVALID : TokenType::CHAR,
-			StringRef(Code.size() - 1, 1), StartPos, StartLine, StartCol);
+			StringRef(Code.Length() - 1, 1), StartPos, StartLine, StartCol);
 		return true;
 	}
 
@@ -513,7 +513,7 @@ namespace Volt
 		size_t StartPos = Pos, StartLine = Line, StartCol = Column;
 		MovePos();
 
-		std::string Str;
+		String Str;
 
 		while (IsValidPos())
 		{
@@ -521,10 +521,10 @@ namespace Volt
 			if (Ch == '"')
 			{
 				MovePos();
-				size_t Start = Code.size();
-				Code.append(Str);
+				size_t Start = Code.Length();
+				Code.Append(Str);
 				Tok = Token(TokenType::STRING,
-					{ Start, Str.size() }, StartPos, StartLine, StartCol);
+					{ Start, Str.Length() }, StartPos, StartLine, StartCol);
 				return true;
 			}
 			if (Ch == '\\')
@@ -532,36 +532,36 @@ namespace Volt
 				MovePos();
 				if (!IsValidPos())
 				{
-					size_t Start = Code.size();
-					Code.append(Str);
+					size_t Start = Code.Length();
+					Code.Append(Str);
 					SendError(LexErrorType::UnterminatedEscape, StartLine, StartCol);
 					Tok = Token(TokenType::INVALID,
-						{ Start, Str.size() }, StartPos, StartLine, StartCol);
+						{ Start, Str.Length() }, StartPos, StartLine, StartCol);
 					return true;
 				}
 
 				if (char Escape; GetEscape(CurrentChar(), Escape))
-					Str.push_back(Escape);
+					Str.Add(Escape);
 			}
 			else if (Ch == '\n')
 			{
-				size_t Start = Code.size();
-				Code.append(Str);
+				size_t Start = Code.Length();
+				Code.Append(Str);
 				SendError(LexErrorType::NewlineInString, StartLine, StartCol);
-				Tok = InvalidToken({ Start, Str.size() }, StartPos, StartLine, StartCol);
+				Tok = InvalidToken({ Start, Str.Length() }, StartPos, StartLine, StartCol);
 				return true;
 			}
 			else
-				Str.push_back(Ch);
+				Str.Add(Ch);
 
 			MovePos();
 		}
 
-		size_t Start = Code.size();
-		Code.append(Str);
+		size_t Start = Code.Length();
+		Code.Append(Str);
 		SendError(LexErrorType::UnterminatedString, StartLine, StartCol);
 		Tok = Token(TokenType::INVALID,
-			{Start, Str.size()}, StartPos, StartLine, StartCol);
+			{Start, Str.Length()}, StartPos, StartLine, StartCol);
 		return true;
 	}
 
