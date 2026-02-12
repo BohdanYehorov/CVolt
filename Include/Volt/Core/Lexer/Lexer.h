@@ -9,11 +9,11 @@
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/ADT/Array.h"
+#include "Volt/ADT/FixedMap.h"
 #include "Token.h"
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
-#include <vector>
 
 namespace Volt
 {
@@ -24,8 +24,11 @@ namespace Volt
     private:
         static std::unordered_set<char> OperatorChars;
         static std::unordered_map<std::string, TokenType> Operators;
-        static std::unordered_map<std::string, TokenType> Keywords;
-        static std::unordered_map<std::string, TokenType> DataTypes;
+        //static std::unordered_map<std::string, TokenType> Keywords;
+        //static FixedMap<std::string, TokenType> Operators;
+        static FixedMap<std::string, TokenType> Keywords;
+        static FixedMap<std::string, TokenType> DataTypes;
+        //static std::unordered_map<std::string, TokenType> DataTypes;
 
     public:
         static std::string GetOperatorLexeme(TokenType Type);

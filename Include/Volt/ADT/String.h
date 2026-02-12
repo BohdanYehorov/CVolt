@@ -59,6 +59,9 @@ namespace Volt
 		[[nodiscard]] const ValueType& operator[](SizeType Index) const { return Str[Index]; }
 		[[nodiscard]] ValueType& operator[](SizeType Index) { return Str[Index]; }
 
+		[[nodiscard]] bool operator==(const BasicString& Other) const;
+		[[nodiscard]] bool operator!=(const BasicString& Other) const;
+
 		[[nodiscard]] ValueType* RawData() const { return Str; }
 		[[nodiscard]] const ValueType* CStr() const { return Str; }
 
@@ -211,6 +214,18 @@ namespace Volt
 		SizeType OldLen = Len;
 		RawResize(Len + Other.Len);
 		std::memcpy(Str + OldLen, Other.Str, Other.Len * sizeof(ValueType));
+	}
+
+	template<typename T, typename Alloca>
+	bool BasicString<T, Alloca>::operator==(const BasicString &Other) const
+	{
+		return Len == Other.Len && std::memcmp(Str, Other.Str, Len) == 0;
+	}
+
+	template<typename T, typename Alloca>
+	bool BasicString<T, Alloca>::operator!=(const BasicString &Other) const
+	{
+		return !(*this == Other);
 	}
 
 	template<typename T, typename Alloca>

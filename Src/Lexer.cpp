@@ -16,6 +16,7 @@ namespace Volt
 	};
 
 	std::unordered_map<std::string, TokenType> Lexer::Operators = {
+	//FixedMap<std::string, TokenType> Lexer::Operators = {
 		{ "+", TokenType::OP_ADD },
 		{ "-", TokenType::OP_SUB },
 		{ "*", TokenType::OP_MUL },
@@ -72,7 +73,8 @@ namespace Volt
 		{ "$", TokenType::OP_REFERENCE }
 	};
 
-	std::unordered_map<std::string, TokenType> Lexer::Keywords = {
+	//std::unordered_map<std::string, TokenType> Lexer::Keywords = {
+	FixedMap<std::string, TokenType> Lexer::Keywords {
 		{ "if", TokenType::KW_IF },
 		{ "else", TokenType::KW_ELSE },
 		{ "while", TokenType::KW_WHILE },
@@ -84,7 +86,8 @@ namespace Volt
 		{ "continue", TokenType::KW_CONTINUE }
 	};
 
-	std::unordered_map<std::string, TokenType> Lexer::DataTypes = {
+	// std::unordered_map<std::string, TokenType> Lexer::DataTypes = {
+	FixedMap<std::string, TokenType> Lexer::DataTypes = {
 		{ "void", TokenType::TYPE_VOID },
 
 		{ "bool", TokenType::TYPE_BOOL },
@@ -245,10 +248,10 @@ namespace Volt
 		TokenType TokenType = TokenType::IDENTIFIER;
 
 		llvm::StringRef Lexeme{ Code.CStr() + StartPos, Pos - StartPos };
-		if (auto KwIter = Keywords.find(std::string(Lexeme)); KwIter != Keywords.end())
-			TokenType = KwIter->second;
-		else if (auto TypeIter = DataTypes.find(std::string(Lexeme)); TypeIter != DataTypes.end())
-			TokenType = TypeIter->second;
+		if (auto KwBucket = Keywords.Find(std::string(Lexeme))/*; KwIter != Keywords.end()*/)
+			TokenType = KwBucket->Value;
+		else if (auto TypeBucket = DataTypes.Find(std::string(Lexeme))/*; TypeIter != DataTypes.end()*/)
+			TokenType = TypeBucket->Value;
 		else if (Lexeme == "true")
 			TokenType = TokenType::BOOL_TRUE;
 		else if (Lexeme == "false")
