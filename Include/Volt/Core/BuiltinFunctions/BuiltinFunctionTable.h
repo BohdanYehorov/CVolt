@@ -8,29 +8,26 @@
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Compiler/Hash/FunctionSignatureHash.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
+#include "Volt/Core/Functions/BuiltinFuncCallee.h"
 #include <llvm/IR/Module.h>
-#include <llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h>
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
 namespace Volt
 {
-	struct FunctionData
-	{
-		DataType* ReturnType;
-		std::string BaseName;
-		llvm::orc::ExecutorAddr ExeAddr;
-		llvm::orc::ExecutorSymbolDef SymbolDef;
-	};
-
 	class BuiltinFunctionTable
 	{
+	public:
+		using Map = std::unordered_map<FunctionSignature, BuiltinFuncCallee*, FunctionSignatureHash>;
+
 	private:
-		std::unordered_map<FunctionSignature, FunctionData, FunctionSignatureHash> Functions;
+		Map Functions;
 		CompilationContext& CContext;
+		Arena& MainArena;
 
 	public:
-		BuiltinFunctionTable(CompilationContext& CContext) : CContext(CContext) {}
+		BuiltinFunctionTable(CompilationContext& CContext)
+			: CContext(CContext), MainArena(CContext.MainArena) {}
 
 		template <typename Ret, typename ...Args>
 		void AddFunction(const std::string& Name, const std::string& BaseName, Ret(*FuncPtr)(Args...));
@@ -39,9 +36,11 @@ namespace Volt
 		void AddFunction(const std::string& Name, const std::string& BaseName, Ret(*FuncPtr)());
 
 		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
-		void GenSymbolMap(llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
+		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
 
-		FunctionData* Get(const FunctionSignature& Signature);
+		[[nodiscard]] BuiltinFuncCallee* Get(const FunctionSignature& Signature);
+
+		[[nodiscard]] const Map& GetMap() const { return Functions; }
 
 	private:
 		template <typename T, typename ...Rest>
@@ -128,7 +127,8 @@ namespace Volt
 		SmallVec8<DataType*> Params;
 		FillParams<Args...>(Params);
 		FunctionSignature Signature{ Name, Params };
-		Functions[Signature] = { RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr) };
+		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
+			RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 	}
 
 	template<typename Ret>
@@ -136,7 +136,8 @@ namespace Volt
 	{
 		DataType* RetType = GetDataType<Ret>(CContext);
 		FunctionSignature Signature{ Name, {} };
-		Functions[Signature] = { RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr) };
+		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
+			RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 	}
 }
 

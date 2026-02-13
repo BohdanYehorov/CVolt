@@ -558,107 +558,39 @@ namespace Volt
 
     TypedValue* LLVMCompiler::CompileCall(const CallNode *Call)
     {
-        if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
+        if (!Call->ResolvedCallee)
+            ERROR("Function not found");
+
+        const auto& Args = Call->Arguments;
+
+        SmallVec8<llvm::Value*> LLVMArgs;
+
+        LLVMArgs.reserve(Args.size());
+
+        for (const auto Arg : Args)
         {
-            const std::string& FuncName = Identifier->Value.str();
+            TypedValue* ArgValue = CompileNode(Arg);
+            if (!ArgValue)
+                return nullptr;
 
-            SmallVec8<llvm::Value*> LLVMArgs;
-            SmallVec8<DataType*> ArgTypes;
-            SmallVec8<TypedValue*> ArgValues;
+            if (Arg->ExpectedType)
+                ArgValue = ImplicitCast(ArgValue, Arg->ExpectedType);
 
-            const auto& Args = Call->Arguments;
-            LLVMArgs.reserve(Args.size());
-            ArgTypes.reserve(Args.size());
-            ArgValues.reserve(Args.size());
-
-            for (const auto Arg : Args)
-            {
-                TypedValue* ArgValue = CompileNode(Arg);
-
-                LLVMArgs.push_back(ArgValue->GetValue());
-                ArgTypes.push_back(ArgValue->GetDataType());
-                ArgValues.push_back(ArgValue);
-            }
-
-            FunctionSignature Signature{ FuncName, ArgTypes };
-
-            if (auto Iter = FunctionSignatures.find(Signature); Iter != FunctionSignatures.end())
-                return Create<TypedValue>(Builder.CreateCall(
-                            Iter->second->GetFunction(), LLVMArgs), Iter->second->GetReturnType());
-
-            if (auto FuncData = BuiltinFuncTable.Get(Signature))
-            {
-                llvm::Function* OutFunc = Module->getFunction(FuncData->BaseName);
-                return Create<TypedValue>(Builder.CreateCall(OutFunc,LLVMArgs),
-                FuncData->ReturnType );
-            }
-
-            // int MinDiffRank = std::numeric_limits<int>::max();
-            // TypedFunction* Function = nullptr;
-            // const FunctionSignature* BestFunctionSignature = nullptr;
-            // for (const auto& [FuncSignature, Func] : FunctionSignatures)
-            // {
-            //     if (FuncSignature.Name != Signature.Name)
-            //         continue;
-            //
-            //     if (FuncSignature.Params.size() != Signature.Params.size())
-            //         continue;
-            //
-            //     int DiffRank = 0;
-            //     bool HasNonImplicitCastTypes = false;
-            //     for (size_t i = 0; i < FuncSignature.Params.size(); i++)
-            //     {
-            //         DataType* ParamType1 = FuncSignature.Params[i];
-            //         DataType* ParamType2 = Signature.Params[i];
-            //         if (!CanImplicitCast(ParamType1, ParamType2))
-            //         {
-            //             HasNonImplicitCastTypes = true;
-            //             break;
-            //         }
-            //
-            //         int Rank1 = DataType::GetPrimitiveTypeRank(Cast<PrimitiveDataType>(ParamType1)); //ParamType1.GetPrimitiveTypeRank();
-            //         int Rank2 = DataType::GetPrimitiveTypeRank(Cast<PrimitiveDataType>(ParamType1));
-            //
-            //         if (Rank1 == -1 || Rank2 == -1)
-            //         {
-            //             HasNonImplicitCastTypes = true;
-            //             break;
-            //         }
-            //
-            //         DiffRank += std::abs(Rank1 - Rank2);
-            //     }
-            //
-            //     if (HasNonImplicitCastTypes)
-            //         continue;
-            //
-            //     if (MinDiffRank > DiffRank)
-            //     {
-            //         Function = Func;
-            //         MinDiffRank = DiffRank;
-            //         BestFunctionSignature = &FuncSignature;
-            //     }
-            // }
-
-            // if (BestFunctionSignature && Function)
-            // {
-            //     for (size_t i = 0; i < BestFunctionSignature->Params.size(); i++)
-            //     {
-            //         DataType* ParamType = BestFunctionSignature->Params[i];
-            //
-            //         TypedValue* Value = ArgValues[i];
-            //         Value = ImplicitCast(Value, ParamType);
-            //
-            //         LLVMArgs[i] = Value->GetValue();
-            //     }
-            //
-            //     return Create<TypedValue>(Builder.CreateCall(
-            //                Function->GetFunction(), LLVMArgs), Function->GetReturnType());
-            // }
-
-            ERROR("Function '" + FuncName + "' not found");
+            LLVMArgs.push_back(ArgValue->GetValue());
         }
 
-        ERROR("Called object is not a function")
+        if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
+            return Create<TypedValue>(Builder.CreateCall(Func->Function, LLVMArgs),
+                Func->ReturnType);
+
+        if (auto BuiltinFunc = Cast<BuiltinFuncCallee>(Call->ResolvedCallee))
+        {
+            llvm::Function* LLVMFunc = Module->getFunction(BuiltinFunc->BaseName);
+            return Create<TypedValue>(Builder.CreateCall(LLVMFunc, LLVMArgs),
+                BuiltinFunc->ReturnType );
+        }
+
+        return nullptr;
     }
 
     TypedValue *LLVMCompiler::CompileSubscript(const SubscriptNode *Subscript)
@@ -764,11 +696,16 @@ namespace Volt
         CurrentFunction = Func;
         FunctionParams = ParamsTypes;
 
-        FunctionSignature Signature{ FuncName, ParamsTypes };
+        // FunctionSignature Signature{ FuncName, ParamsTypes };
         //FunctionSignatures[Signature] = Create<TypedFunction>(Func, Function->ReturnType->Type);
 
-        if (auto Iter = FunctionSignatures.find(Signature); Iter != FunctionSignatures.end())
-            Iter->second->InitFunction(Func);
+        // if (auto Iter = FunctionSignatures.find(Signature); Iter != FunctionSignatures.end())
+        //     Iter->second->Function = Func;
+        // else
+        //     ERROR("Function definition '" + FuncName + "' is unknown");
+
+        if (auto FuncCallee = Cast<FunctionCallee>(Function->ResolvedCallee))
+            FuncCallee->Function = Func;
         else
             ERROR("Function definition '" + FuncName + "' is unknown");
 

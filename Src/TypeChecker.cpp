@@ -393,43 +393,90 @@ namespace Volt
 
             FunctionSignature Signature(Name, ArgTypes);
 
-            if (auto Iter = Functions.find(Signature); Iter != Functions.end())
-            {
-                Call->ResolvedType = Iter->second->GetReturnType();
-                return CTimeValue::CreateNull(Call->ResolvedType, MainArena);
-            }
-
-            if (auto Func = BuiltinFuncTable.Get(Signature))
-            {
-                Call->ResolvedType = Func->ReturnType;
-                return CTimeValue::CreateNull(Func->ReturnType, MainArena);
-            }
+            // if (auto Iter = Functions.find(Signature); Iter != Functions.end())
+            // {
+            //     Call->ResolvedCallee = Iter->second;
+            //     Call->ResolvedType = Iter->second->ReturnType;
+            //     return CTimeValue::CreateNull(Call->ResolvedType, MainArena);
+            // }
+            //
+            // if (auto Func = BuiltinFuncTable.Get(Signature))
+            // {
+            //     Call->ResolvedType = Func->ReturnType;
+            //     Call->ResolvedCallee = Func;
+            //     return CTimeValue::CreateNull(Func->ReturnType, MainArena);
+            // }
 
             // int BestRank = std::numeric_limits<int>::max();
-            // TypedFunction* BestFunction = nullptr;
-            // llvm::ArrayRef<DataType> BestArgTypes;
+            // FunctionCallee* BestFunction = nullptr;
+            // llvm::ArrayRef<DataType*> BestArgs;
             // for (const auto& [CandidateSignature, Func] : Functions)
             // {
+            //     if (CandidateSignature.Name != Name) continue;
+            //
             //     int RankDiff = 0;
             //     bool Valid = true;
             //     for (size_t i = 0; i < ArgsCount; i++)
             //     {
-            //         ASTNode* ArgNode = Call->Arguments[i];
-            //         DataType CandidateArgType = CandidateSignature.Params[i];
-            //         DataType ArgType = ArgTypes[i];
+            //         if (CandidateSignature.Params.size() != ArgTypes.size())
+            //         {
+            //             Valid = false;
+            //             break;
+            //         }
+            //
+            //         DataType* CandidateArgType = CandidateSignature.Params[i];
+            //         DataType* ArgType = ArgTypes[i];
             //
             //         if (!CanImplicitCast(ArgType, CandidateArgType))
             //         {
             //             Valid = false;
             //             break;
             //         }
+            //
+            //         RankDiff += std::abs(
+            //             DataTypeUtils::GetTypeRank(CandidateArgType) - DataTypeUtils::GetTypeRank(ArgType));
             //     }
             //
-            //     if (Valid)
-            //     {
+            //     if (!Valid) continue;
             //
+            //     if (RankDiff < BestRank)
+            //     {
+            //         BestRank = RankDiff;
+            //         BestFunction = Func;
+            //         BestArgs = CandidateSignature.Params;
             //     }
             // }
+            //
+            // if (BestFunction)
+            // {
+            //     Call->ResolvedCallee = BestFunction;
+            //
+            //     for (size_t i = 0; i < ArgsCount; i++)
+            //         Call->Arguments[i]->ExpectedType = BestArgs[i];
+            //
+            //     return CTimeValue::CreateNull(BestFunction->ReturnType, MainArena);
+            // }
+
+            if (auto Iter = TryGetOverload(Signature, Functions); Iter != Functions.end())
+            {
+                Call->ResolvedCallee = Iter->second;
+
+                for (size_t i = 0; i < ArgsCount; i++)
+                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i];
+
+                return CTimeValue::CreateNull(Iter->second->ReturnType, MainArena);
+            }
+
+            if (auto Iter = TryGetOverload(Signature, BuiltinFuncTable.GetMap());
+                Iter != BuiltinFuncTable.GetMap().end())
+            {
+                Call->ResolvedCallee = Iter->second;
+
+                for (size_t i = 0; i < ArgsCount; i++)
+                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i];
+
+                return CTimeValue::CreateNull(Iter->second->ReturnType, MainArena);
+            }
 
             SendError(TypeErrorKind::UndefinedFunction, Call->Callee, { Name });
             return nullptr;
@@ -500,7 +547,10 @@ namespace Volt
 
         FunctionSignature Signature(Function->Name.str(), Params);
         DataType* ReturnType = VisitType(Function->ReturnType);
-        Functions[Signature] = MainArena.Create<TypedFunction>(nullptr, ReturnType);
+
+        auto FuncCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
+        Function->ResolvedCallee = FuncCallee;
+        Functions[Signature] = FuncCallee;
 
         FunctionReturnType = ReturnType;
         VisitBlock(Cast<BlockNode>(Function->Body));

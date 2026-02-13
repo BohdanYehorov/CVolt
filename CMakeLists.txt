@@ -33,6 +33,8 @@ add_executable(CVolt
         Src/LexError.cpp
         Src/ParseError.cpp
         Src/TypeError.cpp
+        Include/Volt/Core/Functions/FunctionCallee.h
+        Include/Volt/Core/Functions/BuiltinFuncCallee.h
 )
 
 target_link_libraries(CVolt PRIVATE LLVM)

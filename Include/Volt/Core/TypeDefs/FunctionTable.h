@@ -6,11 +6,13 @@
 #define CVOLT_FUNCTIONTABLE_H
 
 #include "Volt/Compiler/Functions/FunctionSignature.h"
+#include "Volt/Compiler/Hash/FunctionSignatureHash.h"
 #include "Volt/Compiler/Types/TypedValue.h"
+#include "Volt/Core/Functions/FunctionCallee.h"
 
 namespace Volt
 {
-	using FunctionTable = std::unordered_map<FunctionSignature, TypedFunction*, FunctionSignatureHash>;
+	using FunctionTable = std::unordered_map<FunctionSignature, FunctionCallee*, FunctionSignatureHash>;
 }
 
 #endif //CVOLT_FUNCTIONTABLE_H

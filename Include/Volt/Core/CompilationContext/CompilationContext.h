@@ -80,6 +80,7 @@ namespace Volt
 		friend class Parser;
 		friend class TypeChecker;
 		friend class LLVMCompiler;
+		friend BuiltinFunctionTable;
 	};
 }
 

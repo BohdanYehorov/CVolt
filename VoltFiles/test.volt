@@ -1,5 +1,6 @@
 fun:int Main()
 {
-	Out("Hello, World!");
+	Out(Sin(5));
+
 	return 0;
 }

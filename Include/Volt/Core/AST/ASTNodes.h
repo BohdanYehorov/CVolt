@@ -12,7 +12,6 @@
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
-#include <vector>
 #include <algorithm>
 
 namespace Volt
@@ -21,6 +20,7 @@ namespace Volt
     {
         GENERATED_BODY(ASTNode, Object)
     public:
+        DataType* ExpectedType = nullptr;
         DataType* ResolvedType = nullptr;
         CTimeValue* CompileTimeValue = nullptr;
         size_t Pos, Line, Column;
@@ -219,6 +219,7 @@ namespace Volt
         GENERATED_BODY(CallNode, ASTNode)
     public:
         CalleeBase* ResolvedCallee = nullptr;
+
         ASTNode* Callee;
         llvm::TinyPtrVector<ASTNode*> Arguments;
         CallNode(ASTNode* Callee, size_t Pos, size_t Line, size_t Column)
@@ -329,6 +330,8 @@ namespace Volt
     {
         GENERATED_BODY(FunctionNode, ASTNode)
     public:
+        CalleeBase* ResolvedCallee = nullptr;
+
         DataTypeNodeBase* ReturnType;
         llvm::StringRef Name;
         llvm::TinyPtrVector<ParamNode*> Params;
