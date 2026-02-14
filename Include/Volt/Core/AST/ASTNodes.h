@@ -10,6 +10,7 @@
 #include "Volt/Compiler/CompileTime/CTimeValue.h"
 #include "Volt/Core/Functions/Callee.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
+#include "Volt/Core/Value/TypedValue.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
 #include <algorithm>

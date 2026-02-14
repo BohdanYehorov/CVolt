@@ -393,70 +393,6 @@ namespace Volt
 
             FunctionSignature Signature(Name, ArgTypes);
 
-            // if (auto Iter = Functions.find(Signature); Iter != Functions.end())
-            // {
-            //     Call->ResolvedCallee = Iter->second;
-            //     Call->ResolvedType = Iter->second->ReturnType;
-            //     return CTimeValue::CreateNull(Call->ResolvedType, MainArena);
-            // }
-            //
-            // if (auto Func = BuiltinFuncTable.Get(Signature))
-            // {
-            //     Call->ResolvedType = Func->ReturnType;
-            //     Call->ResolvedCallee = Func;
-            //     return CTimeValue::CreateNull(Func->ReturnType, MainArena);
-            // }
-
-            // int BestRank = std::numeric_limits<int>::max();
-            // FunctionCallee* BestFunction = nullptr;
-            // llvm::ArrayRef<DataType*> BestArgs;
-            // for (const auto& [CandidateSignature, Func] : Functions)
-            // {
-            //     if (CandidateSignature.Name != Name) continue;
-            //
-            //     int RankDiff = 0;
-            //     bool Valid = true;
-            //     for (size_t i = 0; i < ArgsCount; i++)
-            //     {
-            //         if (CandidateSignature.Params.size() != ArgTypes.size())
-            //         {
-            //             Valid = false;
-            //             break;
-            //         }
-            //
-            //         DataType* CandidateArgType = CandidateSignature.Params[i];
-            //         DataType* ArgType = ArgTypes[i];
-            //
-            //         if (!CanImplicitCast(ArgType, CandidateArgType))
-            //         {
-            //             Valid = false;
-            //             break;
-            //         }
-            //
-            //         RankDiff += std::abs(
-            //             DataTypeUtils::GetTypeRank(CandidateArgType) - DataTypeUtils::GetTypeRank(ArgType));
-            //     }
-            //
-            //     if (!Valid) continue;
-            //
-            //     if (RankDiff < BestRank)
-            //     {
-            //         BestRank = RankDiff;
-            //         BestFunction = Func;
-            //         BestArgs = CandidateSignature.Params;
-            //     }
-            // }
-            //
-            // if (BestFunction)
-            // {
-            //     Call->ResolvedCallee = BestFunction;
-            //
-            //     for (size_t i = 0; i < ArgsCount; i++)
-            //         Call->Arguments[i]->ExpectedType = BestArgs[i];
-            //
-            //     return CTimeValue::CreateNull(BestFunction->ReturnType, MainArena);
-            // }
-
             if (auto Iter = TryGetOverload(Signature, Functions); Iter != Functions.end())
             {
                 Call->ResolvedCallee = Iter->second;
@@ -478,7 +414,13 @@ namespace Volt
                 return CTimeValue::CreateNull(Iter->second->ReturnType, MainArena);
             }
 
-            SendError(TypeErrorKind::UndefinedFunction, Call->Callee, { Name });
+            Array<std::string> ErrorContext = { Name };
+            ErrorContext.Reserve(ArgsCount);
+
+            for (auto Arg : ArgTypes)
+                ErrorContext.Add(DataTypeUtils::TypeToString(Arg));
+
+            SendError(TypeErrorKind::NoFunctionOverload, Call->Callee, std::move(ErrorContext));
             return nullptr;
         }
 

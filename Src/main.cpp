@@ -4,6 +4,7 @@
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctions.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
+#include "Volt/Runtime/JITEngine/JITEngine.h"
 #include "Volt/ADT/String.h"
 #include <fstream>
 #include <sstream>
@@ -18,7 +19,9 @@ int main(int Argc, char* Argv[])
     std::stringstream SStr;
     SStr << File.rdbuf();
 
-    Volt::CompilationContext CContext(SStr.str().c_str());
+    Volt::JITEngine::Init();
+
+    Volt::CompilationContext CContext(SStr.str().c_str(), "test.volt");
     Volt::BuiltinFunctionTable FuncTable(CContext);
     FuncTable.AddFunction("Out", "OutBool", &OutBool);
     FuncTable.AddFunction("Out", "OutChar", &OutChar);
@@ -59,16 +62,21 @@ int main(int Argc, char* Argv[])
 
     MyParser.PrintASTTree();
 
-    Volt::LLVMCompiler MyCompiler(CContext, FuncTable, MyTypeChecker.GetFunctions());
+    Volt::LLVMCompiler MyCompiler(CContext, FuncTable);
     MyCompiler.Compile();
     MyCompiler.Print();
 
     std::cout << "=======================Output=======================\n\n";
 
-    int Res = MyCompiler.Run();
+    Volt::JITEngine Engine(CContext, FuncTable);
+
+    for (size_t i = 0; i < 100; i++)
+    {
+        std::cout << Engine.CallFunction<int>("Main", i) << std::endl;
+    }
 
     std::cout << "\n====================================================\n";
-    std::cout << "Exited With Code: " << Res << std::endl;
+    //std::cout << "Exited With Code: " << Res << std::endl;
 
 #else
     if (Argc < 2)

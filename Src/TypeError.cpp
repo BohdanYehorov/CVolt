@@ -36,6 +36,22 @@ namespace Volt
 				return std::format("Operator '{}' not defined for {}.", Context[0], Context[1]);
 			case UndefinedFunction:
 				return std::format("Function '{}' is undefined.", Context[0]);
+			case NoFunctionOverload:
+			{
+				std::string Message = std::format("No function with overload {}(",
+					Context[0]);
+
+				for (size_t i = 1; i < Context.Length(); i++)
+				{
+					Message += Context[i];
+					if (i != Context.Length() - 1)
+						Message += ", ";
+				}
+
+				Message += ").";
+
+				return Message;
+			}
 			default:
 				return "";
 		}

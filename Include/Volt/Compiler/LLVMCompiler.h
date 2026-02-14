@@ -8,11 +8,10 @@
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Types/CompilerTypes.h"
 #include "Volt/Core/Memory/Arena.h"
-#include "Types/TypedValue.h"
+#include "Volt/Core/Value/TypedValue.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
@@ -27,14 +26,12 @@ namespace Volt
         CompilationContext& CContext;
 
         llvm::LLVMContext& Context;
-        std::unique_ptr<llvm::Module> Module = nullptr;
+        std::unique_ptr<llvm::Module>& Module;
         llvm::IRBuilder<> Builder;
         Arena& CompilerArena;
 
         ASTNode* ASTTree;
         BuiltinFunctionTable& BuiltinFuncTable;
-
-        FunctionTable FunctionSignatures;
         VariableTable SymbolTable;
 
         Array<Array<ScopeEntry>> ScopeStack;
@@ -45,11 +42,11 @@ namespace Volt
         llvm::ArrayRef<DataType*> FunctionParams;
 
     public:
-        LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable, FunctionTable& Functions)
+        LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
             : CContext(CContext), Context(CContext.Context),
-            Module(std::make_unique<llvm::Module>("volt", Context)),
-            Builder(Context), CompilerArena(CContext.MainArena), ASTTree(CContext.ASTTree),
-            BuiltinFuncTable(BuiltinFuncTable), FunctionSignatures(Functions)
+            Module(CContext.Module), Builder(Context),
+            CompilerArena(CContext.MainArena), ASTTree(CContext.ASTTree),
+            BuiltinFuncTable(BuiltinFuncTable)
         {
             BuiltinFuncTable.CreateLLVMFunctions(Module.get(), Context);
         }
@@ -59,6 +56,8 @@ namespace Volt
         void Print() const { Module->print(llvm::outs(), nullptr); }
 
         int Run();
+
+        std::unique_ptr<llvm::Module>& GetModule() { return Module; }
 
     private:
         TypedValue *CompileNode(ASTNode *Node);

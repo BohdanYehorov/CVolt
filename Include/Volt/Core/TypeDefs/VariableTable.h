@@ -5,7 +5,7 @@
 #ifndef CVOLT_VARIABLETABLE_H
 #define CVOLT_VARIABLETABLE_H
 
-#include "Volt/Compiler/Types/TypedValue.h"
+#include "../Value/TypedValue.h"
 
 namespace Volt
 {

@@ -1,6 +1,4 @@
-fun:int Main()
+fun:int Main(int Num)
 {
-	Out(Sin(5));
-
-	return 0;
+	return Num * 2;
 }

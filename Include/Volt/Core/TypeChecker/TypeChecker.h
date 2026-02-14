@@ -58,11 +58,6 @@ namespace Volt
             return HasErrors();
         }
 
-        [[nodiscard]] FunctionTable& GetFunctions() { return Functions; }
-        [[nodiscard]] VariableTable& GetVariables() { return Variables; }
-        [[nodiscard]] ASTNode* GetASTTree() const { return ASTTree; }
-        [[nodiscard]] BuiltinFunctionTable& GetBuiltinFunctionTable() const { return BuiltinFuncTable; }
-
     private:
         void SendError(TypeErrorKind Kind, size_t Line, size_t Column, Array<std::string>&& Context = {})
         {

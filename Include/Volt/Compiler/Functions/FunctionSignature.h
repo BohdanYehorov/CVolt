@@ -7,7 +7,6 @@
 
 #include <llvm/ADT/SmallVector.h>
 #include "Volt/Core/Types/DataTypeUtils.h"
-#include "Volt/Compiler/Types/TypedValue.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include <string>
 

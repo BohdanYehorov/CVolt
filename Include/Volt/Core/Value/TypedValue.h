@@ -36,32 +36,6 @@ namespace Volt
                 throw std::runtime_error("Value has already initialized.");
         }
     };
-
-    class TypedFunction : public Object
-    {
-        GENERATED_BODY(TypedValue, Object)
-    private:
-        llvm::Function* Function = nullptr;
-        DataType* ReturnType = nullptr;
-
-    public:
-        TypedFunction() = default;
-        TypedFunction(DataType* ReturnType)
-            : ReturnType(ReturnType) {}
-        TypedFunction(llvm::Function* Function, DataType* ReturnType)
-            : Function(Function), ReturnType(ReturnType) {}
-
-        [[nodiscard]] llvm::Function* GetFunction() const { return Function; }
-        [[nodiscard]] DataType* GetReturnType() const { return ReturnType; }
-
-        void InitFunction(llvm::Function* InFunction)
-        {
-            if (!Function)
-                Function = InFunction;
-            else
-                throw std::runtime_error("Function has already initialized.");
-        }
-    };
 }
 
 

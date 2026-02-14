@@ -13,6 +13,7 @@
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/ADT/String.h"
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <unordered_set>
 
 namespace Volt
@@ -47,14 +48,14 @@ namespace Volt
 		String Code;
 		Arena MainArena;
 		llvm::LLVMContext Context;
+		std::unique_ptr<llvm::Module> Module = nullptr;
 
-		// std::vector<Token> Tokens;
 		Array<Token> Tokens;
 		ASTNode* ASTTree = nullptr;
 
 	public:
-		CompilationContext(const String& Code)
-			: Code(Code) {}
+		CompilationContext(String&& Code, const std::string& FileName)
+			: Code(std::move(Code)), Module(std::make_unique<llvm::Module>(FileName, Context)) {}
 
 		CompilationContext(const CompilationContext&) = delete;
 		CompilationContext(CompilationContext&&) = delete;
@@ -81,6 +82,7 @@ namespace Volt
 		friend class TypeChecker;
 		friend class LLVMCompiler;
 		friend BuiltinFunctionTable;
+		friend class JITEngine;
 	};
 }
 

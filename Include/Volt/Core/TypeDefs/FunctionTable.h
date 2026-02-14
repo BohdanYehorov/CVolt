@@ -7,7 +7,7 @@
 
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Compiler/Hash/FunctionSignatureHash.h"
-#include "Volt/Compiler/Types/TypedValue.h"
+#include "../Value/TypedValue.h"
 #include "Volt/Core/Functions/FunctionCallee.h"
 
 namespace Volt

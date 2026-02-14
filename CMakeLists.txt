@@ -35,6 +35,8 @@ add_executable(CVolt
         Src/TypeError.cpp
         Include/Volt/Core/Functions/FunctionCallee.h
         Include/Volt/Core/Functions/BuiltinFuncCallee.h
+        Include/Volt/Runtime/JITEngine/JITEngine.h
+        Src/JITEngine.cpp
 )
 
 target_link_libraries(CVolt PRIVATE LLVM)

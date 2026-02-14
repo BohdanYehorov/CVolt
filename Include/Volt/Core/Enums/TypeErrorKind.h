@@ -27,6 +27,7 @@ namespace Volt
 		UnaryOperandTypeMismatch,
 		ConditionNotBool,
 		DuplicateFunction,
+		NoFunctionOverload,
 		InvalidReturnType,
 		UndefinedFunction,
 		ArgumentCountMismatch,

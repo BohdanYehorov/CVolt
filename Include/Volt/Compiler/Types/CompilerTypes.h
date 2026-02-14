@@ -6,7 +6,7 @@
 #define CVOLT_INSTRUCTION_H
 
 #include <string>
-#include "TypedValue.h"
+#include "Volt/Core/Value/TypedValue.h"
 
 namespace Volt
 {
