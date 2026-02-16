@@ -112,6 +112,7 @@ namespace Volt
             GEN_CASE(BIT_NOT)
             GEN_CASE(INC)
             GEN_CASE(DEC)
+            GEN_CASE(MUL)
             default: return OperatorType::UNKNOWN;
         }
     }

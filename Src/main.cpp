@@ -31,6 +31,7 @@ int main(int Argc, char* Argv[])
     FuncTable.AddFunction("Out", "OutStr", &OutStr);
     FuncTable.AddFunction("Out", "OutFloat", &OutFloat);
     FuncTable.AddFunction("Out", "OutDouble", &OutDouble);
+    FuncTable.AddFunction("Out", "OutPtr", &OutPtr);
     FuncTable.AddFunction("In", "InInt", &InInt);
     FuncTable.AddFunction("In", "InIntWithLabel", &InIntWithLabel);
     FuncTable.AddFunction("Time", "Time", &Time);
@@ -39,6 +40,9 @@ int main(int Argc, char* Argv[])
     FuncTable.AddFunction("Tan", "Tan", &Tan);
     FuncTable.AddFunction("RandomInt", "RandomInt", &RandomInt);
     FuncTable.AddFunction("System", "System", &System);
+    FuncTable.AddFunction("MemAlloc", "MemAlloc", &MemAlloc);
+    FuncTable.AddFunction("MemFree", "MemFree", &MemFree);
+    FuncTable.AddFunction("MemCpy", "MemCpy", &MemCpy);
 
     Volt::Lexer MyLexer(CContext);
     MyLexer.Lex();
@@ -69,14 +73,11 @@ int main(int Argc, char* Argv[])
     std::cout << "=======================Output=======================\n\n";
 
     Volt::JITEngine Engine(CContext, FuncTable);
-
-    for (size_t i = 0; i < 100; i++)
-    {
-        std::cout << Engine.CallFunction<int>("Main", i) << std::endl;
-    }
+    int Res = Engine.CallFunction<int>("Main");
 
     std::cout << "\n====================================================\n";
-    //std::cout << "Exited With Code: " << Res << std::endl;
+
+    return Res;
 
 #else
     if (Argc < 2)
@@ -135,8 +136,6 @@ int main(int Argc, char* Argv[])
 
     Volt::LLVMCompiler MyCompiler(CContext, FuncTable, MyTypeChecker.GetFunctions());
     MyCompiler.Compile();
-    int Res = MyCompiler.Run();
-    std::cout << "\nExited With Code: " << Res << std::endl;
+    return MyCompiler.Run();
 #endif
-    return 0;
 }

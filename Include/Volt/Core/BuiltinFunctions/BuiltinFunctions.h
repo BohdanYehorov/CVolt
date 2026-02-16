@@ -52,6 +52,11 @@ extern "C"
 		std::cout << Num << std::endl;
 	}
 
+	inline void OutPtr(void* Ptr)
+	{
+		std::cout << Ptr << std::endl;
+	}
+
 	inline void InInt(int* Num)
 	{
 		std::cin >> *Num;
@@ -93,6 +98,21 @@ extern "C"
 	inline int System(char* Cmd)
 	{
 		return system(Cmd);
+	}
+
+	inline void* MemAlloc(long Size)
+	{
+		return std::malloc(Size);
+	}
+
+	inline void MemFree(void* Data)
+	{
+		std::free(Data);
+	}
+
+	inline void MemCpy(void* Dst, void* Src, long Size)
+	{
+		std::memcpy(Dst, Src, Size);
 	}
 }
 

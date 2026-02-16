@@ -16,7 +16,6 @@ namespace Volt
 	};
 
 	std::unordered_map<std::string, TokenType> Lexer::Operators = {
-	//FixedMap<std::string, TokenType> Lexer::Operators = {
 		{ "+", TokenType::OP_ADD },
 		{ "-", TokenType::OP_SUB },
 		{ "*", TokenType::OP_MUL },
@@ -73,7 +72,6 @@ namespace Volt
 		{ "$", TokenType::OP_REFERENCE }
 	};
 
-	//std::unordered_map<std::string, TokenType> Lexer::Keywords = {
 	FixedMap<std::string, TokenType> Lexer::Keywords {
 		{ "if", TokenType::KW_IF },
 		{ "else", TokenType::KW_ELSE },
@@ -86,7 +84,6 @@ namespace Volt
 		{ "continue", TokenType::KW_CONTINUE }
 	};
 
-	// std::unordered_map<std::string, TokenType> Lexer::DataTypes = {
 	FixedMap<std::string, TokenType> Lexer::DataTypes = {
 		{ "void", TokenType::TYPE_VOID },
 
@@ -144,8 +141,6 @@ namespace Volt
 				MovePos();
 			}
 		}
-
-		//TokensArena.SetAutoReallocate(false);
 	}
 
 	void Lexer::WriteErrors(std::ostream &Os) const

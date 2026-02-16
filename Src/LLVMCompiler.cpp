@@ -14,46 +14,6 @@ namespace Volt
         CompileNode(ASTTree);
     }
 
-    int LLVMCompiler::Run()
-    {
-        static bool JITInit = false;
-        if (!JITInit)
-        {
-            llvm::InitializeNativeTarget();
-            llvm::InitializeNativeTargetAsmPrinter();
-            llvm::InitializeNativeTargetAsmParser();
-            JITInit = true;
-        }
-
-        auto NewContext = std::make_unique<llvm::LLVMContext>();
-
-        auto JIT = llvm::orc::LLJITBuilder().create();
-        if (!JIT)
-            return 1;
-
-        llvm::orc::SymbolMap Symbols;
-
-        BuiltinFuncTable.GenSymbolMap(JIT->get(), Symbols);
-
-        cantFail(JIT->get()->getMainJITDylib().define(
-            llvm::orc::absoluteSymbols(Symbols)
-        ));
-
-        llvm::orc::ThreadSafeModule TSM{std::move(Module), std::move(NewContext)};
-
-        if (auto Err = JIT->get()->addIRModule(std::move(TSM)))
-            return 1;
-        auto MainSymOrErr = JIT->get()->lookup("Main");
-        if (!MainSymOrErr)
-        {
-            llvm::logAllUnhandledErrors(MainSymOrErr.takeError(), llvm::errs(), "Error: ");
-            return 1;
-        }
-
-        const auto MainFunc = reinterpret_cast<int(*)()>(MainSymOrErr->getValue());
-        return MainFunc();
-    }
-
     TypedValue *LLVMCompiler::CompileNode(ASTNode *Node)
     {
         if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
@@ -327,11 +287,16 @@ namespace Volt
         {
             case OperatorType::ADD:         return TValue;
             case OperatorType::SUB:         return Create<TypedValue>(IsFP ?
-                                        Builder.CreateNeg(Value) :
-                                        Builder.CreateFNeg(Value), Unary->ResolvedType);
+                                            Builder.CreateFNeg(Value) :
+                                            Builder.CreateNeg(Value), Unary->ResolvedType);
             case OperatorType::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
                                                ImplicitCast(TValue, BoolType)->GetValue()), Unary->ResolvedType);
             case OperatorType::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Unary->ResolvedType);
+            case OperatorType::MUL:
+            {
+                return Create<TypedValue>(Builder.CreateLoad(
+                CContext.GetLLVMType(Unary->ResolvedType), Value), Unary->ResolvedType);
+            }
             default: ERROR("Unknown unary operator")
         }
     }
@@ -387,63 +352,68 @@ namespace Volt
     TypedValue *LLVMCompiler::CompileLogical(const LogicalNode *Logical)
     {
         TypedValue* Left = CompileNode(Logical->Left);
-        Left = ImplicitCast(Left, Logical->OperandsType);
+        TypedValue* Right = CompileNode(Logical->Right);
 
-        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+        Left = ImplicitCast(Left, Logical->OperandsType);
+        Right = ImplicitCast(Right, Logical->OperandsType);
+
+        // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
         switch (Logical->Type)
         {
             case OperatorType::LOGICAL_OR:
             {
-                llvm::BasicBlock* OrRhsBB = llvm::BasicBlock::Create(Context, "or.rhs", Func);
-                llvm::BasicBlock* OrTrueBB = llvm::BasicBlock::Create(Context, "or.true", Func);
-                llvm::BasicBlock* OrEndBB = llvm::BasicBlock::Create(Context, "or.end", Func);
-
-                Builder.CreateCondBr(Left->GetValue(), OrTrueBB, OrRhsBB);
-
-                Builder.SetInsertPoint(OrRhsBB);
-                TypedValue* Right = CompileNode(Logical->Right);
-                Right = ImplicitCast(Right, Logical->OperandsType);
-                Builder.CreateCondBr(Right->GetValue(), OrTrueBB, OrEndBB);
-
-                Builder.SetInsertPoint(OrTrueBB);
-                Builder.CreateBr(OrEndBB);
-
-                Builder.CreateBr(OrEndBB);
-
-                Builder.SetInsertPoint(OrEndBB);
-                llvm::PHINode* Phi = Builder.CreatePHI(llvm::Type::getInt1Ty(Context), 2);
-                Phi->addIncoming(Builder.getTrue(), OrTrueBB);
-                Phi->addIncoming(Builder.getFalse(), OrRhsBB);
+                // llvm::BasicBlock* OrRhsBB = llvm::BasicBlock::Create(Context, "or.rhs", Func);
+                // llvm::BasicBlock* OrTrueBB = llvm::BasicBlock::Create(Context, "or.true", Func);
+                //
+                // Builder.CreateCondBr(Left->GetValue(), OrTrueBB, OrRhsBB);
+                //
+                // Builder.SetInsertPoint(OrRhsBB);
+                // TypedValue* Right = CompileNode(Logical->Right);
+                // Right = ImplicitCast(Right, Logical->OperandsType);
+                //
+                // llvm::BasicBlock* OrEndBB = llvm::BasicBlock::Create(Context, "or.end", Func);
+                // Builder.CreateCondBr(Right->GetValue(), OrTrueBB, OrEndBB);
+                //
+                // Builder.SetInsertPoint(OrTrueBB);
+                // Builder.CreateBr(OrEndBB);
+                //
+                // Builder.SetInsertPoint(OrEndBB);
+                // llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt1Ty(), 2);
+                // Phi->addIncoming(Builder.getTrue(), OrTrueBB);
+                // Phi->addIncoming(Builder.getFalse(), OrRhsBB);
+                //
+                // return Create<TypedValue>(Phi, Logical->ResolvedType);
 
                 return Create<TypedValue>(
-                      Phi, Logical->ResolvedType);
+                    Builder.CreateOr(Left->GetValue(), Right->GetValue()), Logical->ResolvedType);
             }
             case OperatorType::LOGICAL_AND:
             {
-                auto* AndRhsBB   = llvm::BasicBlock::Create(Context, "and.rhs", Func);
-                auto* AndFalseBB= llvm::BasicBlock::Create(Context, "and.false", Func);
-                auto* AndEndBB  = llvm::BasicBlock::Create(Context, "and.end", Func);
-
-                Builder.CreateCondBr(Left->GetValue(), AndRhsBB, AndFalseBB);
-
-                Builder.SetInsertPoint(AndRhsBB);
-                TypedValue* Right = CompileNode(Logical->Right);
-                Right = ImplicitCast(Right, Logical->OperandsType);
-                Builder.CreateBr(AndEndBB);
-
-                Builder.SetInsertPoint(AndFalseBB);
-                Builder.CreateBr(AndEndBB);
-
-                Builder.SetInsertPoint(AndEndBB);
-                llvm::PHINode* Phi =
-                    Builder.CreatePHI(Builder.getInt1Ty(), 2);
-
-                Phi->addIncoming(Right->GetValue(), AndRhsBB);
-                Phi->addIncoming(Builder.getFalse(), AndFalseBB);
+                // auto* AndRhsBB = llvm::BasicBlock::Create(Context, "and.rhs", Func);
+                // auto* AndFalseBB= llvm::BasicBlock::Create(Context, "and.false", Func);
+                //
+                // Builder.CreateCondBr(Left->GetValue(), AndRhsBB, AndFalseBB);
+                //
+                // Builder.SetInsertPoint(AndRhsBB);
+                // TypedValue* Right = CompileNode(Logical->Right);
+                // Right = ImplicitCast(Right, Logical->OperandsType);
+                // auto* AndEndBB  = llvm::BasicBlock::Create(Context, "and.end", Func);
+                // Builder.CreateBr(AndEndBB);
+                //
+                // Builder.SetInsertPoint(AndFalseBB);
+                // Builder.CreateBr(AndEndBB);
+                //
+                // Builder.SetInsertPoint(AndEndBB);
+                // llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt1Ty(), 2);
+                //
+                // Phi->addIncoming(Right->GetValue(), AndRhsBB);
+                // Phi->addIncoming(Builder.getFalse(), AndFalseBB);
+                //
+                // return Create<TypedValue>(Phi, Logical->ResolvedType);
 
                 return Create<TypedValue>(
-                      Phi, Logical->ResolvedType);
+                    Builder.CreateAnd(Left->GetValue(), Right->GetValue()), Logical->ResolvedType);
             }
             default:
                 ERROR("Unknown logical operator")
@@ -558,9 +528,6 @@ namespace Volt
 
     TypedValue* LLVMCompiler::CompileCall(const CallNode *Call)
     {
-        if (!Call->ResolvedCallee)
-            ERROR("Function not found");
-
         const auto& Args = Call->Arguments;
 
         SmallVec8<llvm::Value*> LLVMArgs;
@@ -577,6 +544,16 @@ namespace Volt
                 ArgValue = ImplicitCast(ArgValue, Arg->ExpectedType);
 
             LLVMArgs.push_back(ArgValue->GetValue());
+        }
+
+        if (Cast<DataTypeNodeBase>(Call->Callee))
+        {
+            if (LLVMArgs.size() != 1)
+                return nullptr;
+
+            llvm::Value* Value = LLVMArgs[0];
+            return Create<TypedValue>(
+                Builder.CreateBitCast(Value, CContext.GetLLVMType(Call->ResolvedType)), Call->ResolvedType);
         }
 
         if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
@@ -611,20 +588,6 @@ namespace Volt
             if (IndexInt >= Type->Length || IndexInt < 0)
                 ERROR("Index out of array range");
 
-        // PointerType* ElPtrType = Ptr->GetDataType().GetPtrType();
-        // if (!ElPtrType)
-        //     ERROR("Cannot apply subscript to non-pointer type");
-        //
-        // llvm::AllocaInst* Inst = llvm::cast<llvm::AllocaInst>(Ptr->GetValue());
-        // llvm::Type* ElType = DataType::GetLLVMType(ElPtrType->BaseType, Context);
-        // TypedValue* Index = CompileNode(Subscript->Index);
-        // Index = ImplicitCast(Index, Subscript->Index->ResolvedType);
-        //
-        // //std::cout << Ptr->GetDataType().ToString() << std::endl;
-        //
-        // llvm::Value* ElPtr = Builder.CreateGEP(Inst->getAllocatedType(), Inst, { Builder.getInt32(0), Index->GetValue()});
-        // llvm::Value* El = Builder.CreateLoad(ElPtr->getType(), getLoadStorePointerOperand(ElPtr));
-        // return Create<TypedValue>(El, ElPtrType->BaseType);
         return Create<TypedValue>(El, Type->BaseType);
     }
 
@@ -668,12 +631,11 @@ namespace Volt
 
         for (const auto Param : Function->Params)
         {
-            DataType* ParamType = Param->Type->ResolvedType; //DataType::CreateFromAST(Param->Type, CompilerArena);
+            DataType* ParamType = Param->Type->ResolvedType;
             Params.push_back(DataTypeUtils::GetLLVMType(ParamType, Context));
         }
 
-        llvm::Type* RetType = DataTypeUtils::GetLLVMType(Function->ReturnType->ResolvedType
-            /*DataType::CreateFromAST(Function->ReturnType, CompilerArena)*/, Context);
+        llvm::Type* RetType = DataTypeUtils::GetLLVMType(Function->ReturnType->ResolvedType, Context);
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
 
@@ -687,7 +649,7 @@ namespace Volt
         ParamsTypes.reserve(FuncParams.size());
         for (size_t i = 0; i < FuncParams.size(); i++)
         {
-            DataType* ParamType = FuncParams[i]->Type->ResolvedType; //DataType::CreateFromAST(FuncParams[i]->Type, CompilerArena);
+            DataType* ParamType = FuncParams[i]->Type->ResolvedType;
             auto Arg = Func->args().begin() + i;
             Arg->setName(FuncParams[i]->Name.str());
             ParamsTypes.push_back(ParamType);
@@ -695,14 +657,6 @@ namespace Volt
 
         CurrentFunction = Func;
         FunctionParams = ParamsTypes;
-
-        // FunctionSignature Signature{ FuncName, ParamsTypes };
-        //FunctionSignatures[Signature] = Create<TypedFunction>(Func, Function->ReturnType->Type);
-
-        // if (auto Iter = FunctionSignatures.find(Signature); Iter != FunctionSignatures.end())
-        //     Iter->second->Function = Func;
-        // else
-        //     ERROR("Function definition '" + FuncName + "' is unknown");
 
         if (auto FuncCallee = Cast<FunctionCallee>(Function->ResolvedCallee))
             FuncCallee->Function = Func;
@@ -922,16 +876,6 @@ namespace Volt
 
         if (const auto Subscript = Cast<const SubscriptNode>(Node))
         {
-            // TypedValue* Ptr = CompileNode(Subscript->Target);
-            // PointerType* ElPtrType = Ptr->GetDataType().GetPtrType();
-            // if (!ElPtrType)
-            //     ERROR("Cannot apply subscript to non-pointer type");
-            //
-            // llvm::Type* ElType = DataType::GetLLVMType(ElPtrType->BaseType, Context);
-            // TypedValue* Index = CompileNode(Subscript->Index);
-            //
-            // llvm::Value* ElPtr = Builder.CreateGEP( ElType, Ptr->GetValue(), Index->GetValue());
-
             TypedValue* Ptr = GetLValue(Subscript->Target);
             llvm::Value* Value = Ptr->GetValue();
 
@@ -1019,6 +963,11 @@ namespace Volt
                 return Create<TypedValue>(Builder.CreateFPTrunc(Value->GetValue(),
                     TargetLLVMType), Target);
             }
+        }
+
+        if (auto SrcPtrType = Cast<PointerType>(SrcType))
+        {
+            return Value;
         }
 
         ERROR(std::format("Cannot convert '{}' to '{}'",

@@ -1,4 +1,10 @@
-fun:int Main(int Num)
+fun:int Main()
 {
-	return Num * 2;
+    let:int* Ptr = int*(MemAlloc(4));
+    let:int Num = 6;
+    MemCpy(Ptr, $Num, 4);
+    Out(*Ptr);
+    MemFree(Ptr);
+
+    return 0;
 }

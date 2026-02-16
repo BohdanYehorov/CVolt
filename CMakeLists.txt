@@ -13,6 +13,7 @@ include_directories(
 add_definitions(${LLVM_DEFINITIONS})
 
 add_executable(CVolt
+#add_library(CVolt STATIC
         Src/main.cpp
         Src/Lexer.cpp
         Src/Arena.cpp

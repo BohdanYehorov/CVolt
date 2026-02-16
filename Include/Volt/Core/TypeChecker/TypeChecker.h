@@ -101,6 +101,7 @@ namespace Volt
         template <typename MapT>
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);
 
+        [[nodiscard]] static bool CanCastPointers(PointerType* Src, PointerType* Dst);
         [[nodiscard]] bool CanImplicitCast(DataType* Src, DataType* Dst) const;
         [[nodiscard]] bool CanCastArithmetic(DataType* Left, DataType* Right, OperatorType Type) const;
         [[nodiscard]] bool CanCastComparison(DataType* Left, DataType* Right, OperatorType Type) const;
@@ -110,7 +111,7 @@ namespace Volt
         [[nodiscard]] bool CanCastToJointType(DataType* Left, DataType* Right, OperatorType Type) const;
 
         bool CastToJointType(DataType *&Left, DataType *&Right, OperatorType Type, size_t Line, size_t Column);
-        static bool ImplicitCast(DataType *&Src, DataType *Dst);
+        bool ImplicitCast(DataType *&Src, DataType *Dst);
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
         static bool ImplicitCast(CTimeValue *Src, DataType* DstType);

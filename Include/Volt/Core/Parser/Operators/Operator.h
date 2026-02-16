@@ -14,47 +14,6 @@ namespace Volt
     class Operator
     {
     public:
-        // enum Type
-        // {
-        //     UNKNOWN,
-        //     ADD,
-        //     SUB,
-        //     UN_PLS,
-        //     UN_MNS,
-        //     MUL,
-        //     DIV,
-        //     MOD,
-        //     INC,
-        //     DEC,
-        //     ASSIGN,
-        //     ADD_ASSIGN,
-        //     SUB_ASSIGN,
-        //     MUL_ASSIGN,
-        //     DIV_ASSIGN,
-        //     MOD_ASSIGN,
-        //     AND_ASSIGN,
-        //     OR_ASSIGN,
-        //     XOR_ASSIGN,
-        //     LSHIFT_ASSIGN,
-        //     RSHIFT_ASSIGN,
-        //     EQ,
-        //     NEQ,
-        //     GT,
-        //     GTE,
-        //     LT,
-        //     LTE,
-        //     LOGICAL_AND,
-        //     LOGICAL_OR,
-        //     LOGICAL_NOT,
-        //     BIT_AND,
-        //     BIT_OR,
-        //     BIT_XOR,
-        //     BIT_NOT,
-        //     LSHIFT,
-        //     RSHIFT
-        // };
-
-    public:
         static OperatorType GetAssignmentOp(TokenType Op);
         static OperatorType GetLogicalOp(TokenType Op);
         static OperatorType GetBitwiseOp(TokenType Op);

@@ -1465,15 +1465,16 @@ namespace Volt
             return nullptr;
 
         const Token& Tok = CurrentToken();
-        Consume();
 
         switch (Tok.Type)
         {
             case TokenType::IDENTIFIER:
+                Consume();
                 return NodesArena.Create<IdentifierNode>(
                     GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
             case TokenType::BYTE_NUMBER:
             {
+                Consume();
                 UInt8 Value;
                 llvm::StringRef NumStr = GetTokenLexeme(Tok);
                 std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
@@ -1482,6 +1483,7 @@ namespace Volt
             }
             case TokenType::INT_NUMBER:
             {
+                Consume();
                 UInt32 Value;
                 llvm::StringRef NumStr = GetTokenLexeme(Tok);
                 std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
@@ -1490,6 +1492,7 @@ namespace Volt
             }
             case TokenType::LONG_NUMBER:
             {
+                Consume();
                 UInt64 Value;
 
                 llvm::StringRef NumStr = GetTokenLexeme(Tok);
@@ -1499,6 +1502,7 @@ namespace Volt
             }
             case TokenType::FLOAT_NUMBER:
             {
+                Consume();
                 float Value;
 
                 llvm::StringRef NumStr = GetTokenLexeme(Tok);
@@ -1508,6 +1512,7 @@ namespace Volt
             }
             case TokenType::DOUBLE_NUMBER:
             {
+                Consume();
                 double Value;
                 llvm::StringRef NumStr = GetTokenLexeme(Tok);
                 std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
@@ -1515,17 +1520,22 @@ namespace Volt
                     FloatingPointNode::DOUBLE, Value, Tok.Pos, Tok.Line, Tok.Column);
             }
             case TokenType::BOOL_TRUE:
+                Consume();
                 return NodesArena.Create<BoolNode>(true, Tok.Pos, Tok.Line, Tok.Column);
             case TokenType::BOOL_FALSE:
+                Consume();
                 return NodesArena.Create<BoolNode>(false, Tok.Pos, Tok.Line, Tok.Column);
             case TokenType::CHAR:
+                Consume();
                 return NodesArena.Create<CharNode>(
                     GetTokenLexeme(Tok)[0], Tok.Pos, Tok.Line, Tok.Column);
             case TokenType::STRING:
+                Consume();
                 return NodesArena.Create<StringNode>(
                     GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
             case TokenType::OP_LPAREN:
             {
+                Consume();
                 ASTNode* Node = ParseAssignment();
                 if (!Expect(TokenType::OP_RPAREN))
                     return nullptr;
@@ -1533,6 +1543,7 @@ namespace Volt
             }
             case TokenType::OP_LBRACKET:
             {
+                Consume();
                 auto Array = NodesArena.Create<ArrayNode>(Tok.Pos, Tok.Line, Tok.Column);
                 while (IsValidIndex())
                 {
@@ -1550,11 +1561,13 @@ namespace Volt
                 return Array;
             }
             case TokenType::OP_LBRACE:
-                Index--;
                 return ParseBlock();
             default:
                 break;
         }
+
+        if (auto Type = ParseDataType())
+            return Type;
 
         SendError(ParseErrorType::UnexpectedToken, Tok.Line, Tok.Column,
             { std::string(GetTokenLexeme(Tok).str()) });

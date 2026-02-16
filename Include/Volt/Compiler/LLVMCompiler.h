@@ -55,8 +55,6 @@ namespace Volt
         void Write(llvm::raw_ostream& Os) const { Module->print(Os, nullptr); }
         void Print() const { Module->print(llvm::outs(), nullptr); }
 
-        int Run();
-
         std::unique_ptr<llvm::Module>& GetModule() { return Module; }
 
     private:

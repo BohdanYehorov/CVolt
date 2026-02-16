@@ -21,8 +21,7 @@ namespace Volt
             TypeCategory::FLOATING_POINT
         } },
         { TypeCategory::POINTER, {
-            TypeCategory::BOOLEAN,
-            TypeCategory::POINTER
+            TypeCategory::BOOLEAN
         } }
     };
 
@@ -191,7 +190,11 @@ namespace Volt
         bool HasErrors = false;
         for (auto El : Elements)
         {
-            DataType* ElType = VisitNode(El)->Type;
+            CTimeValue* ElValue = VisitNode(El);
+            if (!ElValue)
+                return nullptr;
+
+            DataType* ElType = ElValue->Type;
             if (!ElType)
                 return nullptr;
 
@@ -214,7 +217,7 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        DataType* VarType = GetVariable(Identifier->Value.str());;
+        DataType* VarType = GetVariable(Identifier->Value.str());
         if (!VarType)
             SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
 
@@ -224,15 +227,24 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitRef(RefNode *Ref)
     {
-        DataType* RefType = VisitNode(Ref->Target)->Type;
+        CTimeValue* RefValue = VisitNode(Ref->Target);
+        if (!RefValue)
+            return nullptr;
+
+        DataType* RefType = RefValue->Type;
         if (!RefType)
             return nullptr;
+
         return CTimeValue::CreateNull(CContext.GetPointerType(RefType), MainArena);
     }
 
     CTimeValue *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
-        DataType* SuffixType = VisitNode(Suffix->Operand)->Type;
+        CTimeValue* SuffixValue = VisitNode(Suffix->Operand);
+        if (!SuffixValue)
+            return nullptr;
+
+        DataType* SuffixType = SuffixValue->Type;
         if (!SuffixType)
             return nullptr;
 
@@ -258,7 +270,11 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
-        DataType* PrefixType = VisitNode(Prefix->Operand)->Type;
+        CTimeValue* PrefixValue = VisitNode(Prefix->Operand);
+        if (!PrefixValue)
+            return nullptr;
+
+        DataType* PrefixType = PrefixValue->Type;
         if (!PrefixType)
             return nullptr;
 
@@ -285,6 +301,9 @@ namespace Volt
     CTimeValue *TypeChecker::VisitUnary(UnaryOpNode *Unary)
     {
         CTimeValue* Operand = VisitNode(Unary->Operand);
+        if (!Operand)
+            return nullptr;
+
         DataType* OperandType = Operand->Type;
         if (!OperandType)
             return nullptr;
@@ -325,6 +344,16 @@ namespace Volt
                 }
                 return nullptr;
             }
+            case OperatorType::MUL:
+            {
+                if (auto PtrType = Cast<PointerType>(OperandType))
+                {
+                    Unary->ResolvedType = PtrType->BaseType;
+                    Unary->CompileTimeValue = CTimeValue::CreateNull(PtrType->BaseType, MainArena);
+                    return Unary->CompileTimeValue;
+                }
+                return nullptr;
+            }
             default:
                 return nullptr;
         }
@@ -356,6 +385,9 @@ namespace Volt
     {
         CTimeValue* Left = VisitNode(Binary->Left);
         CTimeValue* Right = VisitNode(Binary->Right);
+
+        if (!Left || !Right)
+            return nullptr;
 
         DataType* LeftType = Left->Type;
         DataType* RightType = Right->Type;
@@ -424,14 +456,30 @@ namespace Volt
             return nullptr;
         }
 
+        if (auto Type = Cast<DataTypeNodeBase>(Call->Callee))
+        {
+            if (Call->Arguments.size() != 1)
+                return nullptr;
+
+            Call->ResolvedType = VisitType(Type);
+            VisitNode(Call->Arguments[0]);
+            return CTimeValue::CreateNull(Call->ResolvedType, MainArena);
+        }
+
         SendError(TypeErrorKind::InvalidCalleeType, Call->Callee);
         return nullptr;
     }
 
     CTimeValue *TypeChecker::VisitSubscript(SubscriptNode *Subscript)
     {
-        DataType* TargetType = VisitNode(Subscript->Target)->Type;
-        DataType* IndexType = VisitNode(Subscript->Index)->Type;
+        CTimeValue* TargetValue = VisitNode(Subscript->Target);
+        CTimeValue* IndexValue = VisitNode(Subscript->Index);
+
+        if (!TargetValue || !IndexValue)
+            return nullptr;
+
+        DataType* TargetType = TargetValue->Type;
+        DataType* IndexType = IndexValue->Type;
 
         DataType* Int32Type = CContext.GetIntegerType(32);
         // if (!CanImplicitCast(IndexType, Int32Type))
@@ -503,7 +551,11 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitIf(IfNode *If)
     {
-        DataType* CondType = VisitNode(If->Condition)->Type;
+        CTimeValue* Cond = VisitNode(If->Condition);
+        if (!Cond)
+            return nullptr;
+
+        DataType* CondType = Cond->Type;
         if (!CondType)
             return nullptr;
 
@@ -523,7 +575,11 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitWhile(WhileNode *While)
     {
-        DataType* CondType = VisitNode(While->Condition)->Type;
+        CTimeValue* Cond = VisitNode(While->Condition);
+        if (!Cond)
+            return nullptr;
+
+        DataType* CondType = Cond->Type;
         if (!CondType)
             return nullptr;
 
@@ -540,7 +596,12 @@ namespace Volt
     CTimeValue *TypeChecker::VisitFor(ForNode *For)
     {
         VisitNode(For->Initialization);
-        DataType* CondType = VisitNode(For->Condition)->Type;
+
+        CTimeValue* Cond = VisitNode(For->Condition);
+        if (!Cond)
+            return nullptr;
+
+        DataType* CondType = Cond->Type;
         if (!CondType)
             return nullptr;
 
@@ -605,9 +666,18 @@ namespace Volt
         return nullptr;
     }
 
+    bool TypeChecker::CanCastPointers(PointerType *Src, PointerType *Dst)
+    {
+        return Src == Dst || DataTypeUtils::GetTypeCategory(Dst->BaseType) == TypeCategory::VOID;
+    }
+
     bool TypeChecker::CanImplicitCast(DataType* Src, DataType* Dst) const
     {
         if (Src == Dst) return true;
+
+        if (auto SrcPtrType = Cast<PointerType>(Src))
+            if (auto DstPtrType = Cast<PointerType>(Dst))
+                return CanCastPointers(SrcPtrType, DstPtrType);
 
         TypeCategory SrcTypeCategory = DataTypeUtils::GetTypeCategory(Src);
         TypeCategory DstTypeCategory = DataTypeUtils::GetTypeCategory(Dst);
@@ -825,19 +895,10 @@ namespace Volt
 
     bool TypeChecker::ImplicitCast(DataType *&Src, DataType* Dst)
     {
-        if (Src == Dst) return true;
-
-        TypeCategory SrcTypeCategory = DataTypeUtils::GetTypeCategory(Src);
-        TypeCategory DstTypeCategory = DataTypeUtils::GetTypeCategory(Dst);
-
-        if (auto SrcIter = ImplicitCastTypes.find(SrcTypeCategory); SrcIter != ImplicitCastTypes.end())
+        if (CanImplicitCast(Src, Dst))
         {
-            const auto& DstImplicitCastTypes = SrcIter->second;
-            if (auto DstIter = DstImplicitCastTypes.find(DstTypeCategory); DstIter != DstImplicitCastTypes.end())
-            {
-                Src = Dst;
-                return true;
-            }
+            Src = Dst;
+            return true;
         }
 
         return false;
@@ -858,6 +919,18 @@ namespace Volt
         DataType* SrcType = Src->Type;
 
         if (SrcType == DstType) return true;
+
+        if (auto SrcPtrType = Cast<PointerType>(SrcType))
+        {
+            if (auto DstPtrType = Cast<PointerType>(DstType))
+            {
+                if (CanCastPointers(SrcPtrType, DstPtrType))
+                {
+                    Src->Type = DstType;
+                    return true;
+                }
+            }
+        }
 
         TypeCategory SrcTypeCategory = DataTypeUtils::GetTypeCategory(SrcType);
         TypeCategory DstTypeCategory = DataTypeUtils::GetTypeCategory(DstType);
@@ -923,7 +996,6 @@ namespace Volt
                         }
                         break;
                     }
-
                     default:
                         break;
                 }
@@ -1087,7 +1159,24 @@ namespace Volt
     CTimeValue *TypeChecker::CalculateBinary(CTimeValue *Left, CTimeValue *Right, OperatorType Type) const
     {
         if (!Left->IsValid || !Right->IsValid)
-            return CTimeValue::CreateNull(Left->Type, MainArena);
+        {
+            DataType* ResolvedType = Left->Type;
+
+            switch (Type)
+            {
+                case OperatorType::EQ:
+                case OperatorType::NEQ:
+                case OperatorType::GT:
+                case OperatorType::GTE:
+                case OperatorType::LT:
+                case OperatorType::LTE:
+                    ResolvedType = CContext.GetBoolType();
+                default:
+                    break;
+            }
+
+            return CTimeValue::CreateNull(ResolvedType, MainArena);
+        }
 
         switch (Type)
         {
