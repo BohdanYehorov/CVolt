@@ -82,6 +82,7 @@ namespace Volt
         CTimeValue *VisitArray(ArrayNode *Array);
         CTimeValue *VisitIdentifier(IdentifierNode *Identifier);
         CTimeValue *VisitRef(RefNode *Ref);
+        CTimeValue *VisitUnref(UnrefNode *Unref);
         CTimeValue *VisitSuffix(SuffixOpNode *Suffix);
         CTimeValue *VisitPrefix(PrefixOpNode *Prefix);
         CTimeValue *VisitUnary(UnaryOpNode *Unary);
@@ -89,6 +90,7 @@ namespace Volt
         CTimeValue *VisitBinary(BinaryOpNode *Binary);
         CTimeValue *VisitCall(CallNode *Call);
         CTimeValue *VisitSubscript(SubscriptNode *Subscript);
+        CTimeValue *VisitExplicitCast(ExplicitCastNode *ECast);
         CTimeValue *VisitVariable(VariableNode *Variable);
         CTimeValue *VisitFunction(FunctionNode *Function);
         CTimeValue *VisitIf(IfNode *If);
@@ -116,6 +118,10 @@ namespace Volt
 
         static bool ImplicitCast(CTimeValue *Src, DataType* DstType);
         bool CastToJointType(CTimeValue *Left, CTimeValue *Right, OperatorType Type, size_t Line, size_t Column);
+
+        bool CanExplicitCast(DataType* Src, DataType* Dst);
+        bool ExplicitCast(DataType*& Src, DataType* Dst);
+        bool ExplicitCast(CTimeValue*& Src, DataType* Dst);
 
         void EnterScope();
         void ExitScope();

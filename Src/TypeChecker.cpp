@@ -62,6 +62,8 @@ namespace Volt
             return VisitIdentifier(Identifier);
         if (auto Ref = Cast<RefNode>(Node))
             return VisitRef(Ref);
+        if (auto Unref = Cast<UnrefNode>(Node))
+            return VisitUnref(Unref);
         if (auto Suffix = Cast<SuffixOpNode>(Node))
             return VisitSuffix(Suffix);
         if (auto Prefix = Cast<PrefixOpNode>(Node))
@@ -76,6 +78,8 @@ namespace Volt
             return VisitCall(Call);
         if (auto Subscript = Cast<SubscriptNode>(Node))
             return VisitSubscript(Subscript);
+        if (auto ECast = Cast<ExplicitCastNode>(Node))
+            return VisitExplicitCast(ECast);
         if (auto Variable = Cast<VariableNode>(Node))
             return VisitVariable(Variable);
         if (auto Function = Cast<FunctionNode>(Node))
@@ -238,6 +242,26 @@ namespace Volt
         return CTimeValue::CreateNull(CContext.GetPointerType(RefType), MainArena);
     }
 
+    CTimeValue *TypeChecker::VisitUnref(UnrefNode *Unref)
+    {
+        CTimeValue* UnrefValue = VisitNode(Unref->Target);
+        if (!UnrefValue)
+            return nullptr;
+
+        DataType* Type = UnrefValue->Type;
+        if (!Type)
+            return nullptr;
+
+        if (auto PtrType = Cast<PointerType>(Type))
+        {
+            Unref->ResolvedType = PtrType->BaseType;
+            Unref->CompileTimeValue = CTimeValue::CreateNull(PtrType->BaseType, MainArena);
+            return Unref->CompileTimeValue;
+        }
+
+        return nullptr;
+    }
+
     CTimeValue *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
         CTimeValue* SuffixValue = VisitNode(Suffix->Operand);
@@ -344,16 +368,6 @@ namespace Volt
                 }
                 return nullptr;
             }
-            case OperatorType::MUL:
-            {
-                if (auto PtrType = Cast<PointerType>(OperandType))
-                {
-                    Unary->ResolvedType = PtrType->BaseType;
-                    Unary->CompileTimeValue = CTimeValue::CreateNull(PtrType->BaseType, MainArena);
-                    return Unary->CompileTimeValue;
-                }
-                return nullptr;
-            }
             default:
                 return nullptr;
         }
@@ -417,9 +431,14 @@ namespace Volt
 
             for (auto Arg : Call->Arguments)
             {
-                DataType* ArgType = VisitNode(Arg)->Type;
+                CTimeValue* ArgValue = VisitNode(Arg);
+                if (!ArgValue)
+                    return nullptr;
+
+                DataType* ArgType = ArgValue->Type;
                 if (!ArgType)
                     return nullptr;
+
                 ArgTypes.push_back(ArgType);
             }
 
@@ -482,24 +501,45 @@ namespace Volt
         DataType* IndexType = IndexValue->Type;
 
         DataType* Int32Type = CContext.GetIntegerType(32);
-        // if (!CanImplicitCast(IndexType, Int32Type))
-        // {
-        //     SendError(TypeErrorKind::TypeMissmatch,
-        //         Subscript->Index, { IndexType.ToString(), Int32Type.ToString() });
-        //     return nullptr;
-        // }
 
         if (!ImplicitCastOrError(IndexType, Int32Type, Subscript->Index->Line, Subscript->Index->Column))
             return nullptr;
 
         Subscript->Index->ResolvedType = IndexType;
 
-        if (auto PtrType = Cast<ArrayType>(TargetType))
+        if (auto ArrType = Cast<ArrayType>(TargetType))
         {
+            Subscript->TargetType = ArrType;
+            Subscript->ResolvedType = ArrType->BaseType;
+            return CTimeValue::CreateNull(ArrType->BaseType, MainArena);
+        }
+
+        if (auto PtrType = Cast<PointerType>(TargetType))
+        {
+            Subscript->TargetType = PtrType;
             Subscript->ResolvedType = PtrType->BaseType;
             return CTimeValue::CreateNull(PtrType->BaseType, MainArena);
         }
 
+        return nullptr;
+    }
+
+    CTimeValue *TypeChecker::VisitExplicitCast(ExplicitCastNode *ECast)
+    {
+        DataType* SrcType = VisitType(ECast->Type);
+        CTimeValue* Target = VisitNode(ECast->Target);
+
+        if (!SrcType || !Target)
+            return nullptr;
+
+        if (ExplicitCast(Target, SrcType))
+        {
+            ECast->CompileTimeValue = Target;
+            return Target;
+        }
+
+        SendError(TypeErrorKind::IncompatibleTypes, ECast->Line, ECast->Column,
+            { DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target->Type) });
         return nullptr;
     }
 
@@ -1034,6 +1074,53 @@ namespace Volt
         return ImplicitCast(Src, Dst); //ImplicitCastOrError(Src, Dst, Line, Column);
     }
 
+    bool TypeChecker::CanExplicitCast(DataType *Dst, DataType *Src)
+    {
+        if (Dst == Src) return true;
+
+        if (CanImplicitCast(Dst, Src))
+            return true;
+
+        if (auto DstPtrType = Cast<PointerType>(Dst))
+            if (auto SrcPtrType = Cast<PointerType>(Src))
+                return DataTypeUtils::GetTypeCategory(DstPtrType->BaseType) == TypeCategory::VOID;
+
+        return false;
+    }
+
+    bool TypeChecker::ExplicitCast(DataType *&Dst, DataType *Src)
+    {
+        if (CanExplicitCast(Dst, Src))
+        {
+            Dst = Src;
+            return true;
+        }
+
+        return false;
+    }
+
+    bool TypeChecker::ExplicitCast(CTimeValue *&Src, DataType *Dst)
+    {
+        if (ImplicitCast(Src, Dst))
+            return true;
+
+        if (auto SrcPtrType = Cast<PointerType>(Src->Type))
+        {
+            if (auto DstPtrType = Cast<PointerType>(Dst))
+            {
+                if (DataTypeUtils::GetTypeCategory(SrcPtrType->BaseType) == TypeCategory::VOID)
+                {
+                    Src->Type = Dst;
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        return false;
+    }
+
     void TypeChecker::EnterScope()
     {
         ScopeStack.Emplace();
@@ -1198,7 +1285,7 @@ namespace Volt
             case OperatorType::BIT_XOR:     CREATE_OP_FOR_INT(^);
             case OperatorType::LSHIFT:      CREATE_OP_FOR_INT(<<);
             case OperatorType::RSHIFT:      CREATE_OP_FOR_INT(>>);
-            default:                    return CTimeValue::CreateNull(Left->Type, MainArena);
+            default:                        return CTimeValue::CreateNull(Left->Type, MainArena);
         }
     }
 }

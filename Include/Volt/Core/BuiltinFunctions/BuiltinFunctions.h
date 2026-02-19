@@ -110,6 +110,11 @@ extern "C"
 		std::free(Data);
 	}
 
+	inline void* Realloc(void* Data, long NewSize)
+	{
+		return std::realloc(Data, NewSize);
+	}
+
 	inline void MemCpy(void* Dst, void* Src, long Size)
 	{
 		std::memcpy(Dst, Src, Size);

@@ -60,6 +60,8 @@ namespace Volt
             return CompileIdentifier(Identifier);
         if (const auto Ref = Cast<RefNode>(Node))
             return CompileRef(Ref);
+        if (const auto Unref = Cast<UnrefNode>(Node))
+            return CompileUnref(Unref);
         if (const auto Prefix = Cast<PrefixOpNode>(Node))
             return CompilePrefix(Prefix);
         if (const auto Suffix = Cast<SuffixOpNode>(Node))
@@ -78,6 +80,8 @@ namespace Volt
             return CompileCall(Call);
         if (const auto Subscript = Cast<SubscriptNode>(Node))
             return CompileSubscript(Subscript);
+        if (const auto ExplicitCast = Cast<ExplicitCastNode>(Node))
+            return CompileExplicitCast(ExplicitCast);
         if (const auto Var = Cast<VariableNode>(Node))
             return CompileVariable(Var);
         if (const auto Function = Cast<FunctionNode>(Node))
@@ -176,7 +180,6 @@ namespace Volt
                 CContext.GetLLVMType(Type->BaseType), Array->Elements.size());
 
         llvm::AllocaInst* Arr = Builder.CreateAlloca(ArrType);
-        llvm::Value* FirstElPtr = nullptr;
 
         llvm::Value* Idx[2] = {
             Builder.getInt32(0),
@@ -190,9 +193,6 @@ namespace Volt
             Idx[1] = Builder.getInt32(i);
 
             llvm::Value* ElPtr = Builder.CreateGEP(Arr->getAllocatedType(), Arr, Idx);
-            if (!FirstElPtr)
-                FirstElPtr = ElPtr;
-
             Builder.CreateStore(El->GetValue(), ElPtr);
         }
 
@@ -217,9 +217,21 @@ namespace Volt
     {
         TypedValue* LValue = GetLValue(Ref->Target);
         if (!LValue)
-            ERROR("Cannot apply operator '$' to l-value")
+            ERROR("Cannot apply operator '$' to r-value")
 
        return Create<TypedValue>(LValue->GetValue(), CContext.GetPointerType(LValue->GetDataType()));
+    }
+
+    TypedValue *LLVMCompiler::CompileUnref(const UnrefNode *Unref)
+    {
+        TypedValue *TValue = CompileNode(Unref->Target);
+        if (!TValue)
+            return nullptr;
+
+        llvm::Value* Value = TValue->GetValue();
+
+        return Create<TypedValue>(Builder.CreateLoad(
+                CContext.GetLLVMType(Unref->ResolvedType), Value), Unref->ResolvedType);
     }
 
     TypedValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
@@ -292,11 +304,6 @@ namespace Volt
             case OperatorType::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
                                                ImplicitCast(TValue, BoolType)->GetValue()), Unary->ResolvedType);
             case OperatorType::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Unary->ResolvedType);
-            case OperatorType::MUL:
-            {
-                return Create<TypedValue>(Builder.CreateLoad(
-                CContext.GetLLVMType(Unary->ResolvedType), Value), Unary->ResolvedType);
-            }
             default: ERROR("Unknown unary operator")
         }
     }
@@ -546,16 +553,6 @@ namespace Volt
             LLVMArgs.push_back(ArgValue->GetValue());
         }
 
-        if (Cast<DataTypeNodeBase>(Call->Callee))
-        {
-            if (LLVMArgs.size() != 1)
-                return nullptr;
-
-            llvm::Value* Value = LLVMArgs[0];
-            return Create<TypedValue>(
-                Builder.CreateBitCast(Value, CContext.GetLLVMType(Call->ResolvedType)), Call->ResolvedType);
-        }
-
         if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
             return Create<TypedValue>(Builder.CreateCall(Func->Function, LLVMArgs),
                 Func->ReturnType);
@@ -572,23 +569,50 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileSubscript(const SubscriptNode *Subscript)
     {
-        TypedValue* Ptr = GetLValue(Subscript->Target);
-        llvm::Value* Value = Ptr->GetValue();
-        auto Type = Cast<ArrayType>(Ptr->GetDataType());
+        if (auto PtrType = Cast<PointerType>(Subscript->TargetType))
+        {
+            TypedValue* Value = CompileNode(Subscript->Target);
 
-        auto Alloca = llvm::cast<llvm::AllocaInst>(Value);
+            if (!Value)
+                return nullptr;
 
-        TypedValue* Index = CompileNode(Subscript->Index);
-        llvm::Value* ElPtr = Builder.CreateGEP(Alloca->getAllocatedType(), Value,
-            { Builder.getInt32(0), Index->GetValue() });
-        llvm::Value* El = Builder.CreateLoad(Alloca->getAllocatedType()->getArrayElementType(), ElPtr);
+            llvm::Value* LLVMValue = Value->GetValue();
+            llvm::Type* ElType = CContext.GetLLVMType(PtrType->BaseType);
+            TypedValue* Index = CompileNode(Subscript->Index);
+            llvm::Value* ElPtr = Builder.CreateGEP(ElType, LLVMValue, Index->GetValue());
+            llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
+            return Create<TypedValue>(El, PtrType->BaseType);
+        }
 
-        Int64 IndexInt;
-        if (GetIntegerValue(Subscript->Index, IndexInt))
-            if (IndexInt >= Type->Length || IndexInt < 0)
-                ERROR("Index out of array range");
+        if (auto ArrType = Cast<ArrayType>(Subscript->TargetType))
+        {
+            TypedValue* Value = GetLValue(Subscript->Target);
 
-        return Create<TypedValue>(El, Type->BaseType);
+            if (!Value)
+                return nullptr;
+
+            llvm::Value* LLVMValue = Value->GetValue();
+            llvm::Type* ElType = CContext.GetLLVMType(ArrType->BaseType);
+            TypedValue* Index = CompileNode(Subscript->Index);
+            llvm::Value* ElPtr = Builder.CreateGEP(CContext.GetLLVMType(ArrType), LLVMValue,
+                { Builder.getInt32(0), Index->GetValue() });
+            llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
+            return Create<TypedValue>(El, ArrType->BaseType);
+        }
+
+        return nullptr;
+    }
+
+    TypedValue* LLVMCompiler::CompileExplicitCast(const ExplicitCastNode *ExplicitCast)
+    {
+        DataType* DstType = ExplicitCast->CompileTimeValue->Type;
+        TypedValue* Target = CompileNode(ExplicitCast->Target);
+
+        if (TypedValue* Value = ImplicitCast(Target, DstType))
+            return Value;
+
+        return Create<TypedValue>(
+            Builder.CreateBitCast(Target->GetValue(), CContext.GetLLVMType(DstType)), DstType);
     }
 
     TypedValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
@@ -876,23 +900,45 @@ namespace Volt
 
         if (const auto Subscript = Cast<const SubscriptNode>(Node))
         {
-            TypedValue* Ptr = GetLValue(Subscript->Target);
-            llvm::Value* Value = Ptr->GetValue();
+            if (auto PtrType = Cast<PointerType>(Subscript->TargetType))
+            {
+                TypedValue* Value = CompileNode(Subscript->Target);
 
-            auto Type = Cast<ArrayType>(Ptr->GetDataType());
+                if (!Value)
+                    return nullptr;
 
-            auto Alloca = llvm::cast<llvm::AllocaInst>(Value);
+                llvm::Value* LLVMValue = Value->GetValue();
+                llvm::Type* ElType = CContext.GetLLVMType(PtrType->BaseType);
+                TypedValue* Index = CompileNode(Subscript->Index);
+                llvm::Value* ElPtr = Builder.CreateGEP(ElType, LLVMValue, Index->GetValue());
+                return Create<TypedValue>(ElPtr, PtrType->BaseType);
+            }
 
-            Int64 IndexInt;
-            if (GetIntegerValue(Subscript->Index, IndexInt))
-                if (IndexInt >= Type->Length || IndexInt < 0)
-                    ERROR("Index out of array range");
+            if (auto ArrType = Cast<ArrayType>(Subscript->TargetType))
+            {
+                TypedValue* Value = GetLValue(Subscript->Target);
 
-            TypedValue* Index = CompileNode(Subscript->Index);
-            llvm::Value* ElPtr = Builder.CreateGEP(Alloca->getAllocatedType(), Value,
-                { Builder.getInt32(0), Index->GetValue() });
+                if (!Value)
+                    return nullptr;
 
-            return Create<TypedValue>(ElPtr, Type->BaseType, true);
+                llvm::Value* LLVMValue = Value->GetValue();
+                llvm::Type* ElType = CContext.GetLLVMType(ArrType->BaseType);
+                TypedValue* Index = CompileNode(Subscript->Index);
+                llvm::Value* ElPtr = Builder.CreateGEP(CContext.GetLLVMType(ArrType), LLVMValue,
+                    { Builder.getInt32(0), Index->GetValue() });
+                return Create<TypedValue>(ElPtr, ArrType->BaseType);
+            }
+
+            return nullptr;
+        }
+
+        if (auto Unref = Cast<const UnrefNode>(Node))
+        {
+            TypedValue *TValue = CompileNode(Unref->Target);
+            if (!TValue)
+                return nullptr;
+
+            return Create<TypedValue>(TValue->GetValue(), Unref->ResolvedType);
         }
 
         return nullptr;
@@ -904,7 +950,7 @@ namespace Volt
         llvm::Type* TargetLLVMType = CContext.GetLLVMType(Target);
         llvm::Type* SrcLLVMType = CContext.GetLLVMType(SrcType);
 
-        if (DataTypeUtils::IsEqual(SrcType, Target))
+        if (SrcType == Target)
             return Value;
 
         if (Cast<BoolType>(SrcType))
@@ -965,13 +1011,15 @@ namespace Volt
             }
         }
 
-        if (auto SrcPtrType = Cast<PointerType>(SrcType))
-        {
-            return Value;
-        }
+        if (Cast<PointerType>(SrcType))
+            if (auto DstPtrType = Cast<PointerType>(Target))
+                if (DataTypeUtils::GetTypeCategory(DstPtrType->BaseType) == TypeCategory::VOID)
+                    return Value;
 
-        ERROR(std::format("Cannot convert '{}' to '{}'",
-            DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target)))
+        // ERROR(std::format("Cannot convert '{}' to '{}'",
+        //     DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target)))
+
+        return nullptr;
     }
 
     bool LLVMCompiler::CanImplicitCast(DataType* Src, DataType* Dst)

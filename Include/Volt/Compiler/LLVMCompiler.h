@@ -68,6 +68,7 @@ namespace Volt
         TypedValue *CompileArray(const ArrayNode *Array);
         TypedValue *CompileIdentifier(const IdentifierNode *Identifier);
         TypedValue *CompileRef(const RefNode *Ref);
+        TypedValue *CompileUnref(const UnrefNode *Unref);
         TypedValue *CompilePrefix(const PrefixOpNode *Prefix);
         TypedValue *CompileSuffix(const SuffixOpNode *Suffix);
         TypedValue *CompileUnary(const UnaryOpNode *Unary);
@@ -77,6 +78,7 @@ namespace Volt
         TypedValue *CompileBinary(const BinaryOpNode *BinaryOp);
         TypedValue *CompileCall(const CallNode *Call);
         TypedValue *CompileSubscript(const SubscriptNode *Subscript);
+        TypedValue *CompileExplicitCast(const ExplicitCastNode *ExplicitCast);
         TypedValue *CompileVariable(const VariableNode *Var);
         TypedValue *CompileFunction(const FunctionNode *Function);
         TypedValue *CompileReturn(const ReturnNode *Return);

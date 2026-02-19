@@ -126,6 +126,14 @@ namespace Volt
             Os << "Bit Width: " << IntType->BitWidth << std::endl;
         else if (auto FloatType = Cast<FloatingPointType>(Node))
             Os << "Bit Width: " << FloatType->BitWidth << std::endl;
+        else if (auto ExplicitCast = Cast<ExplicitCastNode>(Node))
+        {
+            Os << "Type: \n";
+            WriteASTTree(Os, ExplicitCast->Type, Tabs + 1);
+            PrintTabs(Tabs);
+            Os << "Target: \n";
+            WriteASTTree(Os, ExplicitCast->Target, Tabs + 1);
+        }
         else if (auto Variable = Cast<VariableNode>(Node))
         {
             Os << std::endl;
@@ -1370,6 +1378,10 @@ namespace Volt
                 return NodesArena.Create<PrefixOpNode>(
                     OpType, Operand, Tok.Pos, Tok.Line, Tok.Column);
 
+            if (OpType == OperatorType::MUL)
+                return NodesArena.Create<UnrefNode>(
+                    Operand, Operand->Pos, Operand->Line, Operand->Column);
+
             return NodesArena.Create<UnaryOpNode>(
                 OpType, Operand, Tok.Pos, Tok.Line, Tok.Column);
         }
@@ -1402,6 +1414,25 @@ namespace Volt
             {
                 case TokenType::OP_LPAREN:
                 {
+                    if (auto Type = Cast<DataTypeNodeBase>(Operand))
+                    {
+                        Consume();
+                        ASTNode* Value = ParseAssignment();
+                        if (!Value)
+                            return nullptr;
+
+                        Operand = NodesArena.Create<ExplicitCastNode>(
+                            Type, Value, Type->Pos, Type->Line, Type->Column);
+
+                        if (!Expect(TokenType::OP_RPAREN))
+                        {
+                            Synchronize();
+                            return nullptr;
+                        }
+
+                        break;
+                    }
+
                     auto Call = NodesArena.Create<CallNode>(
                         Operand, Operand->Pos, Operand->Line, Operand->Column);
                     Consume();
@@ -1418,7 +1449,10 @@ namespace Volt
                     }
 
                     if (!Expect(TokenType::OP_RPAREN))
+                    {
+                        Synchronize();
                         return nullptr;
+                    }
 
                     Operand = Call;
                     break;

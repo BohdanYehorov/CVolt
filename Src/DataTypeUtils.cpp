@@ -165,6 +165,8 @@ namespace Volt
             return TypeCategory::POINTER;
         if (Cast<ReferenceType>(Type))
             return TypeCategory::REFERENCE;
+        if (Cast<ArrayType>(Type))
+            return TypeCategory::ARRAY;
 
         return TypeCategory::INVALID;
     }

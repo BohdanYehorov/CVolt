@@ -41,6 +41,7 @@ int main(int Argc, char* Argv[])
     FuncTable.AddFunction("RandomInt", "RandomInt", &RandomInt);
     FuncTable.AddFunction("System", "System", &System);
     FuncTable.AddFunction("MemAlloc", "MemAlloc", &MemAlloc);
+    FuncTable.AddFunction("Realloc", "Realloc", &Realloc);
     FuncTable.AddFunction("MemFree", "MemFree", &MemFree);
     FuncTable.AddFunction("MemCpy", "MemCpy", &MemCpy);
 

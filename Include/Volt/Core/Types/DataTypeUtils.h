@@ -19,7 +19,8 @@ namespace Volt
         INTEGER,
         FLOATING_POINT,
         POINTER,
-        REFERENCE
+        REFERENCE,
+        ARRAY
     };
 
     class DataTypeUtils

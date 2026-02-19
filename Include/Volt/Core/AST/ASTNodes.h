@@ -145,6 +145,15 @@ namespace Volt
             : ASTNode(Pos, Line, Column), Target(Target) {}
     };
 
+    class UnrefNode : public ASTNode
+    {
+        GENERATED_BODY(UnrefNode, ASTNode)
+    public:
+        ASTNode* Target;
+        UnrefNode(ASTNode* Target, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Target(Target) {}
+    };
+
     class UnaryOpNode : public ASTNode
     {
         GENERATED_BODY(UnaryOpNode, ASTNode)
@@ -235,6 +244,8 @@ namespace Volt
     {
         GENERATED_BODY(SubscriptNode, ASTNode)
     public:
+        DataType* TargetType = nullptr;
+
         ASTNode* Target;
         ASTNode* Index;
         SubscriptNode(ASTNode* Target, ASTNode* Index,
@@ -301,6 +312,17 @@ namespace Volt
         ASTNode* Length;
         ArrayTypeNode(DataTypeNodeBase* BaseType, ASTNode* Length, size_t Pos, size_t Line, size_t Column)
             : DerivedTypeNode(BaseType, Pos, Line, Column), Length(Length) {}
+    };
+
+    class ExplicitCastNode : public ASTNode
+    {
+        GENERATED_BODY(ExplicitCastNode, ASTNode)
+    public:
+        DataTypeNodeBase* Type;
+        ASTNode* Target;
+
+        ExplicitCastNode(DataTypeNodeBase* Type, ASTNode* Value, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Type(Type), Target(Value) {}
     };
 
     class VariableNode : public ASTNode
