@@ -6,7 +6,7 @@
 #define CVOLT_FUNCTIONSIGNATURE_H
 
 #include <llvm/ADT/SmallVector.h>
-#include "Volt/Core/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include <string>
 
@@ -28,7 +28,7 @@ namespace Volt
 
             for (size_t i = 0; i < Params.size(); i++)
                 // if (Params[i] != Other.Params[i])
-                if (!DataTypeUtils::IsEqual(Params[i], Other.Params[i]))
+                if (!Params[i]->IsEqual(Other.Params[i]))
                     return false;
 
             return true;

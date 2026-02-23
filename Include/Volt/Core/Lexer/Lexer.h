@@ -24,11 +24,8 @@ namespace Volt
     private:
         static std::unordered_set<char> OperatorChars;
         static std::unordered_map<std::string, TokenType> Operators;
-        //static std::unordered_map<std::string, TokenType> Keywords;
-        //static FixedMap<std::string, TokenType> Operators;
         static FixedMap<std::string, TokenType> Keywords;
         static FixedMap<std::string, TokenType> DataTypes;
-        //static std::unordered_map<std::string, TokenType> DataTypes;
 
     public:
         static std::string GetOperatorLexeme(TokenType Type);
@@ -49,7 +46,6 @@ namespace Volt
         Array<Token>& Tokens;
 
     public:
-        //Lexer(const std::string& Expr);
         Lexer(CompilationContext& Context)
             : Context(Context), Code(Context.Code), CodeSize(Code.Length()), Tokens(Context.Tokens) {}
 

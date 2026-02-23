@@ -7,7 +7,6 @@
 
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Core/Types/DataTypeUtils.h"
 #include "Volt/Compiler/Hash/DataTypeHash.h"
 #include "Volt/Core/Lexer/Token.h"
 #include "Volt/Core/AST/ASTNodes.h"
@@ -32,7 +31,7 @@ namespace Volt
 
 			bool operator==(const DataTypeWrap& Other) const
 			{
-				return DataTypeUtils::IsEqual(Type, Other.Type);
+				return Type->IsEqual(Other.Type);
 			}
 		};
 
@@ -74,6 +73,7 @@ namespace Volt
 		[[nodiscard]] FloatingPointType* GetFPType(size_t BitWidth);
 		[[nodiscard]] PointerType* GetPointerType(DataType *BaseType);
 		[[nodiscard]] ArrayType* GetArrayType(DataType *BaseType, size_t Length);
+		[[nodiscard]] ConstType* GetConstType(DataType *BaseType);
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);
 
 		friend struct Token;

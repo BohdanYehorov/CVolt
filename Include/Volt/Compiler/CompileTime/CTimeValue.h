@@ -6,7 +6,8 @@
 #define CVOLT_CTIMEVALUE_H
 
 #include "Volt/Core/Object/Object.h"
-#include "Volt/Core/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataType.h"
+#include "Volt/Core/Memory/Arena.h"
 
 namespace Volt
 {

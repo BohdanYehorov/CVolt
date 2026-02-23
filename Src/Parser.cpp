@@ -35,7 +35,7 @@ namespace Volt
 
             CTimeValue* Value = Node->CompileTimeValue;
 
-            switch (DataTypeUtils::GetTypeCategory(Value->Type))
+            switch (Value->Type->GetCategory())
             {
                 case TypeCategory::INTEGER:
                     Os << Value->Int;
@@ -532,7 +532,15 @@ namespace Volt
         if (!IsValidIndex())
             return nullptr;
 
+        bool IsConst = false;
+        if (ConsumeIf(TokenType::TYPE_CONST))
+            IsConst = true;
+
         const Token& Tok = CurrentToken();
+
+        size_t StartPos = Tok.Pos;
+        size_t StartLine = Tok.Line;
+        size_t StartColumn = Tok.Column;
 
         PrimitiveDataType* Type;
         switch (Tok.Type)
@@ -566,21 +574,30 @@ namespace Volt
         }
         Consume();
 
-        DataTypeNodeBase* TypeNode = NodesArena.Create<PrimitiveTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
+        DataTypeNodeBase* TypeNode = NodesArena.Create<PrimitiveTypeNode>(
+            Type, Tok.Pos, Tok.Line, Tok.Column);
 
         if (!IsValidIndex())
-            return NodesArena.Create<DataTypeNode>(Type, Tok.Pos, Tok.Line, Tok.Column);
+        {
+            if (IsConst)
+                return NodesArena.Create<ConstTypeNode>(
+                    TypeNode, StartPos, StartLine, StartColumn);
+
+            return TypeNode;
+        }
 
         while (true)
         {
             switch (const Token& Tok = CurrentToken(); Tok.Type)
             {
                 case TokenType::OP_MUL:
-                    TypeNode = NodesArena.Create<PointerTypeNode>(TypeNode, Tok.Pos, Tok.Line, Tok.Column);
+                    TypeNode = NodesArena.Create<PointerTypeNode>(
+                        TypeNode, Tok.Pos, Tok.Line, Tok.Column);
                     Consume();
                     break;
                 case TokenType::OP_REFERENCE:
-                    TypeNode = NodesArena.Create<ReferenceTypeNode>(TypeNode, Tok.Pos, Tok.Line, Tok.Column);
+                    TypeNode = NodesArena.Create<ReferenceTypeNode>(
+                        TypeNode, Tok.Pos, Tok.Line, Tok.Column);
                     Consume();
                     break;
                 case TokenType::OP_LBRACKET:
@@ -598,6 +615,10 @@ namespace Volt
                     break;
                 }
                 default:
+                    if (IsConst)
+                        return NodesArena.Create<ConstTypeNode>(
+                            TypeNode, StartPos, StartLine, StartColumn);
+
                     return TypeNode;
             }
         }

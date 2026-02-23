@@ -96,10 +96,23 @@ namespace Volt
 		return ArrType;
 	}
 
+	ConstType *CompilationContext::GetConstType(DataType *BaseType)
+	{
+		ConstType ConstDataType(BaseType);
+
+		if (auto Iter = CachedTypes.find(&ConstDataType); Iter != CachedTypes.end())
+			return Cast<ConstType>(Iter->Type);
+
+		auto CstType = MainArena.Create<ConstType>(BaseType);
+		CachedTypes.insert(CstType);
+
+		return CstType;
+	}
+
 	llvm::Type *CompilationContext::GetLLVMType(DataType *Type)
 	{
 		if (!Type->CachedType)
-			Type->CachedType = DataTypeUtils::GetLLVMType(Type, Context);
+			Type->CachedType = Type->ToLLVMType(Context);
 
 		return Type->CachedType;
 	}

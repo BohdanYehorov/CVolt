@@ -4,12 +4,11 @@
 
 #ifndef CVOLT_BUILTINFUNCTIONTABLE_H
 #define CVOLT_BUILTINFUNCTIONTABLE_H
-#include "Volt/Core/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataType.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Compiler/Hash/FunctionSignatureHash.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Core/Functions/BuiltinFuncCallee.h"
-#include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 

@@ -5,17 +5,42 @@
 #ifndef CVOLT_DATATYPEBASE_H
 #define CVOLT_DATATYPEBASE_H
 
+#include <llvm/IR/DerivedTypes.h>
+
 #include "Volt/Core/Object/Object.h"
+#include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include <llvm/IR/Type.h>
 
 namespace Volt
 {
+    enum class TypeCategory : UInt8
+    {
+        INVALID,
+        VOID,
+        CHAR,
+        BOOLEAN,
+        INTEGER,
+        FLOATING_POINT,
+        POINTER,
+        REFERENCE,
+        ARRAY,
+        CONSTANT
+    };
+
     class DataType : public Object
     {
         GENERATED_BODY(DataTypeBase, Object)
     private:
         mutable size_t CachedHash = 0;
         llvm::Type* CachedType = nullptr;
+
+    public:
+        virtual bool IsEqual(const DataType* Other) const = 0;
+        virtual llvm::Type* ToLLVMType(llvm::LLVMContext& Context) const = 0;
+        virtual int GetRank() const = 0;
+        virtual std::string ToString() const = 0;
+        virtual TypeCategory GetCategory() const = 0;
+
         friend class DataTypeHash;
         friend class CompilationContext;
     };
@@ -28,16 +53,61 @@ namespace Volt
     class VoidType : public PrimitiveDataType
     {
         GENERATED_BODY(VoidType, PrimitiveDataType)
+
+    public:
+        bool IsEqual(const DataType* Other) const override
+        {
+            return Cast<const VoidType>(Other) != nullptr;
+        }
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            return llvm::Type::getVoidTy(Context);
+        }
+
+        int GetRank() const override { return 0; }
+        std::string ToString() const override { return "void"; }
+        TypeCategory GetCategory() const override { return TypeCategory::VOID; }
     };
 
     class BoolType : public PrimitiveDataType
     {
         GENERATED_BODY(BoolType, PrimitiveDataType)
+
+    public:
+        bool IsEqual(const DataType* Other) const override
+        {
+            return Cast<const BoolType>(Other) != nullptr;
+        }
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            return llvm::IntegerType::getInt1Ty(Context);
+        }
+
+        int GetRank() const override { return 1; }
+        std::string ToString() const override { return "bool"; }
+        TypeCategory GetCategory() const override { return TypeCategory::BOOLEAN; }
     };
 
     class CharType : public PrimitiveDataType
     {
         GENERATED_BODY(CharType, PrimitiveDataType)
+
+    public:
+        bool IsEqual(const DataType* Other) const override
+        {
+            return Cast<const CharType>(Other) != nullptr;
+        }
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            return llvm::IntegerType::getInt8Ty(Context);
+        }
+
+        int GetRank() const override { return 1; }
+        std::string ToString() const override { return "char"; }
+        TypeCategory GetCategory() const override { return TypeCategory::CHAR; }
     };
 
     class IntegerType : public PrimitiveDataType
@@ -48,6 +118,18 @@ namespace Volt
         bool IsSigned;
         IntegerType(size_t BitWidth, bool IsSigned = false)
             : BitWidth(BitWidth), IsSigned(IsSigned) {}
+
+    public:
+        bool IsEqual(const DataType* Other) const override;
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            return llvm::IntegerType::getIntNTy(Context, BitWidth);
+        }
+
+        int GetRank() const override;
+        std::string ToString() const override;
+        TypeCategory GetCategory() const override { return TypeCategory::INTEGER; }
     };
 
     class FloatingPointType : public PrimitiveDataType
@@ -56,6 +138,13 @@ namespace Volt
     public:
         size_t BitWidth;
         FloatingPointType(size_t BitWidth) : BitWidth(BitWidth) {}
+
+    public:
+        bool IsEqual(const DataType* Other) const override;
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
+        int GetRank() const override;
+        std::string ToString() const override;
+        TypeCategory GetCategory() const override { return TypeCategory::FLOATING_POINT; }
     };
 
     class PointerType : public DataType
@@ -65,6 +154,39 @@ namespace Volt
         DataType* BaseType;
         PointerType(DataType* BaseType)
             : BaseType(BaseType) {}
+
+    public:
+        bool IsEqual(const DataType* Other) const override;
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            return llvm::PointerType::get(Context, 0);
+        }
+
+        int GetRank() const override { return 11; }
+        std::string ToString() const override { return BaseType ? BaseType->ToString() + "*" : "?"; }
+        TypeCategory GetCategory() const override { return TypeCategory::POINTER; }
+    };
+
+    class ReferenceType : public DataType
+    {
+        GENERATED_BODY(ReferenceType, DataType)
+    public:
+        DataType* BaseType;
+        ReferenceType(DataType* BaseType)
+            : BaseType(BaseType) {}
+
+    public:
+        bool IsEqual(const DataType* Other) const override;
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            return llvm::PointerType::get(Context, 0);
+        }
+
+        int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
+        std::string ToString() const override { return BaseType ? BaseType->ToString() + "$" : "?"; }
+        TypeCategory GetCategory() const override { return TypeCategory::REFERENCE; }
     };
 
     class ArrayType : public DataType
@@ -79,15 +201,41 @@ namespace Volt
             : BaseType(BaseType), Length(Length), LengthInit(true) {}
         ArrayType(DataType* BaseType)
             : BaseType(BaseType), Length(0), LengthInit(false) {}
+
+    public:
+        bool IsEqual(const DataType* Other) const override;
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            if (!BaseType) return nullptr;
+            return llvm::ArrayType::get(BaseType->ToLLVMType(Context), Length);
+        }
+
+        int GetRank() const override { return 12; }
+        std::string ToString() const override;
+        TypeCategory GetCategory() const override { return TypeCategory::ARRAY; }
     };
 
-    class ReferenceType : public DataType
+    class ConstType : public DataType
     {
-        GENERATED_BODY(ReferenceType, DataType)
+        GENERATED_BODY(ConstType, DataType)
     public:
         DataType* BaseType;
-        ReferenceType(DataType* BaseType)
+        ConstType(DataType* BaseType)
             : BaseType(BaseType) {}
+
+    public:
+        bool IsEqual(const DataType* Other) const override;
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            if (!BaseType) return nullptr;
+            return BaseType->ToLLVMType(Context);
+        }
+
+        int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
+        std::string ToString() const override { return BaseType ? "const " + BaseType->ToString() : "?"; }
+        TypeCategory GetCategory() const override { return TypeCategory::CONSTANT; }
     };
 }
 

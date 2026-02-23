@@ -207,7 +207,7 @@ namespace Volt
             else if (ElementsType != ElType)
             {
                 SendError(TypeErrorKind::ArrayElementTypeMismatch,
-                    El, { DataTypeUtils::TypeToString(ElementsType), DataTypeUtils::TypeToString(ElType) });
+                    El, { ElementsType->ToString(), ElType->ToString() });
                 HasErrors = true;
             }
         }
@@ -277,14 +277,14 @@ namespace Volt
             case OperatorType::INC:
             case OperatorType::DEC:
             {
-                if (DataTypeUtils::GetTypeCategory(SuffixType) == TypeCategory::INTEGER)
+                if (SuffixType->GetCategory() == TypeCategory::INTEGER)
                 {
                     Suffix->ResolvedType = SuffixType;
                     return CTimeValue::CreateNull(SuffixType, MainArena);
                 }
 
                 SendError(TypeErrorKind::InvalidUnaryOperator, Suffix,
-                    { Operator::ToString(Suffix->Type), DataTypeUtils::TypeToString(SuffixType) });
+                    { Operator::ToString(Suffix->Type), SuffixType->ToString() });
                 return nullptr;
             }
             default:
@@ -307,13 +307,13 @@ namespace Volt
             case OperatorType::INC:
             case OperatorType::DEC:
             {
-                if (DataTypeUtils::GetTypeCategory(PrefixType) == TypeCategory::INTEGER)
+                if (PrefixType->GetCategory() == TypeCategory::INTEGER)
                 {
                     Prefix->ResolvedType = PrefixType;
                     return CTimeValue::CreateNull(PrefixType,  MainArena);
                 }
                 SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
-                    { Operator::ToString(Prefix->Type), DataTypeUtils::TypeToString(PrefixType) });
+                    { Operator::ToString(Prefix->Type), PrefixType->ToString() });
 
                 return nullptr;
             }
@@ -332,7 +332,7 @@ namespace Volt
         if (!OperandType)
             return nullptr;
 
-        TypeCategory OperandTypeCategory = DataTypeUtils::GetTypeCategory(OperandType);
+        TypeCategory OperandTypeCategory = OperandType->GetCategory();
 
         switch (Unary->Type)
         {
@@ -469,7 +469,7 @@ namespace Volt
             ErrorContext.Reserve(ArgsCount);
 
             for (auto Arg : ArgTypes)
-                ErrorContext.Add(DataTypeUtils::TypeToString(Arg));
+                ErrorContext.Add(Arg->ToString());
 
             SendError(TypeErrorKind::NoFunctionOverload, Call->Callee, std::move(ErrorContext));
             return nullptr;
@@ -539,7 +539,7 @@ namespace Volt
         }
 
         SendError(TypeErrorKind::IncompatibleTypes, ECast->Line, ECast->Column,
-            { DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target->Type) });
+            { SrcType->ToString(), Target->Type->ToString() });
         return nullptr;
     }
 
@@ -554,8 +554,8 @@ namespace Volt
         if (Value && !ImplicitCast(Value->Type, VarType))
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
-                Variable,{Variable->Name.str(),
-                DataTypeUtils::TypeToString(VarType), DataTypeUtils::TypeToString(Value->Type)});
+                Variable,{ Variable->Name.str(),
+                VarType->ToString(), Value->Type->ToString() });
             return nullptr;
         }
 
@@ -694,7 +694,7 @@ namespace Volt
         if (auto Array = Cast<ArrayTypeNode>(Type))
         {
             CTimeValue* Length = VisitNode(Array->Length);
-            if (Length && DataTypeUtils::GetTypeCategory(Length->Type) == TypeCategory::INTEGER)
+            if (Length && Length->Type->GetCategory() == TypeCategory::INTEGER)
             {
                 Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
                 return Array->ResolvedType;
@@ -706,9 +706,23 @@ namespace Volt
         return nullptr;
     }
 
+    CTimeValue *TypeChecker::GetLValue(ASTNode *Node)
+    {
+        if (auto Identifier = Cast<IdentifierNode>(Node))
+        {
+            CTimeValue* Value = VisitIdentifier(Identifier);
+            if (!Value)
+                return nullptr;
+
+            //if (Value->Type->)
+        }
+        //if (auto Subscript )
+        return nullptr;
+    }
+
     bool TypeChecker::CanCastPointers(PointerType *Src, PointerType *Dst)
     {
-        return Src == Dst || DataTypeUtils::GetTypeCategory(Dst->BaseType) == TypeCategory::VOID;
+        return Src == Dst || Dst->BaseType->GetCategory() == TypeCategory::VOID;
     }
 
     bool TypeChecker::CanImplicitCast(DataType* Src, DataType* Dst) const
@@ -719,8 +733,8 @@ namespace Volt
             if (auto DstPtrType = Cast<PointerType>(Dst))
                 return CanCastPointers(SrcPtrType, DstPtrType);
 
-        TypeCategory SrcTypeCategory = DataTypeUtils::GetTypeCategory(Src);
-        TypeCategory DstTypeCategory = DataTypeUtils::GetTypeCategory(Dst);
+        TypeCategory SrcTypeCategory = Src->GetCategory();
+        TypeCategory DstTypeCategory = Dst->GetCategory();
 
         if (auto SrcIter = ImplicitCastTypes.find(SrcTypeCategory); SrcIter != ImplicitCastTypes.end())
         {
@@ -734,8 +748,8 @@ namespace Volt
 
     bool TypeChecker::CanCastArithmetic(DataType* Left, DataType* Right, OperatorType Type) const
     {
-        TypeCategory LeftTypeCategory = DataTypeUtils::GetTypeCategory(Left);
-        TypeCategory RightTypeCategory = DataTypeUtils::GetTypeCategory(Right);
+        TypeCategory LeftTypeCategory = Left->GetCategory();
+        TypeCategory RightTypeCategory = Right->GetCategory();
 
         switch (Type)
         {
@@ -794,8 +808,8 @@ namespace Volt
 
     bool TypeChecker::CanCastComparison(DataType* Left, DataType* Right, OperatorType Type) const
     {
-        TypeCategory LeftTypeCategory = DataTypeUtils::GetTypeCategory(Left);
-        TypeCategory RightTypeCategory = DataTypeUtils::GetTypeCategory(Right);
+        TypeCategory LeftTypeCategory = Left->GetCategory();
+        TypeCategory RightTypeCategory = Right->GetCategory();
 
         switch (Type)
         {
@@ -856,8 +870,8 @@ namespace Volt
 
     bool TypeChecker::CanCastBitwise(DataType* Left, DataType* Right, OperatorType Type) const
     {
-        TypeCategory LeftTypeCategory = DataTypeUtils::GetTypeCategory(Left);
-        TypeCategory RightTypeCategory = DataTypeUtils::GetTypeCategory(Right);
+        TypeCategory LeftTypeCategory = Left->GetCategory();
+        TypeCategory RightTypeCategory = Right->GetCategory();
 
         switch (Type)
         {
@@ -914,12 +928,12 @@ namespace Volt
         if (!CanCastToJointType(Left, Right, Type))
         {
             SendError(TypeErrorKind::InvalidBinaryOperator, Line, Column,{ Operator::ToString(Type),
-                DataTypeUtils::TypeToString(Left), DataTypeUtils::TypeToString(Right) });
+               Left->ToString(), Left->ToString() });
             return false;
         }
 
-        int LeftTypeRank = DataTypeUtils::GetTypeRank(Left);
-        int RightTypeRank = DataTypeUtils::GetTypeRank(Right);
+        int LeftTypeRank = Left->GetRank(); // GetTypeRank(Left);
+        int RightTypeRank = Right->GetRank(); // GetTypeRank(Right);
 
         if (LeftTypeRank == -1 || RightTypeRank == -1)
             return false;
@@ -950,7 +964,7 @@ namespace Volt
             return true;
 
         SendError(TypeErrorKind::IncompatibleTypes, Line, Column,
-            { DataTypeUtils::TypeToString(Src), DataTypeUtils::TypeToString(Dst) });
+            { Src->ToString(), Dst->ToString() });
         return false;
     }
 
@@ -972,8 +986,8 @@ namespace Volt
             }
         }
 
-        TypeCategory SrcTypeCategory = DataTypeUtils::GetTypeCategory(SrcType);
-        TypeCategory DstTypeCategory = DataTypeUtils::GetTypeCategory(DstType);
+        TypeCategory SrcTypeCategory = SrcType->GetCategory();
+        TypeCategory DstTypeCategory = DstType->GetCategory();
 
         if (auto SrcIter = ImplicitCastTypes.find(SrcTypeCategory); SrcIter != ImplicitCastTypes.end())
         {
@@ -1055,12 +1069,12 @@ namespace Volt
         if (!CanCastToJointType(LeftType, RightType, Type))
         {
             SendError(TypeErrorKind::InvalidBinaryOperator, Line, Column,{ Operator::ToString(Type),
-                DataTypeUtils::TypeToString(LeftType), DataTypeUtils::TypeToString(RightType) });
+                LeftType->ToString(), RightType->ToString() });
             return false;
         }
 
-        int LeftTypeRank = DataTypeUtils::GetTypeRank(LeftType);
-        int RightTypeRank = DataTypeUtils::GetTypeRank(RightType);
+        int LeftTypeRank =  LeftType->GetRank(); // GetTypeRank(LeftType);
+        int RightTypeRank = RightType->GetRank(); // GetTypeRank(RightType);
 
         if (LeftTypeRank == -1 || RightTypeRank == -1)
             return false;
@@ -1083,7 +1097,7 @@ namespace Volt
 
         if (auto DstPtrType = Cast<PointerType>(Dst))
             if (auto SrcPtrType = Cast<PointerType>(Src))
-                return DataTypeUtils::GetTypeCategory(DstPtrType->BaseType) == TypeCategory::VOID;
+                return DstPtrType->BaseType->GetCategory() == TypeCategory::VOID;
 
         return false;
     }
@@ -1108,7 +1122,7 @@ namespace Volt
         {
             if (auto DstPtrType = Cast<PointerType>(Dst))
             {
-                if (DataTypeUtils::GetTypeCategory(SrcPtrType->BaseType) == TypeCategory::VOID)
+                if (SrcPtrType->BaseType->GetCategory() == TypeCategory::VOID)
                 {
                     Src->Type = Dst;
                     return true;
@@ -1164,7 +1178,7 @@ namespace Volt
         if (!Operand->IsValid)
             return CTimeValue::CreateNull(Operand->Type, MainArena);
 
-        TypeCategory OperandTypeCategory = DataTypeUtils::GetTypeCategory(Operand->Type);
+        TypeCategory OperandTypeCategory = Operand->Type->GetCategory();
         switch (Type)
         {
             case OperatorType::ADD:
@@ -1207,7 +1221,7 @@ namespace Volt
         }
     }
 
-#define CREATE_OP_FOR_ALL_TYPES(Op) switch (DataTypeUtils::GetTypeCategory(Left->Type)) \
+#define CREATE_OP_FOR_ALL_TYPES(Op) switch (Left->Type->GetCategory()) \
     { \
         case TypeCategory::INTEGER: \
             return CTimeValue::CreateInteger(Left->Type, Left->Int Op Right->Int, MainArena); \
@@ -1218,7 +1232,7 @@ namespace Volt
         default: return nullptr; \
     }
 
-#define CREATE_CMP_FOR_ALL_TYPES(Op) switch (DataTypeUtils::GetTypeCategory(Left->Type)) \
+#define CREATE_CMP_FOR_ALL_TYPES(Op) switch (Left->Type->GetCategory()) \
     { \
         case TypeCategory::INTEGER: \
             return CTimeValue::CreateBool(CContext.GetBoolType(), Left->Int Op Right->Int, MainArena); \
@@ -1229,14 +1243,14 @@ namespace Volt
         default: return nullptr; \
     }
 
-#define CREATE_OP_FOR_INT(Op) switch (DataTypeUtils::GetTypeCategory(Left->Type)) \
+#define CREATE_OP_FOR_INT(Op) switch (Left->Type->GetCategory()) \
     { \
     case TypeCategory::INTEGER: \
         return CTimeValue::CreateInteger(Left->Type, Left->Int Op Right->Int, MainArena); \
     default: return nullptr; \
     }
 
-#define CREATE_OP_FOR_BOOL(Op) switch (DataTypeUtils::GetTypeCategory(Left->Type)) \
+#define CREATE_OP_FOR_BOOL(Op) switch (Left->Type->GetCategory()) \
     { \
         case TypeCategory::BOOLEAN: \
             return CTimeValue::CreateBool(Left->Type, Left->Bool Op Right->Bool, MainArena); \

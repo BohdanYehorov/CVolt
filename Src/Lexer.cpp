@@ -85,6 +85,7 @@ namespace Volt
 	};
 
 	FixedMap<std::string, TokenType> Lexer::DataTypes = {
+		{"const", TokenType::TYPE_CONST },
 		{ "void", TokenType::TYPE_VOID },
 
 		{ "bool", TokenType::TYPE_BOOL },

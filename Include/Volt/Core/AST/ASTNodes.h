@@ -296,14 +296,14 @@ namespace Volt
             : DerivedTypeNode(BaseType, Pos, Line, Column) {}
     };
 
-    class DataTypeNode : public DataTypeNodeBase
-    {
-        GENERATED_BODY(DataTypeNode, DataTypeNodeBase)
-    public:
-        DataType* Type;
-        DataTypeNode(DataType* Type, size_t Pos, size_t Line, size_t Column)
-            : DataTypeNodeBase(Pos, Line, Column), Type(Type) {}
-    };
+    // class DataTypeNode : public DataTypeNodeBase
+    // {
+    //     GENERATED_BODY(DataTypeNode, DataTypeNodeBase)
+    // public:
+    //     DataType* Type;
+    //     DataTypeNode(DataType* Type, bool IsConst, size_t Pos, size_t Line, size_t Column)
+    //         : DataTypeNodeBase(IsConst, Pos, Line, Column), Type(Type) {}
+    // };
 
     class ArrayTypeNode : public DerivedTypeNode
     {
@@ -312,6 +312,14 @@ namespace Volt
         ASTNode* Length;
         ArrayTypeNode(DataTypeNodeBase* BaseType, ASTNode* Length, size_t Pos, size_t Line, size_t Column)
             : DerivedTypeNode(BaseType, Pos, Line, Column), Length(Length) {}
+    };
+
+    class ConstTypeNode : public DerivedTypeNode
+    {
+        GENERATED_BODY(ConstTypeNode, DerivedTypeNode)
+    public:
+        ConstTypeNode(DataTypeNodeBase* BaseType, size_t Pos, size_t Line, size_t Column)
+            : DerivedTypeNode(BaseType, Pos, Line, Column) {}
     };
 
     class ExplicitCastNode : public ASTNode

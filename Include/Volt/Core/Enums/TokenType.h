@@ -87,6 +87,7 @@ namespace Volt
 		KW_BREAK,
 		KW_CONTINUE,
 
+		TYPE_CONST,
 		TYPE_VOID,
 
 		TYPE_BOOL,

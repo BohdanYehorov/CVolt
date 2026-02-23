@@ -19,7 +19,7 @@ namespace Volt
         if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
         {
             CTimeValue* Value = Node->CompileTimeValue;
-            switch (DataTypeUtils::GetTypeCategory(Value->Type))
+            switch (Value->Type->GetCategory())
             {
                 case TypeCategory::INTEGER:
                     return Create<TypedValue>(llvm::ConstantInt::get(
@@ -496,6 +496,7 @@ namespace Volt
         llvm::Value* RightVal = Right->GetValue();
 
         bool IsFP = Cast<FloatingPointType>(Type);
+        auto PtrType = Cast<PointerType>(Type);
         bool IsSigned = false;
         if (auto IntType = Cast<IntegerType>(Type))
             IsSigned = IntType->IsSigned;
@@ -620,7 +621,7 @@ namespace Volt
         DataType* VarType = Var->Type->ResolvedType;
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        llvm::Type* Type = DataTypeUtils::GetLLVMType(VarType, Context);
+        llvm::Type* Type = CContext.GetLLVMType(VarType);
 
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
@@ -656,10 +657,10 @@ namespace Volt
         for (const auto Param : Function->Params)
         {
             DataType* ParamType = Param->Type->ResolvedType;
-            Params.push_back(DataTypeUtils::GetLLVMType(ParamType, Context));
+            Params.push_back(CContext.GetLLVMType(ParamType));
         }
 
-        llvm::Type* RetType = DataTypeUtils::GetLLVMType(Function->ReturnType->ResolvedType, Context);
+        llvm::Type* RetType = CContext.GetLLVMType(Function->ReturnType->ResolvedType);
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
 
@@ -1013,7 +1014,7 @@ namespace Volt
 
         if (Cast<PointerType>(SrcType))
             if (auto DstPtrType = Cast<PointerType>(Target))
-                if (DataTypeUtils::GetTypeCategory(DstPtrType->BaseType) == TypeCategory::VOID)
+                if (DstPtrType->BaseType->GetCategory() == TypeCategory::VOID)
                     return Value;
 
         // ERROR(std::format("Cannot convert '{}' to '{}'",

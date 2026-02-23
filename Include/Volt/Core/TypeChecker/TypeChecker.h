@@ -6,7 +6,7 @@
 #define CVOLT_TYPECHECKER_H
 
 #include "Volt/Core/Parser/Parser.h"
-#include "Volt/Core/Types/DataTypeUtils.h"
+#include "Volt/Core/Types/DataType.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
 #include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
@@ -99,6 +99,7 @@ namespace Volt
         CTimeValue *VisitReturn(ReturnNode *Return);
 
         DataType *VisitType(DataTypeNodeBase *Type);
+        CTimeValue* GetLValue(ASTNode* Node);
 
         template <typename MapT>
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);
@@ -172,7 +173,7 @@ namespace Volt
                     Casts++;
 
                 RankDiff += std::abs(
-                    DataTypeUtils::GetTypeRank(CandidateArgType) - DataTypeUtils::GetTypeRank(ArgType));
+                    CandidateArgType->GetRank() - ArgType->GetRank());
             }
 
             if (!Valid) continue;
