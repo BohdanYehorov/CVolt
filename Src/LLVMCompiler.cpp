@@ -947,80 +947,85 @@ namespace Volt
 
     TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataType* Target)
     {
-        DataType* SrcType = Value->GetDataType();
-        llvm::Type* TargetLLVMType = CContext.GetLLVMType(Target);
-        llvm::Type* SrcLLVMType = CContext.GetLLVMType(SrcType);
-
-        if (SrcType == Target)
+        if (Value->CastTo(Target, Builder, CContext))
             return Value;
 
-        if (Cast<BoolType>(SrcType))
-        {
-            if (Cast<IntegerType>(Target))
-                return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
-                    TargetLLVMType), Target);
-
-            if (Cast<FloatingPointType>(Target))
-                return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
-                    TargetLLVMType), Target);
-
-            if (Cast<PointerType>(Target))
-                return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
-                            llvm::ConstantPointerNull::get(
-                            llvm::cast<llvm::PointerType>(SrcLLVMType))), Target);
-        }
-
-        if (auto SrcIntType = Cast<IntegerType>(SrcType))
-        {
-            if (Cast<BoolType>(Target))
-                return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
-                            llvm::ConstantInt::get(SrcLLVMType, 0)), Target);
-
-            if (auto TargetIntType = Cast<IntegerType>(Target))
-            {
-                if (SrcIntType->BitWidth < TargetIntType->BitWidth)
-                    return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
-                        TargetLLVMType), Target);
-
-                return Create<TypedValue>(Builder.CreateTrunc(Value->GetValue(),
-                    TargetLLVMType), Target);
-            }
-
-            if (Cast<FloatingPointType>(Target))
-                return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
-                    TargetLLVMType), Target);
-        }
-
-        if (auto SrcFloatType = Cast<FloatingPointType>(SrcType))
-        {
-            if (Cast<BoolType>(Target))
-                return Create<TypedValue>(Builder.CreateFCmpONE(Value->GetValue(),
-                            llvm::ConstantFP::get(SrcLLVMType, 0.0 )), Target);
-
-            if (Cast<IntegerType>(Target))
-                return Create<TypedValue>(Builder.CreateFPToSI(Value->GetValue(),
-                    TargetLLVMType), Target);
-
-            if (auto TargetFloatType = Cast<FloatingPointType>(Target))
-            {
-                if (SrcFloatType->BitWidth < TargetFloatType->BitWidth)
-                    return Create<TypedValue>(Builder.CreateFPExt(Value->GetValue(),
-                        TargetLLVMType), Target);
-
-                return Create<TypedValue>(Builder.CreateFPTrunc(Value->GetValue(),
-                    TargetLLVMType), Target);
-            }
-        }
-
-        if (Cast<PointerType>(SrcType))
-            if (auto DstPtrType = Cast<PointerType>(Target))
-                if (DstPtrType->BaseType->GetCategory() == TypeCategory::VOID)
-                    return Value;
-
-        // ERROR(std::format("Cannot convert '{}' to '{}'",
-        //     DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target)))
-
         return nullptr;
+
+        // DataType* SrcType = Value->GetDataType();
+        // llvm::Type* TargetLLVMType = CContext.GetLLVMType(Target);
+        // llvm::Type* SrcLLVMType = CContext.GetLLVMType(SrcType);
+        //
+        // if (SrcType == Target)
+        //     return Value;
+        //
+        // if (Cast<BoolType>(SrcType))
+        // {
+        //     if (Cast<IntegerType>(Target))
+        //         return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
+        //             TargetLLVMType), Target);
+        //
+        //     if (Cast<FloatingPointType>(Target))
+        //         return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
+        //             TargetLLVMType), Target);
+        //
+        //     if (Cast<PointerType>(Target))
+        //         return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
+        //                     llvm::ConstantPointerNull::get(
+        //                     llvm::cast<llvm::PointerType>(SrcLLVMType))), Target);
+        // }
+        //
+        // if (auto SrcIntType = Cast<IntegerType>(SrcType))
+        // {
+        //     if (Cast<BoolType>(Target))
+        //         return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
+        //                     llvm::ConstantInt::get(SrcLLVMType, 0)), Target);
+        //
+        //     if (auto TargetIntType = Cast<IntegerType>(Target))
+        //     {
+        //         if (SrcIntType->BitWidth < TargetIntType->BitWidth)
+        //             return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
+        //                 TargetLLVMType), Target);
+        //
+        //         return Create<TypedValue>(Builder.CreateTrunc(Value->GetValue(),
+        //             TargetLLVMType), Target);
+        //     }
+        //
+        //     if (Cast<FloatingPointType>(Target))
+        //         return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
+        //             TargetLLVMType), Target);
+        // }
+        //
+        // if (auto SrcFloatType = Cast<FloatingPointType>(SrcType))
+        // {
+        //     if (Cast<BoolType>(Target))
+        //         return Create<TypedValue>(Builder.CreateFCmpONE(Value->GetValue(),
+        //                     llvm::ConstantFP::get(SrcLLVMType, 0.0 )), Target);
+        //
+        //     if (Cast<IntegerType>(Target))
+        //         return Create<TypedValue>(Builder.CreateFPToSI(Value->GetValue(),
+        //             TargetLLVMType), Target);
+        //
+        //     if (auto TargetFloatType = Cast<FloatingPointType>(Target))
+        //     {
+        //         if (SrcFloatType->BitWidth < TargetFloatType->BitWidth)
+        //             return Create<TypedValue>(Builder.CreateFPExt(Value->GetValue(),
+        //                 TargetLLVMType), Target);
+        //
+        //         return Create<TypedValue>(Builder.CreateFPTrunc(Value->GetValue(),
+        //             TargetLLVMType), Target);
+        //     }
+        // }
+        //
+        // if (Cast<PointerType>(SrcType))
+        //     if (auto DstPtrType = Cast<PointerType>(Target))
+        //         if (DstPtrType->BaseType->GetCategory() == TypeCategory::VOID)
+        //             return Value;
+        //
+        // // ERROR(std::format("Cannot convert '{}' to '{}'",
+        // //     DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target)))
+        //
+        // return nullptr;
     }
 
     bool LLVMCompiler::CanImplicitCast(DataType* Src, DataType* Dst)

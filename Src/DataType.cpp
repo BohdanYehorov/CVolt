@@ -26,7 +26,7 @@ namespace Volt
 		return Src->ImplicitCast(Dst);
 	}
 
-	DataType *BoolType::ImplicitCast(DataType *To) const
+	DataType *BoolType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
@@ -37,19 +37,23 @@ namespace Volt
 				return To;
 			return nullptr;
 		}
+
+		if (!Explicit)
+			return nullptr;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
 			case TypeCategory::CHAR:
 			case TypeCategory::INTEGER:
+			case TypeCategory::FLOATING_POINT:
 				return To;
 			default:
 				return nullptr;
 		}
 	}
 
-	DataType *CharType::ImplicitCast(DataType *To) const
+	DataType *CharType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
@@ -64,6 +68,7 @@ namespace Volt
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
+				return Explicit ? To : nullptr;
 			case TypeCategory::CHAR:
 			case TypeCategory::INTEGER:
 			case TypeCategory::FLOATING_POINT:
@@ -103,7 +108,7 @@ namespace Volt
 		}
 	}
 
-	DataType *IntegerType::ImplicitCast(DataType *To) const
+	DataType *IntegerType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
@@ -118,6 +123,7 @@ namespace Volt
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
+				return Explicit ? To : nullptr;
 			case TypeCategory::CHAR:
 			case TypeCategory::INTEGER:
 			case TypeCategory::FLOATING_POINT:
@@ -168,7 +174,7 @@ namespace Volt
 		}
 	}
 
-	DataType *FloatingPointType::ImplicitCast(DataType *To) const
+	DataType *FloatingPointType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
@@ -182,6 +188,8 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
+			case TypeCategory::BOOLEAN:
+				return Explicit ? To : nullptr;
 			case TypeCategory::CHAR:
 			case TypeCategory::INTEGER:
 			case TypeCategory::FLOATING_POINT:
@@ -198,7 +206,7 @@ namespace Volt
 		return false;
 	}
 
-	DataType *PointerType::ImplicitCast(DataType *To) const
+	DataType *PointerType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
@@ -214,6 +222,10 @@ namespace Volt
 		{
 			if (PtrType->BaseType->GetCategory() == TypeCategory::VOID)
 				return To;
+
+			if (Explicit && BaseType->GetCategory() == TypeCategory::VOID)
+				return To;
+
 			return nullptr;
 		}
 
@@ -248,7 +260,7 @@ namespace Volt
 		return BaseType ? BaseType->ToString() + "[" + std::to_string(Length) + "]" : "?";
 	}
 
-	DataType *ArrayType::ImplicitCast(DataType *To) const
+	DataType *ArrayType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
@@ -270,11 +282,19 @@ namespace Volt
 		return false;
 	}
 
-	DataType* ConstType::ImplicitCast(DataType *To) const
+	DataType* ConstType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
 
-		return nullptr;
+		if (auto CstType = Cast<ConstType>(To))
+		{
+			if (BaseType->CastTo(CstType->BaseType, Explicit))
+				return To;
+
+			return nullptr;
+		}
+
+		return BaseType->CastTo(To, Explicit);
 	}
 }

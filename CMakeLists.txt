@@ -33,6 +33,7 @@ set(SOURCES
     Src/TypeError.cpp
     Src/JITEngine.cpp
     Src/DataType.cpp
+        Src/TypedValue.cpp
 )
 
 if (COMPILE_TO_LIB)

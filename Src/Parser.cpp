@@ -547,28 +547,28 @@ namespace Volt
         switch (Tok.Type)
         {
             case TokenType::TYPE_VOID:
-                Type = NodesArena.Create<VoidType>();
+                Type = CContext.GetVoidType();
                 break;
             case TokenType::TYPE_BOOL:
-                Type = NodesArena.Create<BoolType>();
+                Type = CContext.GetBoolType();
                 break;
             case TokenType::TYPE_CHAR:
-                Type = NodesArena.Create<CharType>();
+                Type = CContext.GetCharType();
                 break;
             case TokenType::TYPE_BYTE:
-                Type = NodesArena.Create<IntegerType>(8);
+                Type = CContext.GetIntegerType(8);
                 break;
             case TokenType::TYPE_INT:
-                Type = NodesArena.Create<IntegerType>(32);
+                Type = CContext.GetIntegerType(32);
                 break;
             case TokenType::TYPE_LONG:
-                Type = NodesArena.Create<IntegerType>(64);
+                Type = CContext.GetIntegerType(64);
                 break;
             case TokenType::TYPE_FLOAT:
-                Type = NodesArena.Create<FloatingPointType>(32);
+                Type = CContext.GetFPType(32);
                 break;
             case TokenType::TYPE_DOUBLE:
-                Type = NodesArena.Create<FloatingPointType>(64);
+                Type = CContext.GetFPType(64);
                 break;
             default:
                 return nullptr;

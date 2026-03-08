@@ -1,12 +1,9 @@
-fun:int Hello(float Num)
-{
-    return 0;
-}
-
 fun:int Main()
 {
-    let:int Num = 5;
-    Hello(Num);
+    let:bool Cond = true;
+    let:int Num = int(Cond);
+
+    Out(Num);
 
     return 0;
 }

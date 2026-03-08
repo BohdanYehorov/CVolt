@@ -118,7 +118,6 @@ namespace Volt
                 return nullptr;
         }
 
-        // Int->ResolvedType = CContext.GetIntegerType(BitWidth);
         Int->CompileTimeValue = CTimeValue::CreateInteger(CContext.GetIntegerType(BitWidth), Int->Value, MainArena);
         return Int->CompileTimeValue;
     }
@@ -138,28 +137,24 @@ namespace Volt
                 return nullptr;
         }
 
-        //Float->ResolvedType = CContext.GetFPType(BitWidth);
         Float->CompileTimeValue = CTimeValue::CreateFloat(CContext.GetFPType(BitWidth), Float->Value, MainArena);
         return Float->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitBool(BoolNode *Bool)
     {
-        // Bool->ResolvedType = CContext.GetBoolType();
         Bool->CompileTimeValue = CTimeValue::CreateBool(CContext.GetBoolType(), Bool->Value, MainArena);
         return Bool->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitChar(CharNode *Char)
     {
-        // Char->ResolvedType = CContext.GetCharType();
         Char->CompileTimeValue = CTimeValue::CreateChar(CContext.GetCharType(), Char->Value, MainArena);
         return Char->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitString(StringNode *String)
     {
-        // String->ResolvedType = CContext.GetPointerType(CContext.GetCharType());
         String->CompileTimeValue = CTimeValue::CreateEmpty(CContext.GetPointerType(CContext.GetCharType()), MainArena);
         return String->CompileTimeValue;
     }
@@ -196,18 +191,22 @@ namespace Volt
         if (HasErrors)
             return nullptr;
 
-        // Array->ResolvedType = CContext.GetArrayType(ElementsType, Elements.size());
-        return CTimeValue::CreateEmpty(CContext.GetArrayType(ElementsType, Elements.size()), MainArena);
+        Array->CompileTimeValue = CTimeValue::CreateEmpty(
+            CContext.GetArrayType(ElementsType, Elements.size()), MainArena);
+        return Array->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
         DataType* VarType = GetVariable(Identifier->Value.str());
         if (!VarType)
+        {
             SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
+            return nullptr;
+        }
 
-        // Identifier->ResolvedType = VarType;
-        return CTimeValue::CreateEmpty(VarType, MainArena);
+        Identifier->CompileTimeValue = CTimeValue::CreateEmpty(VarType, MainArena);
+        return Identifier->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitRef(RefNode *Ref)
@@ -220,7 +219,8 @@ namespace Volt
         if (!RefType)
             return nullptr;
 
-        return CTimeValue::CreateEmpty(CContext.GetPointerType(RefType), MainArena);
+        Ref->CompileTimeValue = CTimeValue::CreateEmpty(CContext.GetPointerType(RefType), MainArena);
+        return Ref->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitUnref(UnrefNode *Unref)
@@ -235,7 +235,6 @@ namespace Volt
 
         if (auto PtrType = Cast<PointerType>(Type))
         {
-            // Unref->ResolvedType = PtrType->BaseType;
             Unref->CompileTimeValue = CTimeValue::CreateEmpty(PtrType->BaseType, MainArena);
             return Unref->CompileTimeValue;
         }
@@ -260,8 +259,8 @@ namespace Volt
             {
                 if (SuffixType->GetCategory() == TypeCategory::INTEGER)
                 {
-                    // Suffix->ResolvedType = SuffixType;
-                    return CTimeValue::CreateEmpty(SuffixType, MainArena);
+                    Suffix->CompileTimeValue = CTimeValue::CreateEmpty(SuffixType, MainArena);
+                    return Suffix->CompileTimeValue;
                 }
 
                 SendError(TypeErrorKind::InvalidUnaryOperator, Suffix,
@@ -290,8 +289,8 @@ namespace Volt
             {
                 if (PrefixType->GetCategory() == TypeCategory::INTEGER)
                 {
-                    // Prefix->ResolvedType = PrefixType;
-                    return CTimeValue::CreateEmpty(PrefixType,  MainArena);
+                    Prefix->CompileTimeValue = CTimeValue::CreateEmpty(PrefixType,  MainArena);
+                    return Prefix->CompileTimeValue;
                 }
                 SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
                     { Operator::ToString(Prefix->Type), PrefixType->ToString() });
@@ -392,7 +391,6 @@ namespace Volt
             if (Call->Arguments.size() != 1)
                 return nullptr;
 
-            // Call->ResolvedType = VisitType(Type);
             VisitNode(Call->Arguments[0]);
             return CTimeValue::CreateEmpty(VisitType(Type), MainArena);
         }
@@ -417,19 +415,16 @@ namespace Volt
         if (!ImplicitCastOrError(IndexType, Int32Type, Subscript->Index->Line, Subscript->Index->Column))
             return nullptr;
 
-        // Subscript->Index->ResolvedType = IndexType;
 
         if (auto ArrType = Cast<ArrayType>(TargetType))
         {
             Subscript->TargetType = ArrType;
-            // Subscript->ResolvedType = ArrType->BaseType;
             return CTimeValue::CreateEmpty(ArrType->BaseType, MainArena);
         }
 
         if (auto PtrType = Cast<PointerType>(TargetType))
         {
             Subscript->TargetType = PtrType;
-            // Subscript->ResolvedType = PtrType->BaseType;
             return CTimeValue::CreateEmpty(PtrType->BaseType, MainArena);
         }
 
@@ -444,7 +439,7 @@ namespace Volt
         if (!SrcType || !Target)
             return nullptr;
 
-        if (ExplicitCast(Target, SrcType))
+        if (Target->ExplicitCast(SrcType))
         {
             ECast->CompileTimeValue = Target;
             return Target;
@@ -609,7 +604,7 @@ namespace Volt
             if (Length && Length->Type->GetCategory() == TypeCategory::INTEGER)
             {
                 Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
-                return CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
+                return Array->ResolvedType;
             }
 
             throw std::runtime_error("Array length mast be defined in compiler time");
@@ -637,207 +632,6 @@ namespace Volt
         return Src == Dst || Dst->BaseType->GetCategory() == TypeCategory::VOID;
     }
 
-    // bool TypeChecker::CanCastArithmetic(DataType* Left, DataType* Right, OperatorType Type) const
-    // {
-    //     TypeCategory LeftTypeCategory = Left->GetCategory();
-    //     TypeCategory RightTypeCategory = Right->GetCategory();
-    //
-    //     switch (Type)
-    //     {
-    //         case OperatorType::ADD:
-    //         case OperatorType::SUB:
-    //         case OperatorType::MUL:
-    //         case OperatorType::DIV:
-    //         {
-    //             switch (LeftTypeCategory)
-    //             {
-    //                 case TypeCategory::INTEGER:
-    //                 {
-    //                     switch (RightTypeCategory)
-    //                     {
-    //                         case TypeCategory::INTEGER:
-    //                         case TypeCategory::FLOATING_POINT:
-    //                             break;
-    //                         case TypeCategory::POINTER:
-    //                             if (Type == OperatorType::ADD)
-    //                                 return true;
-    //                             return false;
-    //                         default:
-    //                             return false;
-    //                     }
-    //                 }
-    //
-    //                 case TypeCategory::FLOATING_POINT:
-    //                     return RightTypeCategory == TypeCategory::FLOATING_POINT ||
-    //                         RightTypeCategory == TypeCategory::INTEGER;
-    //
-    //                 case TypeCategory::POINTER:
-    //                 {
-    //                     if (Type != OperatorType::ADD && Type != OperatorType::SUB)
-    //                         return false;
-    //
-    //                     switch (RightTypeCategory)
-    //                     {
-    //                         case TypeCategory::INTEGER:
-    //                             return true;
-    //                         default:
-    //                             return false;
-    //                     }
-    //                 }
-    //                 default:
-    //                     return false;
-    //             }
-    //         }
-    //         case OperatorType::MOD:
-    //             return LeftTypeCategory == TypeCategory::INTEGER &&
-    //                 RightTypeCategory == TypeCategory::INTEGER;
-    //
-    //         default:
-    //             return false;
-    //     }
-    // }
-    //
-    // bool TypeChecker::CanCastComparison(DataType* Left, DataType* Right, OperatorType Type) const
-    // {
-    //     TypeCategory LeftTypeCategory = Left->GetCategory();
-    //     TypeCategory RightTypeCategory = Right->GetCategory();
-    //
-    //     switch (Type)
-    //     {
-    //         case OperatorType::EQ:
-    //         case OperatorType::NEQ:
-    //         {
-    //             switch (LeftTypeCategory)
-    //             {
-    //                 case TypeCategory::BOOLEAN:
-    //                     return RightTypeCategory == TypeCategory::BOOLEAN ||
-    //                         RightTypeCategory == TypeCategory::INTEGER;
-    //                 case TypeCategory::INTEGER:
-    //                 case TypeCategory::FLOATING_POINT:
-    //                     return RightTypeCategory == TypeCategory::INTEGER ||
-    //                         RightTypeCategory == TypeCategory::FLOATING_POINT;
-    //                 case TypeCategory::POINTER:
-    //                     return RightTypeCategory == TypeCategory::POINTER;
-    //                 default:
-    //                     return false;
-    //             }
-    //         }
-    //
-    //         case OperatorType::LT:
-    //         case OperatorType::LTE:
-    //         case OperatorType::GT:
-    //         case OperatorType::GTE:
-    //         {
-    //             switch (LeftTypeCategory)
-    //             {
-    //                 case TypeCategory::INTEGER:
-    //                 case TypeCategory::FLOATING_POINT:
-    //                     return RightTypeCategory == TypeCategory::INTEGER ||
-    //                         RightTypeCategory == TypeCategory::FLOATING_POINT;
-    //                 default:
-    //                     return false;
-    //             }
-    //         }
-    //
-    //         default:
-    //             return false;
-    //     }
-    // }
-    //
-    // bool TypeChecker::CanCastLogical(DataType* Left, DataType* Right, OperatorType Type) const
-    // {
-    //     DataType* BoolType = CContext.GetBoolType();
-    //
-    //     switch (Type)
-    //     {
-    //         case OperatorType::LOGICAL_AND:
-    //         case OperatorType::LOGICAL_OR:
-    //             return Left->ImplicitCast(BoolType) &&
-    //                 Right->ImplicitCast(BoolType);
-    //         default:
-    //             return false;
-    //     }
-    // }
-    //
-    // bool TypeChecker::CanCastBitwise(DataType* Left, DataType* Right, OperatorType Type) const
-    // {
-    //     TypeCategory LeftTypeCategory = Left->GetCategory();
-    //     TypeCategory RightTypeCategory = Right->GetCategory();
-    //
-    //     switch (Type)
-    //     {
-    //         case OperatorType::BIT_AND:
-    //         case OperatorType::BIT_OR:
-    //         case OperatorType::BIT_XOR:
-    //             return (LeftTypeCategory == TypeCategory::INTEGER ||
-    //                     LeftTypeCategory == TypeCategory::BOOLEAN) &&
-    //                    (RightTypeCategory == TypeCategory::INTEGER ||
-    //                     RightTypeCategory == TypeCategory::BOOLEAN);
-    //
-    //         case OperatorType::LSHIFT:
-    //         case OperatorType::RSHIFT:
-    //             return LeftTypeCategory == TypeCategory::INTEGER &&
-    //                 RightTypeCategory == TypeCategory::INTEGER;
-    //
-    //         default:
-    //             return false;
-    //     }
-    // }
-    //
-    // bool TypeChecker::CanCastAssignment(DataType* Left, DataType* Right, OperatorType Type) const
-    // {
-    //     switch (Type)
-    //     {
-    //         case OperatorType::ASSIGN:
-    //             return Right->ImplicitCast(Left);
-    //         case OperatorType::ADD_ASSIGN:
-    //             return CanCastArithmetic(Right, Left, OperatorType::ADD);
-    //         case OperatorType::SUB_ASSIGN:
-    //             return CanCastArithmetic(Right, Left, OperatorType::SUB);
-    //         case OperatorType::MUL_ASSIGN:
-    //             return CanCastArithmetic(Right, Left, OperatorType::MUL);
-    //         case OperatorType::DIV_ASSIGN:
-    //             return CanCastArithmetic(Right, Left, OperatorType::DIV);
-    //         default:
-    //             return false;
-    //     }
-    // }
-    //
-    // bool TypeChecker::CanCastToJointType(DataType* Left, DataType* Right, OperatorType Type) const
-    // {
-    //     if (CanCastArithmetic(Left, Right, Type)) return true;
-    //     if (CanCastComparison(Left, Right, Type)) return true;
-    //     if (CanCastLogical(Left, Right, Type))    return true;
-    //     if (CanCastBitwise(Left, Right, Type))    return true;
-    //     if (CanCastAssignment(Left, Right, Type)) return true;
-    //
-    //     return false;
-    // }
-
-    // bool TypeChecker::CastToJointType(DataType *&Left, DataType *&Right, OperatorType Type, size_t Line, size_t Column)
-    // {
-    //     if (!CanCastToJointType(Left, Right, Type))
-    //     {
-    //         SendError(TypeErrorKind::InvalidBinaryOperator, Line, Column,{ Operator::ToString(Type),
-    //            Left->ToString(), Left->ToString() });
-    //         return false;
-    //     }
-    //
-    //     int LeftTypeRank = Left->GetRank();
-    //     int RightTypeRank = Right->GetRank();
-    //
-    //     if (LeftTypeRank == -1 || RightTypeRank == -1)
-    //         return false;
-    //
-    //     if (LeftTypeRank == RightTypeRank)
-    //         return true;
-    //
-    //     DataType*& Src = LeftTypeRank > RightTypeRank ? Right : Left;
-    //     DataType*& Dst = LeftTypeRank > RightTypeRank ? Left : Right;
-    //
-    //     return ImplicitCastOrError(Src, Dst, Line, Column);
-    // }
-
     bool TypeChecker::ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column)
     {
         if (Src->ImplicitCast(Dst))
@@ -845,80 +639,6 @@ namespace Volt
 
         SendError(TypeErrorKind::IncompatibleTypes, Line, Column,
             { Src->ToString(), Dst->ToString() });
-        return false;
-    }
-
-    /*bool TypeChecker::CastToJointType(CTimeValue *Left, CTimeValue *Right, OperatorType Type, size_t Line, size_t Column)
-    {
-        DataType* LeftType = Left->Type;
-        DataType* RightType = Right->Type;
-
-        if (!CanCastToJointType(LeftType, RightType, Type))
-        {
-            SendError(TypeErrorKind::InvalidBinaryOperator, Line, Column,{ Operator::ToString(Type),
-                LeftType->ToString(), RightType->ToString() });
-            return false;
-        }
-
-        int LeftTypeRank =  LeftType->GetRank();
-        int RightTypeRank = RightType->GetRank();
-
-        if (LeftTypeRank == -1 || RightTypeRank == -1)
-            return false;
-
-        if (LeftTypeRank == RightTypeRank)
-            return true;
-
-        CTimeValue* Src = LeftTypeRank > RightTypeRank ? Right : Left;
-        DataType*& Dst = LeftTypeRank > RightTypeRank ? LeftType : RightType;
-
-        return Src->ImplicitCast(Dst); //ImplicitCastOrError(Src, Dst, Line, Column);
-    }*/
-
-    bool TypeChecker::CanExplicitCast(DataType *Dst, DataType *Src)
-    {
-        if (Dst == Src) return true;
-
-        if (Dst->ImplicitCast(Src))
-            return true;
-
-        if (auto DstPtrType = Cast<PointerType>(Dst))
-            if (auto SrcPtrType = Cast<PointerType>(Src))
-                return DstPtrType->BaseType->GetCategory() == TypeCategory::VOID;
-
-        return false;
-    }
-
-    bool TypeChecker::ExplicitCast(DataType *&Dst, DataType *Src)
-    {
-        if (CanExplicitCast(Dst, Src))
-        {
-            Dst = Src;
-            return true;
-        }
-
-        return false;
-    }
-
-    bool TypeChecker::ExplicitCast(CTimeValue *&Src, DataType *Dst)
-    {
-        if (Src->ImplicitCast(Dst))
-            return true;
-
-        if (auto SrcPtrType = Cast<PointerType>(Src->Type))
-        {
-            if (auto DstPtrType = Cast<PointerType>(Dst))
-            {
-                if (SrcPtrType->BaseType->GetCategory() == TypeCategory::VOID)
-                {
-                    Src->Type = Dst;
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
         return false;
     }
 
@@ -955,56 +675,5 @@ namespace Volt
             return Iter->second->GetDataType();
 
         return nullptr;
-    }
-
-    CTimeValue *TypeChecker::CalculateUnary(CTimeValue *Operand, OperatorType Type) const
-    {
-        if (!Operand)
-            return nullptr;
-
-        if (Operand->IsEmpty)
-            return CTimeValue::CreateEmpty(Operand->Type, MainArena);
-
-        TypeCategory OperandTypeCategory = Operand->Type->GetCategory();
-        switch (Type)
-        {
-            case OperatorType::ADD:
-            {
-                switch (OperandTypeCategory)
-                {
-                    case TypeCategory::INTEGER:
-                    case TypeCategory::FLOATING_POINT:
-                        return Operand;
-                    default:
-                        return nullptr;
-                }
-            }
-            case OperatorType::SUB:
-            {
-                switch (OperandTypeCategory)
-                {
-                    case TypeCategory::INTEGER:
-                        return CTimeValue::CreateInteger(Operand->Type, -Operand->Int, MainArena);
-                    case TypeCategory::FLOATING_POINT:
-                        return CTimeValue::CreateFloat(Operand->Type, -Operand->Float, MainArena);
-                    default:
-                        return nullptr;
-                }
-            }
-            case OperatorType::BIT_NOT:
-            {
-                if (OperandTypeCategory == TypeCategory::INTEGER)
-                    return CTimeValue::CreateInteger(Operand->Type, ~Operand->Int, MainArena);
-                return nullptr;
-            }
-            case OperatorType::LOGICAL_NOT:
-            {
-                if (OperandTypeCategory == TypeCategory::BOOLEAN)
-                    return CTimeValue::CreateBool(Operand->Type, !Operand->Bool, MainArena);
-
-                return nullptr;
-            }
-            default: return CTimeValue::CreateEmpty(Operand->Type, MainArena);
-        }
     }
 }

@@ -38,10 +38,31 @@ namespace Volt
 		};
 		bool IsEmpty = true;
 
-		bool ImplicitCast(DataType* To);
+		bool ImplicitCast(DataType* To) { return CastTo(To, false); }
+		bool ExplicitCast(DataType* To) { return CastTo(To, true); }
+
+		bool CastTo(DataType* To, bool Explicit)
+		{
+			if (CanCastTo(To, Explicit))
+			{
+				Type = To;
+				return true;
+			}
+
+			return false;
+		}
+
 		static CTimeValue* ResolveBinary(CTimeValue*& Left, CTimeValue*& Right, OperatorType Op,
 			CompilationContext& CContext);
 		static CTimeValue* ResolveUnary(CTimeValue*& Operand, OperatorType Op, CompilationContext& CContext);
+
+	private:
+		bool CastBooleanTo(TypeCategory To, bool Explicit);
+		bool CastCharTo(TypeCategory To, bool Explicit);
+		bool CastIntegerTo(TypeCategory To, bool Explicit);
+		bool CastFloatTo(TypeCategory To, bool Explicit);
+
+		bool CanCastTo(DataType* To, bool Explicit);
 	};
 
 	template<typename T>

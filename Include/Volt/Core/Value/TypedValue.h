@@ -4,11 +4,15 @@
 
 #ifndef CVOLT_TYPEDVALUE_H
 #define CVOLT_TYPEDVALUE_H
+
 #include "Volt/Core/Types/DataType.h"
 #include <llvm/IR/Value.h>
+#include <llvm/IR/IRBuilder.h>
 
 namespace Volt
 {
+    class CompilationContext;
+
     class TypedValue : public Object
     {
         GENERATED_BODY(TypedValue, Object)
@@ -27,13 +31,14 @@ namespace Volt
         [[nodiscard]] llvm::Value* GetValue() const { return Value; }
         [[nodiscard]] DataType* GetDataType() const { return Type; }
 
-        void InitValue(llvm::Value* InValue)
-        {
-            if (!Value)
-                Value = InValue;
-            else
-                throw std::runtime_error("Value has already initialized.");
-        }
+        [[nodiscard]] bool CastTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+
+    private:
+        [[nodiscard]] bool CastBooleanTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] bool CastCharTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] bool CastIntegerTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] bool CastFloatTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] bool CastPointerTo(DataType* To, llvm::IRBuilder<>& Builder);
     };
 }
 

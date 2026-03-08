@@ -55,117 +55,6 @@ namespace Volt
 		return Value;
 	}
 
-	bool CTimeValue::ImplicitCast(DataType *To)
-	{
-		if (Type == To)
-			return true;
-
-		DataType* NewType = Type->ImplicitCast(To);
-		if (!NewType)
-			return false;
-
-		if (IsEmpty)
-		{
-			Type = NewType;
-			return true;
-		}
-
-		TypeCategory OldTypeCategory = Type->GetCategory();
-		TypeCategory NewTypeCategory = NewType->GetCategory();
-
-		switch (OldTypeCategory)
-		{
-			case TypeCategory::BOOLEAN:
-			{
-				switch (NewTypeCategory)
-				{
-					case TypeCategory::BOOLEAN:
-						return true;
-					case TypeCategory::CHAR:
-						Char = static_cast<char>(Bool);
-						Type = NewType;
-						return true;
-					case TypeCategory::INTEGER:
-						Int = static_cast<Int64>(Bool);
-						Type = NewType;
-						return true;
-					default:
-						return false;
-				}
-			}
-
-			case TypeCategory::CHAR:
-			{
-				switch (NewTypeCategory)
-				{
-					case TypeCategory::BOOLEAN:
-						Bool = static_cast<bool>(Char);
-						Type = NewType;
-						return true;
-					case TypeCategory::CHAR:
-						return true;
-					case TypeCategory::INTEGER:
-						Int = static_cast<Int64>(Char);
-						Type = NewType;
-						return true;
-					case TypeCategory::FLOATING_POINT:
-						Float = static_cast<double>(Char);
-						Type = NewType;
-						return true;
-					default:
-						return false;
-				}
-			}
-
-			case TypeCategory::INTEGER:
-			{
-				switch (NewTypeCategory)
-				{
-					case TypeCategory::BOOLEAN:
-						Bool = static_cast<bool>(Int);
-						Type = NewType;
-						return true;
-					case TypeCategory::CHAR:
-						Char = static_cast<char>(Int);
-						Type = NewType;
-						return true;
-					case TypeCategory::INTEGER:
-						Type = NewType;
-						return true;
-					case TypeCategory::FLOATING_POINT:
-						Float = static_cast<double>(Int);
-						Type = NewType;
-						return true;
-					default:
-						return false;
-				}
-			}
-
-			case TypeCategory::FLOATING_POINT:
-			{
-				switch (NewTypeCategory)
-				{
-					case TypeCategory::CHAR:
-						Char = static_cast<char>(Float);
-						Type = NewType;
-						return true;
-					case TypeCategory::INTEGER:
-						Int = static_cast<Int64>(Float);
-						Type = NewType;
-						return true;
-					case TypeCategory::FLOATING_POINT:
-						Type = NewType;
-						return true;
-					default:
-						return false;
-				}
-			}
-
-			default:
-				return false;
-		}
-	}
-
 #define RESOLVE_OP_FOR_ALL_TYPES(Op) switch (LeftType->GetCategory()) \
 	{ \
 		case TypeCategory::INTEGER: \
@@ -307,6 +196,154 @@ namespace Volt
 				return nullptr;
 			}
 			default: return CreateEmpty(Operand->Type, CContext.MainArena);
+		}
+	}
+
+	bool CTimeValue::CastBooleanTo(TypeCategory To, bool Explicit)
+	{
+		if (To == TypeCategory::BOOLEAN)
+			return true;
+
+		if (!Explicit)
+			return false;
+
+		switch (To)
+		{
+			case TypeCategory::CHAR:
+			{
+				Char = static_cast<char>(Bool);
+				return true;
+			}
+			case TypeCategory::INTEGER:
+			{
+				Int = static_cast<Int64>(Bool);
+				return true;
+			}
+			case TypeCategory::FLOATING_POINT:
+			{
+				Float = static_cast<double>(Bool);
+				return true;
+			}
+			default:
+				return false;
+		}
+	}
+
+	bool CTimeValue::CastCharTo(TypeCategory To, bool Explicit)
+	{
+		switch (To)
+		{
+			case TypeCategory::BOOLEAN:
+			{
+				if (!Explicit)
+					return false;
+
+				Bool = static_cast<bool>(Char);
+				return true;
+			}
+			case TypeCategory::CHAR:
+				return true;
+			case TypeCategory::INTEGER:
+			{
+				Int = static_cast<Int64>(Char);
+				return true;
+			}
+			case TypeCategory::FLOATING_POINT:
+			{
+				Float = static_cast<double>(Char);
+				return true;
+			}
+			default:
+				return false;
+		}
+	}
+
+	bool CTimeValue::CastIntegerTo(TypeCategory To, bool Explicit)
+	{
+		switch (To)
+		{
+			case TypeCategory::BOOLEAN:
+			{
+				if (!Explicit)
+					return false;
+
+				Bool = static_cast<bool>(Int);
+				return true;
+			}
+			case TypeCategory::CHAR:
+			{
+				Char = static_cast<char>(Int);
+				return true;
+			}
+			case TypeCategory::INTEGER:
+				return true;
+			case TypeCategory::FLOATING_POINT:
+			{
+				Float = static_cast<double>(Int);
+				return true;
+			}
+			default:
+				return false;
+		}
+	}
+
+	bool CTimeValue::CastFloatTo(TypeCategory To, bool Explicit)
+	{
+		switch (To)
+		{
+			case TypeCategory::BOOLEAN:
+			{
+				if (!Explicit)
+					return false;
+
+				Bool = static_cast<bool>(Float);
+				return true;
+			}
+			case TypeCategory::CHAR:
+			{
+				Char = static_cast<char>(Float);
+				return true;
+			}
+			case TypeCategory::INTEGER:
+			{
+				Int = static_cast<Int64>(Float);
+				return true;
+			}
+			case TypeCategory::FLOATING_POINT:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	bool CTimeValue::CanCastTo(DataType* To, bool Explicit)
+	{
+		DataType* NewType = Type->CastTo(To, Explicit);
+		if (!NewType)
+			return false;
+
+		if (IsEmpty)
+			return true;
+
+		TypeCategory OldTypeCategory = Type->GetCategory();
+		TypeCategory NewTypeCategory = NewType->GetCategory();
+
+		switch (OldTypeCategory)
+		{
+			case TypeCategory::BOOLEAN:
+				return CastBooleanTo(NewTypeCategory, Explicit);
+
+			case TypeCategory::CHAR:
+				return CastCharTo(NewTypeCategory, Explicit);
+
+			case TypeCategory::INTEGER:
+				return CastIntegerTo(NewTypeCategory, Explicit);
+
+			case TypeCategory::FLOATING_POINT:
+				return CastFloatTo(NewTypeCategory, Explicit);
+
+			default:
+				return false;
 		}
 	}
 }
