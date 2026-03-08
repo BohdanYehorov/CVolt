@@ -1,7 +1,12 @@
+fun:int Hello(float Num)
+{
+    return 0;
+}
+
 fun:int Main()
 {
     let:int Num = 5;
-    Out(Num);
+    Hello(Num);
 
     return 0;
 }

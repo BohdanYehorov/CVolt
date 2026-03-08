@@ -12,8 +12,6 @@ namespace Volt
 		UNKNOWN,
 		ADD,
 		SUB,
-		UN_PLS,
-		UN_MNS,
 		MUL,
 		DIV,
 		MOD,

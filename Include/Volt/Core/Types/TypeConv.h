@@ -1,0 +1,79 @@
+//
+// Created by bohdan on 06.03.26.
+//
+
+#ifndef CVOLT_TYPECONV_H
+#define CVOLT_TYPECONV_H
+
+#include "DataType.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
+
+namespace Volt::TypeConv
+{
+	template <typename T>
+	DataType* GetBaseType(CompilationContext& CContext);
+
+	template<> inline DataType* GetBaseType<void>(CompilationContext& CContext)
+	{
+		return CContext.GetVoidType();
+	}
+
+	template<> inline DataType* GetBaseType<bool>(CompilationContext& CContext)
+	{
+		return CContext.GetBoolType();
+	}
+
+	template<> inline DataType* GetBaseType<char>(CompilationContext& CContext)
+	{
+		return CContext.GetCharType();
+	}
+
+	template<> inline DataType* GetBaseType<std::byte>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(8);
+	}
+
+	template<> inline DataType* GetBaseType<short>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(16);
+	}
+
+	template<> inline DataType* GetBaseType<int>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(32);
+	}
+
+	template<> inline DataType* GetBaseType<long>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(64);
+	}
+
+	template<> inline DataType* GetBaseType<long long>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(64);
+	}
+
+	template<> inline DataType* GetBaseType<float>(CompilationContext& CContext)
+	{
+		return CContext.GetFPType(32);
+	}
+
+	template<> inline DataType* GetBaseType<double>(CompilationContext& CContext)
+	{
+		return CContext.GetFPType(64);
+	}
+
+	template <typename T>
+	DataType* GetDataType(CompilationContext& CContext)
+	{
+		if constexpr (std::is_pointer_v<T>)
+		{
+			using BaseType = std::remove_pointer_t<T>;
+			return CContext.GetPointerType(GetDataType<BaseType>(CContext));
+		}
+
+		return GetBaseType<T>(CContext);
+	}
+}
+
+#endif //CVOLT_TYPECONV_H

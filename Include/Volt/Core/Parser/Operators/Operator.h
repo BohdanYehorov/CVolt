@@ -7,25 +7,59 @@
 
 #include "Volt/Core/Enums/TokenType.h"
 #include "Volt/Core/Enums/OperatorType.h"
+#include "Volt/Core/Types/DataType.h"
+#include "Volt/Core/TypeDefs/TypeDefs.h"
 #include <string>
 
 namespace Volt
 {
+    class CompilationContext;
+
+    enum class BinaryOperatorKind
+    {
+        Arithmetic,
+        Comparison,
+        Logical,
+        Assignment,
+        Unknown
+    };
+
     class Operator
     {
     public:
-        static OperatorType GetAssignmentOp(TokenType Op);
-        static OperatorType GetLogicalOp(TokenType Op);
-        static OperatorType GetBitwiseOp(TokenType Op);
-        static OperatorType GetEqualityOp(TokenType Op);
-        static OperatorType GetRelationalOp(TokenType Op);
-        static OperatorType GetShiftOp(TokenType Op);
-        static OperatorType GetAdditiveOp(TokenType Op);
-        static OperatorType GetMultiplicativeOp(TokenType Op);
-        static OperatorType GetUnaryOp(TokenType Op);
-        static OperatorType GetPostfix(TokenType Op);
+        [[nodiscard]] static OperatorType GetAssignmentOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetLogicalOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetBitwiseOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetEqualityOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetRelationalOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetShiftOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetAdditiveOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetMultiplicativeOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetUnaryOp(TokenType Op);
+        [[nodiscard]] static OperatorType GetPostfix(TokenType Op);
 
-        static std::string ToString(OperatorType Op);
+        [[nodiscard]] static std::string ToString(OperatorType Op);
+
+        [[nodiscard]] static DataType* ResolveArithmetic(DataType*& Left, DataType*& Right, OperatorType Op);
+        [[nodiscard]] static DataType* ResolveComparison(DataType*& Left, DataType*& Right, OperatorType Op,
+            CompilationContext& CContext);
+        [[nodiscard]] static DataType* ResolveLogical(DataType*& Left, DataType*& Right, OperatorType Op,
+            CompilationContext& CContext);
+        [[nodiscard]] static DataType* ResolveAssignment(DataType*& Left, DataType*& Right, OperatorType Op);
+        [[nodiscard]] static DataType* ResolvePointerArithmetic(DataType* Left, DataType* Right, OperatorType Op,
+            CompilationContext& CContext);
+        [[nodiscard]] static DataType* ResolveBinary(DataType*& Left, DataType*& Right, OperatorType Op,
+            CompilationContext& CContext);
+
+        [[nodiscard]] static BinaryOperatorKind GetBinaryOperatorKind(OperatorType Op);
+
+        [[nodiscard]] static DataType* ResolveUnary(DataType*& Operand, OperatorType Op);
+
+    private:
+        static bool CastToJointType(DataType*& Left, DataType*& Right);
+        [[nodiscard]] static DataType* GetJointType(DataType* Left, DataType* Right);
+        static DataType* Normalize(DataType*& Left, DataType*& Right, DataType* Joint);
+        [[nodiscard]] static OperatorType GetSecondOpCompoundAssignment(OperatorType Op);
     };
 }
 

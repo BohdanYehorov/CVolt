@@ -111,6 +111,8 @@ namespace Volt
 
 	llvm::Type *CompilationContext::GetLLVMType(DataType *Type)
 	{
+		assert(Type);
+
 		if (!Type->CachedType)
 			Type->CachedType = Type->ToLLVMType(Context);
 

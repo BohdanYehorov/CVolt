@@ -3,6 +3,7 @@
 //
 
 #include "Volt/Core/Parser/Operators/Operator.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 
 #define GEN_CASE(Op) case TokenType::OP_##Op: return OperatorType::Op;
 #define GEN_CASE_TO_STRING(Op) case OperatorType::Op: return #Op;
@@ -134,8 +135,6 @@ namespace Volt
             GEN_CASE_TO_STRING(UNKNOWN)
             GEN_CASE_TO_STRING(ADD)
             GEN_CASE_TO_STRING(SUB)
-            GEN_CASE_TO_STRING(UN_PLS)
-            GEN_CASE_TO_STRING(UN_MNS)
             GEN_CASE_TO_STRING(MUL)
             GEN_CASE_TO_STRING(DIV)
             GEN_CASE_TO_STRING(MOD)
@@ -170,7 +169,352 @@ namespace Volt
             default: return "?";
         }
     }
-}
 
+    DataType *Operator::ResolveArithmetic(DataType *&Left, DataType *&Right, OperatorType Op)
+    {
+        using enum TypeCategory;
+        using enum OperatorType;
+
+        DataType* JointType = GetJointType(Left, Right);
+        if (!JointType) return nullptr;
+
+        TypeCategory Category = JointType->GetCategory();
+
+        switch (Op)
+        {
+            case ADD:
+            case SUB:
+            case MUL:
+            case DIV:
+            {
+                if (Category == CHAR || Category == INTEGER || Category == FLOATING_POINT)
+                    return Normalize(Left, Right, JointType);
+                return nullptr;
+            }
+
+            case MOD:
+            case BIT_AND:
+            case BIT_OR:
+            case BIT_XOR:
+            case LSHIFT:
+            case RSHIFT:
+            {
+                if (Category == CHAR || Category == INTEGER)
+                    return Normalize(Left, Right, JointType);
+                return nullptr;
+            }
+            default:
+                return nullptr;
+        }
+    }
+
+    DataType *Operator::ResolveComparison(DataType *&Left, DataType *&Right, OperatorType Op,
+        CompilationContext& CContext)
+    {
+        using enum TypeCategory;
+        using enum OperatorType;
+
+        DataType* JointType = GetJointType(Left, Right);
+        if (!JointType) return nullptr;
+
+        TypeCategory Category = JointType->GetCategory();
+
+        switch (Op)
+        {
+            case EQ:
+            case NEQ:
+            {
+                if (Category == BOOLEAN ||
+                    Category == CHAR ||
+                    Category == INTEGER ||
+                    Category == FLOATING_POINT ||
+                    Category == POINTER)
+                {
+                    Normalize(Left, Right, JointType);
+                    return CContext.GetBoolType();
+                }
+                return nullptr;
+            }
+
+            case GT:
+            case GTE:
+            case LT:
+            case LTE:
+            {
+                if (Category == CHAR ||
+                    Category == INTEGER ||
+                    Category == FLOATING_POINT)
+                {
+                    Normalize(Left, Right, JointType);
+                    return CContext.GetBoolType();
+                }
+                return nullptr;
+            }
+
+            default:
+                return nullptr;
+        }
+    }
+
+    DataType *Operator::ResolveLogical(DataType *&Left, DataType *&Right, OperatorType Op,
+        CompilationContext& CContext)
+    {
+        using enum TypeCategory;
+        using enum OperatorType;
+
+        DataType* BoolTy = CContext.GetBoolType();
+        if (!Left->ImplicitCast(BoolTy) || !Right->ImplicitCast(BoolTy))
+            return nullptr;
+
+        switch (Op)
+        {
+            case LOGICAL_AND:
+            case LOGICAL_OR:
+                return Normalize(Left, Right, BoolTy);
+
+            default:
+                return nullptr;
+        }
+    }
+
+    DataType *Operator::ResolveAssignment(DataType *&Left, DataType *&Right, OperatorType Op)
+    {
+        using enum TypeCategory;
+        using enum OperatorType;
+
+        if (!Right->ImplicitCast(Left))
+            return nullptr;
+
+        TypeCategory Category = Left->GetCategory();
+
+        switch (Op)
+        {
+            case ASSIGN:
+            {
+                if (Category != VOID)
+                {
+                    Right = Right->ImplicitCast(Left);
+                    return Left;
+                }
+                return nullptr;
+            }
+
+            default:
+            {
+                OperatorType SecondOp = GetSecondOpCompoundAssignment(Op);
+                if (SecondOp == UNKNOWN)
+                    return nullptr;
+
+                DataType *TmpLeft = Left, *TmpRight = Right;
+                DataType* Result = ResolveArithmetic(TmpLeft, TmpLeft, SecondOp);
+                if (!Result) return nullptr;
+
+                if (!Result->ImplicitCast(Left))
+                    return nullptr;
+
+                Right = Left;
+                return Left;
+            }
+        }
+    }
+
+    DataType *Operator::ResolvePointerArithmetic(DataType *Left, DataType *Right, OperatorType Op,
+        CompilationContext& CContext)
+    {
+        using enum TypeCategory;
+        using enum OperatorType;
+
+        TypeCategory LeftCategory = Left->GetCategory();
+        TypeCategory RightCategory = Right->GetCategory();
+
+        if (LeftCategory == POINTER && RightCategory == INTEGER)
+        {
+            if (Op == ADD || Op == SUB)
+                return Left;
+
+            return nullptr;
+        }
+
+        if (LeftCategory == INTEGER && RightCategory == POINTER)
+        {
+            if (Op == ADD)
+                return Right;
+
+            return nullptr;
+        }
+
+        if (LeftCategory == POINTER && RightCategory == POINTER)
+        {
+            if (Op != SUB)
+                return nullptr;
+
+            if (Cast<PointerType>(Left)->BaseType != Cast<PointerType>(Right)->BaseType)
+                return nullptr;
+
+            return CContext.GetIntegerType(64);
+        }
+
+        return nullptr;
+    }
+
+    DataType *Operator::ResolveBinary(DataType *&Left, DataType *&Right, OperatorType Op, CompilationContext& CContext)
+    {
+        switch (GetBinaryOperatorKind(Op))
+        {
+            case BinaryOperatorKind::Arithmetic:
+                if (DataType* PtrArithmeticResType = ResolvePointerArithmetic(Left, Right, Op, CContext))
+                    return PtrArithmeticResType;
+                return ResolveArithmetic(Left, Right, Op);
+            case BinaryOperatorKind::Comparison:
+                return ResolveComparison(Left, Right, Op, CContext);
+            case BinaryOperatorKind::Logical:
+                return ResolveLogical(Left, Right, Op, CContext);
+            case BinaryOperatorKind::Assignment:
+                return ResolveAssignment(Left, Right, Op);
+            default:
+                return nullptr;
+        }
+    }
+
+    BinaryOperatorKind Operator::GetBinaryOperatorKind(OperatorType Op)
+    {
+        using enum OperatorType;
+
+        switch (Op)
+        {
+            case ADD:
+            case SUB:
+            case MUL:
+            case DIV:
+            case MOD:
+            case BIT_AND:
+            case BIT_OR:
+            case BIT_XOR:
+            case LSHIFT:
+            case RSHIFT:
+                return BinaryOperatorKind::Arithmetic;
+
+            case EQ:
+            case NEQ:
+            case GT:
+            case GTE:
+            case LT:
+            case LTE:
+                return BinaryOperatorKind::Comparison;
+
+            case LOGICAL_AND:
+            case LOGICAL_OR:
+                return BinaryOperatorKind::Logical;
+
+            case ADD_ASSIGN:
+            case SUB_ASSIGN:
+            case MUL_ASSIGN:
+            case DIV_ASSIGN:
+            case MOD_ASSIGN:
+            case AND_ASSIGN:
+            case OR_ASSIGN:
+            case XOR_ASSIGN:
+            case LSHIFT_ASSIGN:
+            case RSHIFT_ASSIGN:
+                return BinaryOperatorKind::Assignment;
+
+            default:
+                return BinaryOperatorKind::Unknown;
+        }
+    }
+
+    DataType *Operator::ResolveUnary(DataType *&Operand, OperatorType Op)
+    {
+        using enum TypeCategory;
+        using enum OperatorType;
+
+        TypeCategory Category = Operand->GetCategory();
+
+        switch (Op)
+        {
+            case ADD:
+            case SUB:
+            case INC:
+            case DEC:
+            {
+                if (Category == CHAR || Category == INTEGER || Category == FLOATING_POINT)
+                    return Operand;
+
+                return nullptr;
+            }
+
+            case BIT_NOT:
+            {
+                if (Category == CHAR || Category == INTEGER)
+                    return Operand;
+
+                return nullptr;
+            }
+
+            case LOGICAL_NOT:
+            {
+                if (Category == BOOLEAN)
+                    return Operand;
+
+                return nullptr;
+            }
+
+            default:
+                return nullptr;
+        }
+    }
+
+    bool Operator::CastToJointType(DataType *&Left, DataType *&Right)
+    {
+        if (Left == Right) return true;
+
+        int LeftRank = Left->GetRank();
+        int RightRank = Right->GetRank();
+
+        if (LeftRank == -1 || RightRank == -1)
+            return false;
+
+        DataType*& Dst = LeftRank > RightRank ? Left : Right;
+        DataType*& Src = Dst == Left ? Right : Left;
+        Src = Src->ImplicitCast(Dst);
+        if (!Src) return false;
+
+        return true;
+    }
+
+    DataType *Operator::GetJointType(DataType *Left, DataType *Right)
+    {
+        if (CastToJointType(Left, Right))
+            return Left;
+        return nullptr;
+    }
+
+    DataType *Operator::Normalize(DataType *&Left, DataType *&Right, DataType *Joint)
+    {
+        Left = Joint;
+        Right = Joint;
+        return Joint;
+    }
+
+    OperatorType Operator::GetSecondOpCompoundAssignment(OperatorType Op)
+    {
+        using enum OperatorType;
+
+        switch (Op)
+        {
+            case ADD_ASSIGN: return ADD;
+            case SUB_ASSIGN: return SUB;
+            case MUL_ASSIGN: return MUL;
+            case DIV_ASSIGN: return DIV;
+            case MOD_ASSIGN: return MOD;
+            case AND_ASSIGN: return BIT_AND;
+            case OR_ASSIGN: return BIT_OR;
+            case XOR_ASSIGN: return BIT_XOR;
+            case LSHIFT_ASSIGN: return LSHIFT;
+            case RSHIFT_ASSIGN: return RSHIFT;
+            default: return UNKNOWN;
+        }
+    }
+}
 #undef GEN_CASE
 #undef GEN_CASE_TO_STRING

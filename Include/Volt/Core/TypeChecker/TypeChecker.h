@@ -24,7 +24,7 @@ namespace Volt
     class TypeChecker
     {
     private:
-        static llvm::DenseMap<TypeCategory, llvm::DenseSet<TypeCategory>> ImplicitCastTypes;
+        // static llvm::DenseMap<TypeCategory, llvm::DenseSet<TypeCategory>> ImplicitCastTypes;
 
     private:
         CompilationContext& CContext;
@@ -86,7 +86,6 @@ namespace Volt
         CTimeValue *VisitSuffix(SuffixOpNode *Suffix);
         CTimeValue *VisitPrefix(PrefixOpNode *Prefix);
         CTimeValue *VisitUnary(UnaryOpNode *Unary);
-        CTimeValue *VisitComparison(ComparisonNode *Comparison);
         CTimeValue *VisitBinary(BinaryOpNode *Binary);
         CTimeValue *VisitCall(CallNode *Call);
         CTimeValue *VisitSubscript(SubscriptNode *Subscript);
@@ -105,20 +104,18 @@ namespace Volt
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);
 
         [[nodiscard]] static bool CanCastPointers(PointerType* Src, PointerType* Dst);
-        [[nodiscard]] bool CanImplicitCast(DataType* Src, DataType* Dst) const;
-        [[nodiscard]] bool CanCastArithmetic(DataType* Left, DataType* Right, OperatorType Type) const;
-        [[nodiscard]] bool CanCastComparison(DataType* Left, DataType* Right, OperatorType Type) const;
-        [[nodiscard]] bool CanCastLogical(DataType* Left, DataType* Right, OperatorType Type) const;
-        [[nodiscard]] bool CanCastBitwise(DataType* Left, DataType* Right, OperatorType Type) const;
-        [[nodiscard]] bool CanCastAssignment(DataType* Left, DataType* Right, OperatorType Type) const;
-        [[nodiscard]] bool CanCastToJointType(DataType* Left, DataType* Right, OperatorType Type) const;
+        // [[nodiscard]] bool CanCastArithmetic(DataType* Left, DataType* Right, OperatorType Type) const;
+        // [[nodiscard]] bool CanCastComparison(DataType* Left, DataType* Right, OperatorType Type) const;
+        // [[nodiscard]] bool CanCastLogical(DataType* Left, DataType* Right, OperatorType Type) const;
+        // [[nodiscard]] bool CanCastBitwise(DataType* Left, DataType* Right, OperatorType Type) const;
+        // [[nodiscard]] bool CanCastAssignment(DataType* Left, DataType* Right, OperatorType Type) const;
+        // [[nodiscard]] bool CanCastToJointType(DataType* Left, DataType* Right, OperatorType Type) const;
 
-        bool CastToJointType(DataType *&Left, DataType *&Right, OperatorType Type, size_t Line, size_t Column);
-        bool ImplicitCast(DataType *&Src, DataType *Dst);
+        // bool CastToJointType(DataType *&Left, DataType *&Right, OperatorType Type, size_t Line, size_t Column);
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
-        static bool ImplicitCast(CTimeValue *Src, DataType* DstType);
-        bool CastToJointType(CTimeValue *Left, CTimeValue *Right, OperatorType Type, size_t Line, size_t Column);
+        // static bool ImplicitCast(CTimeValue *Src, DataType* DstType);
+        // bool CastToJointType(CTimeValue *Left, CTimeValue *Right, OperatorType Type, size_t Line, size_t Column);
 
         bool CanExplicitCast(DataType* Src, DataType* Dst);
         bool ExplicitCast(DataType*& Src, DataType* Dst);
@@ -131,7 +128,6 @@ namespace Volt
         DataType* GetVariable(const std::string& Name);
 
         CTimeValue *CalculateUnary(CTimeValue *Operand, OperatorType Type) const;
-        CTimeValue *CalculateBinary(CTimeValue *Left, CTimeValue *Right, OperatorType Type) const;
 
         friend class LLVMCompiler;
     };
@@ -163,7 +159,7 @@ namespace Volt
                 DataType* CandidateArgType = CandidateSignature.Params[i];
                 DataType* ArgType = ArgTypes[i];
 
-                if (!CanImplicitCast(ArgType, CandidateArgType))
+                if (!ArgType->ImplicitCast(CandidateArgType))
                 {
                     Valid = false;
                     break;

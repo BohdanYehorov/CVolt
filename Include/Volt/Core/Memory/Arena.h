@@ -12,6 +12,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <memory>
 
 namespace Volt
 {

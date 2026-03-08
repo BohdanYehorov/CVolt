@@ -3,6 +3,7 @@
 //
 
 #include "Volt/Core/Parser/Parser.h"
+#include "Volt/Compiler/CompileTime/CTimeValue.h"
 
 #include <charconv>
 #include <complex>
@@ -29,7 +30,7 @@ namespace Volt
         Os << Node->GetName() <<
             " [" << Node->Pos << ":" << Node->Line << ":" << Node->Column << "] ";
 
-        if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
+        if (Node->CompileTimeValue && !Node->CompileTimeValue->IsEmpty)
         {
             Os << "CompileTimeValue: ";
 

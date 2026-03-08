@@ -8,6 +8,7 @@
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/Memory/Arena.h"
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 
 namespace Volt
 {
@@ -15,12 +16,16 @@ namespace Volt
 	{
 		GENERATED_BODY(CTimeValue, Object)
 	public:
+		static CTimeValue* CreateRaw(CompilationContext& CContext);
 		static CTimeValue* CreateInteger(DataType* IntType, Int64 Integer, Arena& MainArena);
 		static CTimeValue* CreateFloat(DataType* FloatType, double Float, Arena& MainArena);
 		static CTimeValue* CreateBool(DataType* BoolType, bool Bool, Arena& MainArena);
 		static CTimeValue* CreateChar(DataType* CharType, char Char, Arena& MainArena);
-		static CTimeValue* CreatePointer(DataType* PtrType, void* Ptr, Arena& MainArena);
-		static CTimeValue* CreateNull(DataType* Type, Arena& MainArena);
+
+		static CTimeValue* CreateEmpty(DataType* Type, Arena& MainArena);
+
+		template <typename T>
+		static CTimeValue* CreateFromType(DataType* Type, T Value, Arena& TypesArena);
 
 	public:
 		DataType* Type;
@@ -30,12 +35,32 @@ namespace Volt
 			double Float;
 			bool Bool;
 			char Char;
-			void* Ptr;
 		};
-		bool IsValid = true;
+		bool IsEmpty = true;
 
-		operator bool() const { return IsValid; }
+		bool ImplicitCast(DataType* To);
+		static CTimeValue* ResolveBinary(CTimeValue*& Left, CTimeValue*& Right, OperatorType Op,
+			CompilationContext& CContext);
+		static CTimeValue* ResolveUnary(CTimeValue*& Operand, OperatorType Op, CompilationContext& CContext);
 	};
+
+	template<typename T>
+	CTimeValue *CTimeValue::CreateFromType(DataType *Type, T Value, Arena &TypesArena)
+	{
+		switch (Type->GetCategory())
+		{
+			case TypeCategory::INTEGER:
+				return CreateInteger(Type, Value, TypesArena);
+			case TypeCategory::FLOATING_POINT:
+				return CreateFloat(Type, Value, TypesArena);
+			case TypeCategory::BOOLEAN:
+				return CreateBool(Type, Value, TypesArena);
+			case TypeCategory::CHAR:
+				return CreateChar(Type, Value, TypesArena);
+			default:
+				return nullptr;
+		}
+	}
 }
 
 #endif //CVOLT_CTIMEVALUE_H

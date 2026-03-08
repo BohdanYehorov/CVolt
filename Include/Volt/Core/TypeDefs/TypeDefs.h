@@ -7,9 +7,13 @@
 
 #include <unordered_map>
 #include <string>
+#include <llvm/ADT/SmallVector.h>
 
 namespace Volt
 {
+	template <typename T>
+	using SmallVec4 = llvm::SmallVector<T, 4>;
+
 	template <typename T>
 	using SmallVec8 = llvm::SmallVector<T, 8>;
 

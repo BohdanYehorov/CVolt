@@ -12,29 +12,33 @@ include_directories(
 
 add_definitions(${LLVM_DEFINITIONS})
 
-add_executable(CVolt
-#add_library(CVolt STATIC
-        Src/main.cpp
-        Src/Lexer.cpp
-        Src/Arena.cpp
-        Src/Parser.cpp
-        Src/Operator.cpp
-        Src/BufferView.cpp
-        Src/LLVMCompiler.cpp
-        Src/Hash.cpp
-        Src/DataTypeHash.cpp
-        Src/FunctionSignatureHash.cpp
-        Src/ParserFuzzer.cpp
-        Src/TypeChecker.cpp
-        Src/BuiltinFunctionTable.cpp
-        Src/CTimeValue.cpp
-        Src/CompilationContext.cpp
-        Src/Token.cpp
-        Src/LexError.cpp
-        Src/ParseError.cpp
-        Src/TypeError.cpp
-        Src/JITEngine.cpp
-        Src/DataType.cpp
+set(SOURCES
+    Src/Lexer.cpp
+    Src/Arena.cpp
+    Src/Parser.cpp
+    Src/Operator.cpp
+    Src/BufferView.cpp
+    Src/LLVMCompiler.cpp
+    Src/Hash.cpp
+    Src/DataTypeHash.cpp
+    Src/FunctionSignatureHash.cpp
+    Src/ParserFuzzer.cpp
+    Src/TypeChecker.cpp
+    Src/BuiltinFunctionTable.cpp
+    Src/CTimeValue.cpp
+    Src/CompilationContext.cpp
+    Src/Token.cpp
+    Src/LexError.cpp
+    Src/ParseError.cpp
+    Src/TypeError.cpp
+    Src/JITEngine.cpp
+    Src/DataType.cpp
 )
+
+if (COMPILE_TO_LIB)
+    add_library(CVolt STATIC ${SOURCES})
+else ()
+    add_executable(CVolt Src/main.cpp ${SOURCES})
+endif ()
 
 target_link_libraries(CVolt PRIVATE LLVM)

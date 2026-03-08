@@ -9,6 +9,7 @@
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
+#include "Volt/Core/Enums/OperatorType.h"
 #include <llvm/IR/Type.h>
 
 namespace Volt
@@ -41,6 +42,11 @@ namespace Volt
         virtual std::string ToString() const = 0;
         virtual TypeCategory GetCategory() const = 0;
 
+        virtual DataType* ImplicitCast(DataType* To) const = 0;
+
+    protected:
+        static DataType* GetJointType(DataType* Left, DataType* Right);
+
         friend class DataTypeHash;
         friend class CompilationContext;
     };
@@ -68,6 +74,7 @@ namespace Volt
         int GetRank() const override { return 0; }
         std::string ToString() const override { return "void"; }
         TypeCategory GetCategory() const override { return TypeCategory::VOID; }
+        DataType* ImplicitCast(DataType *To) const override { return nullptr; }
     };
 
     class BoolType : public PrimitiveDataType
@@ -88,6 +95,7 @@ namespace Volt
         int GetRank() const override { return 1; }
         std::string ToString() const override { return "bool"; }
         TypeCategory GetCategory() const override { return TypeCategory::BOOLEAN; }
+        DataType* ImplicitCast(DataType *To) const override;
     };
 
     class CharType : public PrimitiveDataType
@@ -108,6 +116,7 @@ namespace Volt
         int GetRank() const override { return 1; }
         std::string ToString() const override { return "char"; }
         TypeCategory GetCategory() const override { return TypeCategory::CHAR; }
+        DataType* ImplicitCast(DataType *To) const override;
     };
 
     class IntegerType : public PrimitiveDataType
@@ -130,6 +139,7 @@ namespace Volt
         int GetRank() const override;
         std::string ToString() const override;
         TypeCategory GetCategory() const override { return TypeCategory::INTEGER; }
+        DataType* ImplicitCast(DataType *To) const override;
     };
 
     class FloatingPointType : public PrimitiveDataType
@@ -145,6 +155,7 @@ namespace Volt
         int GetRank() const override;
         std::string ToString() const override;
         TypeCategory GetCategory() const override { return TypeCategory::FLOATING_POINT; }
+        DataType* ImplicitCast(DataType *To) const override;
     };
 
     class PointerType : public DataType
@@ -166,6 +177,7 @@ namespace Volt
         int GetRank() const override { return 11; }
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "*" : "?"; }
         TypeCategory GetCategory() const override { return TypeCategory::POINTER; }
+        DataType* ImplicitCast(DataType *To) const override;
     };
 
     class ReferenceType : public DataType
@@ -187,6 +199,10 @@ namespace Volt
         int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "$" : "?"; }
         TypeCategory GetCategory() const override { return TypeCategory::REFERENCE; }
+        DataType* ImplicitCast(DataType *To) const override
+        {
+            throw std::runtime_error("Cast references is unsupported");
+        }
     };
 
     class ArrayType : public DataType
@@ -214,6 +230,7 @@ namespace Volt
         int GetRank() const override { return 12; }
         std::string ToString() const override;
         TypeCategory GetCategory() const override { return TypeCategory::ARRAY; }
+        DataType* ImplicitCast(DataType *To) const override;
     };
 
     class ConstType : public DataType
@@ -236,6 +253,7 @@ namespace Volt
         int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
         std::string ToString() const override { return BaseType ? "const " + BaseType->ToString() : "?"; }
         TypeCategory GetCategory() const override { return TypeCategory::CONSTANT; }
+        DataType* ImplicitCast(DataType *To) const override;
     };
 }
 

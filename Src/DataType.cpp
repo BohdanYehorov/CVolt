@@ -6,6 +6,73 @@
 
 namespace Volt
 {
+	DataType *DataType::GetJointType(DataType *Left, DataType *Right)
+	{
+		if (Left == Right)
+			return Left;
+
+		int LeftTypeRank = Left->GetRank();
+		int RightTypeRank = Right->GetRank();
+
+		if (LeftTypeRank == -1 || RightTypeRank == -1)
+			return nullptr;
+
+		if (LeftTypeRank == RightTypeRank)
+			return Left;
+
+		DataType* Src = LeftTypeRank > RightTypeRank ? Right : Left;
+		DataType* Dst = LeftTypeRank > RightTypeRank ? Left : Right;
+
+		return Src->ImplicitCast(Dst);
+	}
+
+	DataType *BoolType::ImplicitCast(DataType *To) const
+	{
+		if (this == To)
+			return To;
+
+		if (auto CstType = Cast<ConstType>(To))
+		{
+			if (ImplicitCast(CstType->BaseType))
+				return To;
+			return nullptr;
+		}
+
+		switch (To->GetCategory())
+		{
+			case TypeCategory::BOOLEAN:
+			case TypeCategory::CHAR:
+			case TypeCategory::INTEGER:
+				return To;
+			default:
+				return nullptr;
+		}
+	}
+
+	DataType *CharType::ImplicitCast(DataType *To) const
+	{
+		if (this == To)
+			return To;
+
+		if (auto CstType = Cast<ConstType>(To))
+		{
+			if (ImplicitCast(CstType->BaseType))
+				return To;
+			return nullptr;
+		}
+
+		switch (To->GetCategory())
+		{
+			case TypeCategory::BOOLEAN:
+			case TypeCategory::CHAR:
+			case TypeCategory::INTEGER:
+			case TypeCategory::FLOATING_POINT:
+				return To;
+			default:
+				return nullptr;
+		}
+	}
+
 	bool IntegerType::IsEqual(const DataType *Other) const
 	{
 		if (auto IntType = Cast<const IntegerType>(Other))
@@ -33,6 +100,30 @@ namespace Volt
 			case 32: return "int";
 			case 64: return "long";
 			default: throw std::runtime_error("Unsupported integer size");
+		}
+	}
+
+	DataType *IntegerType::ImplicitCast(DataType *To) const
+	{
+		if (this == To)
+			return To;
+
+		if (auto CstType = Cast<ConstType>(To))
+		{
+			if (ImplicitCast(CstType->BaseType))
+				return To;
+			return nullptr;
+		}
+
+		switch (To->GetCategory())
+		{
+			case TypeCategory::BOOLEAN:
+			case TypeCategory::CHAR:
+			case TypeCategory::INTEGER:
+			case TypeCategory::FLOATING_POINT:
+				return To;
+			default:
+				return nullptr;
 		}
 	}
 
@@ -77,11 +168,62 @@ namespace Volt
 		}
 	}
 
+	DataType *FloatingPointType::ImplicitCast(DataType *To) const
+	{
+		if (this == To)
+			return To;
+
+		if (auto CstType = Cast<ConstType>(To))
+		{
+			if (ImplicitCast(CstType->BaseType))
+				return To;
+			return nullptr;
+		}
+
+		switch (To->GetCategory())
+		{
+			case TypeCategory::CHAR:
+			case TypeCategory::INTEGER:
+			case TypeCategory::FLOATING_POINT:
+				return To;
+			default:
+				return nullptr;
+		}
+	}
+
 	bool PointerType::IsEqual(const DataType *Other) const
 	{
 		if (auto PtrType = Cast<const PointerType>(Other))
 			return BaseType->IsEqual(PtrType->BaseType);
 		return false;
+	}
+
+	DataType *PointerType::ImplicitCast(DataType *To) const
+	{
+		if (this == To)
+			return To;
+
+		if (auto CstType = Cast<ConstType>(To))
+		{
+			if (ImplicitCast(CstType->BaseType))
+				return To;
+			return nullptr;
+		}
+
+		if (auto PtrType = Cast<PointerType>(To))
+		{
+			if (PtrType->BaseType->GetCategory() == TypeCategory::VOID)
+				return To;
+			return nullptr;
+		}
+
+		switch (To->GetCategory())
+		{
+			case TypeCategory::BOOLEAN:
+				return To;
+			default:
+				return nullptr;
+		}
 	}
 
 	bool ReferenceType::IsEqual(const DataType *Other) const
@@ -106,10 +248,33 @@ namespace Volt
 		return BaseType ? BaseType->ToString() + "[" + std::to_string(Length) + "]" : "?";
 	}
 
+	DataType *ArrayType::ImplicitCast(DataType *To) const
+	{
+		if (this == To)
+			return To;
+
+		if (auto CstType = Cast<ConstType>(To))
+		{
+			if (ImplicitCast(CstType->BaseType))
+				return To;
+			return nullptr;
+		}
+
+		return nullptr;
+	}
+
 	bool ConstType::IsEqual(const DataType *Other) const
 	{
 		if (auto CstType = Cast<const ConstType>(Other))
 			return BaseType->IsEqual(CstType->BaseType);
 		return false;
+	}
+
+	DataType* ConstType::ImplicitCast(DataType *To) const
+	{
+		if (this == To)
+			return To;
+
+		return nullptr;
 	}
 }

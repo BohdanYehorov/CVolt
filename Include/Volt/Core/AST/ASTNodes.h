@@ -7,22 +7,24 @@
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Parser/Operators/Operator.h"
-#include "Volt/Compiler/CompileTime/CTimeValue.h"
 #include "Volt/Core/Functions/Callee.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Core/Value/TypedValue.h"
+#include "Volt/ADT/Array.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
 #include <algorithm>
 
 namespace Volt
 {
+    class CTimeValue;
+
     class ASTNode : public Object
     {
         GENERATED_BODY(ASTNode, Object)
     public:
         DataType* ExpectedType = nullptr;
-        DataType* ResolvedType = nullptr;
+        // DataType* ResolvedType = nullptr;
         CTimeValue* CompileTimeValue = nullptr;
         size_t Pos, Line, Column;
         ASTNode(size_t Pos, size_t Line, size_t Column)
@@ -187,7 +189,10 @@ namespace Volt
     {
         GENERATED_BODY(BinaryOpNode, ASTNode)
     public:
-        DataType* OperandsType = nullptr;
+        // DataType* OperandsType = nullptr;
+
+        DataType* LeftOperandType = nullptr;
+        DataType* RightOperandType = nullptr;
 
         OperatorType Type;
         ASTNode* Left;
@@ -257,6 +262,8 @@ namespace Volt
     {
         GENERATED_BODY(DataTypeNodeBase, ASTNode)
     public:
+        DataType* ResolvedType = nullptr;
+
         DataTypeNodeBase(size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column) {}
     };

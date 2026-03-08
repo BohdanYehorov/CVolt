@@ -16,7 +16,7 @@ namespace Volt
 
     TypedValue *LLVMCompiler::CompileNode(ASTNode *Node)
     {
-        if (Node->CompileTimeValue && Node->CompileTimeValue->IsValid)
+        if (Node->CompileTimeValue && !Node->CompileTimeValue->IsEmpty)
         {
             CTimeValue* Value = Node->CompileTimeValue;
             switch (Value->Type->GetCategory())
@@ -140,13 +140,13 @@ namespace Volt
     TypedValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
         return Create<TypedValue>(llvm::ConstantInt::get(
-            CContext.GetLLVMType(Int->ResolvedType), Int->Value), Int->ResolvedType);
+            CContext.GetLLVMType(Int->CompileTimeValue->Type), Int->Value), Int->CompileTimeValue->Type);
     }
 
     TypedValue *LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
     {
         return Create<TypedValue>(llvm::ConstantFP::get(
-            CContext.GetLLVMType(Float->ResolvedType), Float->Value), Float->ResolvedType);
+            CContext.GetLLVMType(Float->CompileTimeValue->Type), Float->Value), Float->CompileTimeValue->Type);
     }
 
     TypedValue *LLVMCompiler::CompileBool(const BoolNode *Bool)
@@ -175,7 +175,7 @@ namespace Volt
 
         llvm::Type* ArrType = nullptr;
 
-        if (auto Type = Cast<ArrayType>(Array->ResolvedType))
+        if (auto Type = Cast<ArrayType>(Array->CompileTimeValue->Type))
             ArrType = llvm::ArrayType::get(
                 CContext.GetLLVMType(Type->BaseType), Array->Elements.size());
 
@@ -196,7 +196,7 @@ namespace Volt
             Builder.CreateStore(El->GetValue(), ElPtr);
         }
 
-        return Create<TypedValue>(Arr, Array->ResolvedType);
+        return Create<TypedValue>(Arr, Array->CompileTimeValue->Type);
     }
 
     TypedValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
@@ -231,7 +231,7 @@ namespace Volt
         llvm::Value* Value = TValue->GetValue();
 
         return Create<TypedValue>(Builder.CreateLoad(
-                CContext.GetLLVMType(Unref->ResolvedType), Value), Unref->ResolvedType);
+                CContext.GetLLVMType(Unref->CompileTimeValue->Type), Value), Unref->CompileTimeValue->Type);
     }
 
     TypedValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
@@ -300,10 +300,10 @@ namespace Volt
             case OperatorType::ADD:         return TValue;
             case OperatorType::SUB:         return Create<TypedValue>(IsFP ?
                                             Builder.CreateFNeg(Value) :
-                                            Builder.CreateNeg(Value), Unary->ResolvedType);
+                                            Builder.CreateNeg(Value), Unary->CompileTimeValue->Type);
             case OperatorType::LOGICAL_NOT: return Create<TypedValue>(Builder.CreateNot(
-                                               ImplicitCast(TValue, BoolType)->GetValue()), Unary->ResolvedType);
-            case OperatorType::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Unary->ResolvedType);
+                                               ImplicitCast(TValue, BoolType)->GetValue()), Unary->CompileTimeValue->Type);
+            case OperatorType::BIT_NOT:     return Create<TypedValue>(Builder.CreateNot(Value), Unary->CompileTimeValue->Type);
             default: ERROR("Unknown unary operator")
         }
     }
@@ -313,8 +313,8 @@ namespace Volt
         TypedValue* Left = CompileNode(Comparison->Left);
         TypedValue* Right = CompileNode(Comparison->Right);
 
-        Left = ImplicitCast(Left, Comparison->OperandsType);
-        Right = ImplicitCast(Right, Comparison->OperandsType);
+        Left = ImplicitCast(Left, Comparison->LeftOperandType);
+        Right = ImplicitCast(Right, Comparison->RightOperandType);
 
         DataType* Type = Left->GetDataType();
 
@@ -332,26 +332,26 @@ namespace Volt
         {
             case OperatorType::EQ:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOEQ(LeftVal, RightVal) :
-                                Builder.CreateICmpEQ(LeftVal, RightVal), Comparison->ResolvedType);
+                                Builder.CreateICmpEQ(LeftVal, RightVal), Comparison->CompileTimeValue->Type);
             case OperatorType::NEQ: return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpONE(LeftVal, RightVal) :
-                                Builder.CreateICmpNE(LeftVal, RightVal), Comparison->ResolvedType);
+                                Builder.CreateICmpNE(LeftVal, RightVal), Comparison->CompileTimeValue->Type);
             case OperatorType::LT:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOLT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLT(LeftVal, RightVal) :
-                                Builder.CreateICmpULT(LeftVal, RightVal), Comparison->ResolvedType);
+                                Builder.CreateICmpULT(LeftVal, RightVal), Comparison->CompileTimeValue->Type);
             case OperatorType::LTE: return Create<TypedValue>( IsFP ?
                                 Builder.CreateFCmpOLE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLE(LeftVal, RightVal) :
-                                Builder.CreateICmpULE(LeftVal, RightVal), Comparison->ResolvedType);
+                                Builder.CreateICmpULE(LeftVal, RightVal), Comparison->CompileTimeValue->Type);
             case OperatorType::GT:  return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOGT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGT(LeftVal, RightVal) :
-                                Builder.CreateICmpUGT(LeftVal, RightVal), Comparison->ResolvedType);
+                                Builder.CreateICmpUGT(LeftVal, RightVal), Comparison->CompileTimeValue->Type);
             case OperatorType::GTE: return Create<TypedValue>(IsFP ?
                                 Builder.CreateFCmpOGE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGE(LeftVal, RightVal) :
-                                Builder.CreateICmpUGE(LeftVal, RightVal), Comparison->ResolvedType);
+                                Builder.CreateICmpUGE(LeftVal, RightVal), Comparison->CompileTimeValue->Type);
             default: ERROR("Unknown comparison operator")
         }
     }
@@ -361,8 +361,8 @@ namespace Volt
         TypedValue* Left = CompileNode(Logical->Left);
         TypedValue* Right = CompileNode(Logical->Right);
 
-        Left = ImplicitCast(Left, Logical->OperandsType);
-        Right = ImplicitCast(Right, Logical->OperandsType);
+        Left = ImplicitCast(Left, Logical->LeftOperandType);
+        Right = ImplicitCast(Right, Logical->RightOperandType);
 
         // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -390,10 +390,10 @@ namespace Volt
                 // Phi->addIncoming(Builder.getTrue(), OrTrueBB);
                 // Phi->addIncoming(Builder.getFalse(), OrRhsBB);
                 //
-                // return Create<TypedValue>(Phi, Logical->ResolvedType);
+                // return Create<TypedValue>(Phi, Logical->CompileTimeValue->Type);
 
                 return Create<TypedValue>(
-                    Builder.CreateOr(Left->GetValue(), Right->GetValue()), Logical->ResolvedType);
+                    Builder.CreateOr(Left->GetValue(), Right->GetValue()), Logical->CompileTimeValue->Type);
             }
             case OperatorType::LOGICAL_AND:
             {
@@ -417,10 +417,10 @@ namespace Volt
                 // Phi->addIncoming(Right->GetValue(), AndRhsBB);
                 // Phi->addIncoming(Builder.getFalse(), AndFalseBB);
                 //
-                // return Create<TypedValue>(Phi, Logical->ResolvedType);
+                // return Create<TypedValue>(Phi, Logical->CompileTimeValue->Type);
 
                 return Create<TypedValue>(
-                    Builder.CreateAnd(Left->GetValue(), Right->GetValue()), Logical->ResolvedType);
+                    Builder.CreateAnd(Left->GetValue(), Right->GetValue()), Logical->CompileTimeValue->Type);
             }
             default:
                 ERROR("Unknown logical operator")
@@ -487,8 +487,8 @@ namespace Volt
         TypedValue* Left = CompileNode(BinaryOp->Left);
         TypedValue* Right = CompileNode(BinaryOp->Right);
 
-        Left = ImplicitCast(Left, BinaryOp->OperandsType);
-        Right = ImplicitCast(Right, BinaryOp->OperandsType);
+        Left = ImplicitCast(Left, BinaryOp->LeftOperandType);
+        Right = ImplicitCast(Right, BinaryOp->RightOperandType);
 
         DataType* Type = Left->GetDataType();
 
@@ -505,31 +505,31 @@ namespace Volt
         {
             case OperatorType::ADD:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFAdd(LeftVal, RightVal) :
-                                    Builder.CreateAdd(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateAdd(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::SUB:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFSub(LeftVal, RightVal) :
-                                    Builder.CreateSub(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateSub(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::MUL:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFMul(LeftVal, RightVal) :
-                                    Builder.CreateMul(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateMul(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::DIV:     return Create<TypedValue>(IsFP ?
                                     Builder.CreateFDiv(LeftVal, RightVal) : IsSigned ?
                                     Builder.CreateSDiv(LeftVal, RightVal) :
-                                    Builder.CreateUDiv(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateUDiv(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::MOD:     return Create<TypedValue>(IsSigned ?
                                     Builder.CreateSRem(LeftVal, RightVal) :
-                                    Builder.CreateURem(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateURem(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::BIT_AND: return Create<TypedValue>(
-                                    Builder.CreateAnd(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateAnd(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::BIT_OR:  return Create<TypedValue>(
-                                    Builder.CreateOr(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateOr(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::BIT_XOR: return Create<TypedValue>(
-                                    Builder.CreateXor(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateXor(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::LSHIFT:  return  Create<TypedValue>(
-                                    Builder.CreateShl(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateShl(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             case OperatorType::RSHIFT:  return Create<TypedValue>(IsSigned ?
                                     Builder.CreateAShr(LeftVal, RightVal) :
-                                    Builder.CreateLShr(LeftVal, RightVal), BinaryOp->ResolvedType);
+                                    Builder.CreateLShr(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type);
             default: ERROR("Unknown binary operator")
         }
     }
@@ -939,7 +939,7 @@ namespace Volt
             if (!TValue)
                 return nullptr;
 
-            return Create<TypedValue>(TValue->GetValue(), Unref->ResolvedType);
+            return Create<TypedValue>(TValue->GetValue(), Unref->CompileTimeValue->Type);
         }
 
         return nullptr;
