@@ -29,6 +29,10 @@ namespace Volt
 				return std::format("Cannot assign '{}.'", Context[0]);
 			case InvalidAssignment:
 				return std::format("Cannot assign values of this type: '{}'.", Context[0]);
+			case AssignNonLValue:
+				return std::format("Cannot assign value to r-value");
+			case AssignReadOnlyType:
+				return "Assign to readonly type";
 			case AssignmentTypeMismatch:
 				return std::format("Cannot initialize local variable '{}' of type {} with {}.",
 					Context[0], Context[1], Context[2]);

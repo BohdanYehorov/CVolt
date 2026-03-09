@@ -318,6 +318,9 @@ namespace Volt
 
 	bool CTimeValue::CanCastTo(DataType* To, bool Explicit)
 	{
+		if (auto ConstTy = Cast<ConstType>(To))
+			return CanCastTo(ConstTy->BaseType, Explicit);
+
 		DataType* NewType = Type->CastTo(To, Explicit);
 		if (!NewType)
 			return false;

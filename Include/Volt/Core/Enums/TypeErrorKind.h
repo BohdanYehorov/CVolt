@@ -18,6 +18,8 @@ namespace Volt
 		Redeclaration,
 		ImmutableAssignment,
 		InvalidAssignment,
+		AssignNonLValue,
+		AssignReadOnlyType,
 		AssignmentTypeMismatch,
 		InvalidBinaryOperator,
 		BinaryOperandTypeMismatch,

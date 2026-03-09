@@ -313,8 +313,11 @@ namespace Volt
         TypedValue* Left = CompileNode(Comparison->Left);
         TypedValue* Right = CompileNode(Comparison->Right);
 
-        Left = ImplicitCast(Left, Comparison->LeftOperandType);
-        Right = ImplicitCast(Right, Comparison->RightOperandType);
+        if (!Left->CastTo(Comparison->LeftOperandType, Builder, CContext))
+            return nullptr;
+
+        if (!Right->CastTo(Comparison->RightOperandType, Builder, CContext))
+            return nullptr;
 
         DataType* Type = Left->GetDataType();
 
@@ -361,8 +364,11 @@ namespace Volt
         TypedValue* Left = CompileNode(Logical->Left);
         TypedValue* Right = CompileNode(Logical->Right);
 
-        Left = ImplicitCast(Left, Logical->LeftOperandType);
-        Right = ImplicitCast(Right, Logical->RightOperandType);
+        if (!Left->CastTo(Logical->LeftOperandType, Builder, CContext))
+            return nullptr;
+
+        if (!Right->CastTo(Logical->RightOperandType, Builder, CContext))
+            return nullptr;
 
         // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -487,8 +493,11 @@ namespace Volt
         TypedValue* Left = CompileNode(BinaryOp->Left);
         TypedValue* Right = CompileNode(BinaryOp->Right);
 
-        Left = ImplicitCast(Left, BinaryOp->LeftOperandType);
-        Right = ImplicitCast(Right, BinaryOp->RightOperandType);
+        if (!Left->CastTo(BinaryOp->LeftOperandType, Builder, CContext))
+            return nullptr;
+
+        if (!Right->CastTo(BinaryOp->RightOperandType, Builder, CContext))
+            return nullptr;
 
         DataType* Type = Left->GetDataType();
 
@@ -549,7 +558,8 @@ namespace Volt
                 return nullptr;
 
             if (Arg->ExpectedType)
-                ArgValue = ImplicitCast(ArgValue, Arg->ExpectedType);
+                if (!ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
+                    return nullptr;
 
             LLVMArgs.push_back(ArgValue->GetValue());
         }
@@ -639,7 +649,8 @@ namespace Volt
         else if (Var->Value)
         {
             TypedValue* Value = CompileNode(Var->Value);
-            Value = ImplicitCast(Value, VarType);
+            if (!Value->CastTo(VarType, Builder, CContext))
+                return nullptr;
             Builder.CreateStore(Value->GetValue(), Alloca);
         }
 
@@ -721,7 +732,8 @@ namespace Volt
     TypedValue *LLVMCompiler::CompileIf(const IfNode *If)
     {
         TypedValue* Cond = CompileNode(If->Condition);
-        Cond = ImplicitCast(Cond,CContext.GetBoolType());
+        if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+            return nullptr;
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -758,7 +770,8 @@ namespace Volt
         Builder.CreateBr(LoopHeader);
         Builder.SetInsertPoint(LoopHeader);
         TypedValue* Cond = CompileNode(While->Condition);
-        Cond = ImplicitCast(Cond, CContext.GetBoolType());
+        if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+            return nullptr;
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
         llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
@@ -799,7 +812,8 @@ namespace Volt
         Builder.CreateBr(ForHeader);
         Builder.SetInsertPoint(ForHeader);
         TypedValue* Cond = CompileNode(For->Condition);
-        Cond = ImplicitCast(Cond, CContext.GetBoolType());
+        if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+            return nullptr;
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
         llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);

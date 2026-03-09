@@ -1,8 +1,6 @@
 fun:int Main()
 {
-    let:bool Cond = true;
-    let:int Num = int(Cond);
-
+    let:const int Num = 5;
     Out(Num);
 
     return 0;

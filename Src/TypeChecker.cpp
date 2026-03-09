@@ -319,7 +319,12 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitBinary(BinaryOpNode *Binary)
     {
-        CTimeValue* Left = VisitNode(Binary->Left);
+        CTimeValue* Left = nullptr;
+        if (Cast<AssignmentNode>(Binary))
+            Left = GetLValue(Binary->Left);
+        else
+            Left = VisitNode(Binary->Left);
+
         CTimeValue* Right = VisitNode(Binary->Right);
 
         if (!Left || !Right)
@@ -609,22 +614,41 @@ namespace Volt
 
             throw std::runtime_error("Array length mast be defined in compiler time");
         }
+        if (auto Const = Cast<ConstTypeNode>(Type))
+        {
+            Const->ResolvedType = CContext.GetConstType(VisitType(Const->BaseType));
+            return Const->ResolvedType;
+        }
 
         return nullptr;
     }
 
     CTimeValue *TypeChecker::GetLValue(ASTNode *Node)
     {
-        // if (auto Identifier = Cast<IdentifierNode>(Node))
-        // {
-        //     CTimeValue* Value = VisitIdentifier(Identifier);
-        //     if (!Value)
-        //         return nullptr;
-        //
-        //     //if (Value->Type->)
-        // }
-        // //if (auto Subscript )
-        return nullptr;
+        CTimeValue* Value = nullptr;
+
+        if (auto Identifier = Cast<IdentifierNode>(Node))
+            Value = VisitIdentifier(Identifier);
+        else if (auto Subscript = Cast<SubscriptNode>(Node))
+            Value = VisitSubscript(Subscript);
+        else if (auto Unref = Cast<UnrefNode>(Node))
+            Value = VisitUnref(Unref);
+        else
+        {
+            SendError(TypeErrorKind::AssignNonLValue, Node->Line, Node->Column);
+            return nullptr;
+        }
+
+        if (!Value)
+            return nullptr;
+
+        if (Value->Type->GetCategory() == TypeCategory::CONSTANT)
+        {
+            SendError(TypeErrorKind::AssignReadOnlyType, Node->Line, Node->Column);
+            return nullptr;
+        }
+
+        return Value;
     }
 
     bool TypeChecker::CanCastPointers(PointerType *Src, PointerType *Dst)
