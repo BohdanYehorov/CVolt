@@ -10,11 +10,11 @@ namespace Volt
 	{
 		for (auto& [Signature, Data] : Functions)
 		{
-			llvm::Type* RetType = CContext.GetLLVMType(Data->ReturnType);
+			llvm::Type* RetType = CContext.GetLLVMType(Data->ReturnType.GetType());
 			SmallVec8<llvm::Type*> LLVMParams;
 			LLVMParams.reserve(Signature.Params.size());
 			for (const auto& Param : Signature.Params)
-				LLVMParams.push_back(CContext.GetLLVMType(Param));
+				LLVMParams.push_back(CContext.GetLLVMType(Param.GetType()));
 
 			llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, LLVMParams, false);
 			llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Data->BaseName, Module);

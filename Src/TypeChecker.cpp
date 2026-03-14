@@ -118,7 +118,8 @@ namespace Volt
                 return nullptr;
         }
 
-        Int->CompileTimeValue = CTimeValue::CreateInteger(CContext.GetIntegerType(BitWidth), Int->Value, MainArena);
+        Int->CompileTimeValue = CTimeValue::CreateInteger(
+            QualType(CContext.GetIntegerType(BitWidth), QualType::CONST), Int->Value, MainArena);
         return Int->CompileTimeValue;
     }
 
@@ -137,25 +138,30 @@ namespace Volt
                 return nullptr;
         }
 
-        Float->CompileTimeValue = CTimeValue::CreateFloat(CContext.GetFPType(BitWidth), Float->Value, MainArena);
+        Float->CompileTimeValue = CTimeValue::CreateFloat(
+            QualType(CContext.GetFPType(BitWidth), QualType::CONST), Float->Value, MainArena);
         return Float->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitBool(BoolNode *Bool)
     {
-        Bool->CompileTimeValue = CTimeValue::CreateBool(CContext.GetBoolType(), Bool->Value, MainArena);
+        Bool->CompileTimeValue = CTimeValue::CreateBool(
+            QualType(CContext.GetBoolType(), QualType::CONST), Bool->Value, MainArena);
         return Bool->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitChar(CharNode *Char)
     {
-        Char->CompileTimeValue = CTimeValue::CreateChar(CContext.GetCharType(), Char->Value, MainArena);
+        Char->CompileTimeValue = CTimeValue::CreateChar(
+            QualType(CContext.GetCharType(), QualType::CONST), Char->Value, MainArena);
         return Char->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitString(StringNode *String)
     {
-        String->CompileTimeValue = CTimeValue::CreateEmpty(CContext.GetPointerType(CContext.GetCharType()), MainArena);
+        String->CompileTimeValue = CTimeValue::CreateEmpty(
+            QualType(CContext.GetPointerType(QualType(CContext.GetCharType(),
+                QualType::CONST)), QualType::CONST), MainArena);
         return String->CompileTimeValue;
     }
 
@@ -166,7 +172,7 @@ namespace Volt
         if (Elements.empty())
             return nullptr;
 
-        DataType* ElementsType = nullptr;
+        QualType ElementsType;
         bool HasErrors = false;
         for (auto El : Elements)
         {
@@ -174,7 +180,7 @@ namespace Volt
             if (!ElValue)
                 return nullptr;
 
-            DataType* ElType = ElValue->Type;
+            QualType ElType = ElValue->Type;
             if (!ElType)
                 return nullptr;
 
@@ -191,8 +197,8 @@ namespace Volt
         if (HasErrors)
             return nullptr;
 
-        Array->CompileTimeValue = CTimeValue::CreateEmpty(
-            CContext.GetArrayType(ElementsType, Elements.size()), MainArena);
+        Array->CompileTimeValue = CTimeValue::CreateEmpty(QualType(
+            CContext.GetArrayType(ElementsType, Elements.size()), QualType::CONST), MainArena);
         return Array->CompileTimeValue;
     }
 
@@ -205,21 +211,22 @@ namespace Volt
             return nullptr;
         }
 
-        Identifier->CompileTimeValue = CTimeValue::CreateEmpty(VarType, MainArena);
+        Identifier->CompileTimeValue = CTimeValue::CreateEmpty(QualType(VarType, 0), MainArena); // <-
         return Identifier->CompileTimeValue;
     }
 
     CTimeValue *TypeChecker::VisitRef(RefNode *Ref)
     {
-        CTimeValue* RefValue = VisitNode(Ref->Target);
+        CTimeValue* RefValue = GetLValue(Ref->Target, true);
         if (!RefValue)
             return nullptr;
 
-        DataType* RefType = RefValue->Type;
+        QualType RefType = RefValue->Type;
         if (!RefType)
             return nullptr;
 
-        Ref->CompileTimeValue = CTimeValue::CreateEmpty(CContext.GetPointerType(RefType), MainArena);
+        Ref->CompileTimeValue = CTimeValue::CreateEmpty(
+            QualType(CContext.GetPointerType(RefType), 0), MainArena); // <-
         return Ref->CompileTimeValue;
     }
 
@@ -229,11 +236,11 @@ namespace Volt
         if (!UnrefValue)
             return nullptr;
 
-        DataType* Type = UnrefValue->Type;
+        QualType Type = UnrefValue->Type;
         if (!Type)
             return nullptr;
 
-        if (auto PtrType = Cast<PointerType>(Type))
+        if (auto PtrType = Cast<PointerType>(Type.GetType()))
         {
             Unref->CompileTimeValue = CTimeValue::CreateEmpty(PtrType->BaseType, MainArena);
             return Unref->CompileTimeValue;
@@ -248,7 +255,7 @@ namespace Volt
         if (!SuffixValue)
             return nullptr;
 
-        DataType* SuffixType = SuffixValue->Type;
+        QualType SuffixType = SuffixValue->Type;
         if (!SuffixType)
             return nullptr;
 
@@ -274,20 +281,22 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
-        CTimeValue* PrefixValue = VisitNode(Prefix->Operand);
+        CTimeValue* PrefixValue = GetLValue(Prefix->Operand);
         if (!PrefixValue)
             return nullptr;
 
-        DataType* PrefixType = PrefixValue->Type;
+        QualType PrefixType = PrefixValue->Type;
         if (!PrefixType)
             return nullptr;
+
+        TypeCategory Category = PrefixType->GetCategory();
 
         switch (Prefix->Type)
         {
             case OperatorType::INC:
             case OperatorType::DEC:
             {
-                if (PrefixType->GetCategory() == TypeCategory::INTEGER)
+                if (Category == TypeCategory::INTEGER || Category == TypeCategory::CHAR || Category == TypeCategory::FLOATING_POINT)
                 {
                     Prefix->CompileTimeValue = CTimeValue::CreateEmpty(PrefixType,  MainArena);
                     return Prefix->CompileTimeValue;
@@ -331,8 +340,8 @@ namespace Volt
             return nullptr;
 
         Binary->CompileTimeValue = CTimeValue::ResolveBinary(Left, Right, Binary->Type, CContext);
-        Binary->LeftOperandType = Left->Type;
-        Binary->RightOperandType = Right->Type;
+        Binary->LeftOperandType = Left->Type.GetType();
+        Binary->RightOperandType = Right->Type.GetType();
         return Binary->CompileTimeValue;
     }
 
@@ -342,7 +351,7 @@ namespace Volt
         {
             const std::string& Name = Identifier->Value.str();
             size_t ArgsCount = Call->Arguments.size();
-            SmallVec8<DataType*> ArgTypes;
+            SmallVec8<QualType> ArgTypes;
             ArgTypes.reserve(ArgsCount);
 
             for (auto Arg : Call->Arguments)
@@ -351,7 +360,7 @@ namespace Volt
                 if (!ArgValue)
                     return nullptr;
 
-                DataType* ArgType = ArgValue->Type;
+                QualType ArgType = ArgValue->Type;
                 if (!ArgType)
                     return nullptr;
 
@@ -365,7 +374,7 @@ namespace Volt
                 Call->ResolvedCallee = Iter->second;
 
                 for (size_t i = 0; i < ArgsCount; i++)
-                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i];
+                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i].GetType();
 
                 return CTimeValue::CreateEmpty(Iter->second->ReturnType, MainArena);
             }
@@ -376,7 +385,7 @@ namespace Volt
                 Call->ResolvedCallee = Iter->second;
 
                 for (size_t i = 0; i < ArgsCount; i++)
-                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i];
+                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i].GetType();
 
                 return CTimeValue::CreateEmpty(Iter->second->ReturnType, MainArena);
             }
@@ -412,8 +421,8 @@ namespace Volt
         if (!TargetValue || !IndexValue)
             return nullptr;
 
-        DataType* TargetType = TargetValue->Type;
-        DataType* IndexType = IndexValue->Type;
+        DataType* TargetType = TargetValue->Type.GetType();
+        DataType* IndexType = IndexValue->Type.GetType();
 
         DataType* Int32Type = CContext.GetIntegerType(32);
 
@@ -438,7 +447,7 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitExplicitCast(ExplicitCastNode *ECast)
     {
-        DataType* SrcType = VisitType(ECast->Type);
+        QualType SrcType = VisitType(ECast->Type);
         CTimeValue* Target = VisitNode(ECast->Target);
 
         if (!SrcType || !Target)
@@ -457,13 +466,13 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitVariable(VariableNode *Variable)
     {
-        DataType* VarType = VisitType(Variable->Type);
+        QualType VarType = VisitType(Variable->Type);
         CTimeValue* Value = VisitNode(Variable->Value);
 
         if (!VarType)
             return nullptr;
 
-        if (Value && !Value->Type->ImplicitCast(VarType))
+        if (Value && !Value->Type.ImplicitCast(VarType))
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
                 Variable,{ Variable->Name.str(),
@@ -477,18 +486,18 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitFunction(FunctionNode *Function)
     {
-        SmallVec8<DataType*> Params;
+        SmallVec8<QualType> Params;
         Params.reserve(Function->Params.size());
         FunctionParams.reserve(Function->Params.size());
         for (const auto& Param : Function->Params)
         {
-            DataType* ParamType = VisitType(Param->Type);
-            Params.push_back(ParamType);
+            QualType ParamType = VisitType(Param->Type);
+            Params.push_back(ParamType); // <-
             FunctionParams.emplace_back(Param->Name.str(), ParamType);
         }
 
         FunctionSignature Signature(Function->Name.str(), Params);
-        DataType* ReturnType = VisitType(Function->ReturnType);
+        QualType ReturnType = VisitType(Function->ReturnType);
 
         auto FuncCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
         Function->ResolvedCallee = FuncCallee;
@@ -496,7 +505,7 @@ namespace Volt
 
         FunctionReturnType = ReturnType;
         VisitBlock(Cast<BlockNode>(Function->Body));
-        FunctionReturnType = nullptr;
+        FunctionReturnType = QualType();
 
         return nullptr;
     }
@@ -507,7 +516,7 @@ namespace Volt
         if (!Cond)
             return nullptr;
 
-        DataType* CondType = Cond->Type;
+        DataType* CondType = Cond->Type.GetType();
         if (!CondType)
             return nullptr;
 
@@ -531,7 +540,7 @@ namespace Volt
         if (!Cond)
             return nullptr;
 
-        DataType* CondType = Cond->Type;
+        DataType* CondType = Cond->Type.GetType();
         if (!CondType)
             return nullptr;
 
@@ -553,7 +562,7 @@ namespace Volt
         if (!Cond)
             return nullptr;
 
-        DataType* CondType = Cond->Type;
+        DataType* CondType = Cond->Type.GetType();
         if (!CondType)
             return nullptr;
 
@@ -572,36 +581,36 @@ namespace Volt
     {
         if (Return->ReturnValue)
         {
-            if (FunctionReturnType == CContext.GetVoidType())
+            if (FunctionReturnType.GetType() == CContext.GetVoidType())
             {
                 SendError(TypeErrorKind::VoidReturnValue, Return->ReturnValue);
                 return nullptr;
             }
 
-            DataType* ReturnType = VisitNode(Return->ReturnValue)->Type;
-            if (!ReturnType->ImplicitCast(FunctionReturnType))
+            QualType ReturnType = VisitNode(Return->ReturnValue)->Type;
+            if (!ReturnType.ImplicitCast(FunctionReturnType))
                 SendError(TypeErrorKind::ReturnTypeMismatch, Return->ReturnValue);
 
             return nullptr;
         }
 
-        if (FunctionReturnType != CContext.GetVoidType())
+        if (FunctionReturnType.GetType() != CContext.GetVoidType())
             SendError(TypeErrorKind::NonVoidMissingReturn, Return);
 
         return nullptr;
     }
 
-    DataType* TypeChecker::VisitType(DataTypeNodeBase *Type)
+    QualType TypeChecker::VisitType(DataTypeNodeBase *Type)
     {
         if (auto Primitive = Cast<PrimitiveTypeNode>(Type))
         {
             Primitive->ResolvedType = Primitive->Type;
-            return Primitive->Type;
+            return { Primitive->Type, 0 };
         }
         if (auto Ptr = Cast<PointerTypeNode>(Type))
         {
             Ptr->ResolvedType = CContext.GetPointerType(VisitType(Ptr->BaseType));
-            return CContext.GetPointerType(VisitType(Ptr->BaseType));
+            return { Ptr->ResolvedType, 0 };
         }
         if (auto Array = Cast<ArrayTypeNode>(Type))
         {
@@ -609,21 +618,21 @@ namespace Volt
             if (Length && Length->Type->GetCategory() == TypeCategory::INTEGER)
             {
                 Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
-                return Array->ResolvedType;
+                return { Array->ResolvedType, 0 };
             }
 
             throw std::runtime_error("Array length mast be defined in compiler time");
         }
-        if (auto Const = Cast<ConstTypeNode>(Type))
-        {
-            Const->ResolvedType = CContext.GetConstType(VisitType(Const->BaseType));
-            return Const->ResolvedType;
-        }
+        // if (auto Const = Cast<ConstTypeNode>(Type))
+        // {
+        //     Const->ResolvedType = CContext.GetConstType(VisitType(Const->BaseType));
+        //     return Const->ResolvedType;
+        // }
 
-        return nullptr;
+        return {};
     }
 
-    CTimeValue *TypeChecker::GetLValue(ASTNode *Node)
+    CTimeValue *TypeChecker::GetLValue(ASTNode *Node, bool IgnoreConstants)
     {
         CTimeValue* Value = nullptr;
 
@@ -642,7 +651,7 @@ namespace Volt
         if (!Value)
             return nullptr;
 
-        if (Value->Type->GetCategory() == TypeCategory::CONSTANT)
+        if (!IgnoreConstants && Value->Type.HasQualifier(QualType::CONST))
         {
             SendError(TypeErrorKind::AssignReadOnlyType, Node->Line, Node->Column);
             return nullptr;
@@ -673,7 +682,7 @@ namespace Volt
 
     void TypeChecker::ExitScope()
     {
-        for (const ScopeEntry& Entry : ScopeStack.Back())
+        for (const CTimeScopeEntry& Entry : ScopeStack.Back())
         {
             if (Entry.Previous)
                 Variables[Entry.Name] = Entry.Previous;
@@ -684,19 +693,19 @@ namespace Volt
         ScopeStack.Pop();
     }
 
-    void TypeChecker::DeclareVariable(const std::string &Name, DataType* Type)
+    void TypeChecker::DeclareVariable(const std::string &Name, QualType Type)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            ScopeStack.Back().Add({ Name, Iter->second });
+            ScopeStack.Back().Emplace(Name, Iter->second);
 
-        Variables[Name] = MainArena.Create<TypedValue>(Type);
+        Variables[Name] = CTimeValue::CreateEmpty(Type,  MainArena);
         ScopeStack.Back().Add({ Name, nullptr });
     }
 
     DataType* TypeChecker::GetVariable(const std::string &Name)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            return Iter->second->GetDataType();
+            return Iter->second->Type.GetType(); // <-
 
         return nullptr;
     }

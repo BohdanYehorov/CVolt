@@ -15,7 +15,7 @@ namespace Volt
 		GENERATED_BODY(FunctionCallee, CalleeBase)
 	public:
 		llvm::Function* Function;
-		FunctionCallee(DataType* Type, llvm::Function* Function)
+		FunctionCallee(QualType Type, llvm::Function* Function)
 			: CalleeBase(Type), Function(Function) {}
 	};
 }

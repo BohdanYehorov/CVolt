@@ -40,25 +40,25 @@ namespace Volt
 
         [[nodiscard]] static std::string ToString(OperatorType Op);
 
-        [[nodiscard]] static DataType* ResolveArithmetic(DataType*& Left, DataType*& Right, OperatorType Op);
-        [[nodiscard]] static DataType* ResolveComparison(DataType*& Left, DataType*& Right, OperatorType Op,
+        [[nodiscard]] static QualType ResolveArithmetic(QualType& Left, QualType& Right, OperatorType Op);
+        [[nodiscard]] static QualType ResolveComparison(QualType& Left, QualType& Right, OperatorType Op,
             CompilationContext& CContext);
-        [[nodiscard]] static DataType* ResolveLogical(DataType*& Left, DataType*& Right, OperatorType Op,
+        [[nodiscard]] static QualType ResolveLogical(QualType& Left, QualType& Right, OperatorType Op,
             CompilationContext& CContext);
-        [[nodiscard]] static DataType* ResolveAssignment(DataType*& Left, DataType*& Right, OperatorType Op);
-        [[nodiscard]] static DataType* ResolvePointerArithmetic(DataType* Left, DataType* Right, OperatorType Op,
+        [[nodiscard]] static QualType ResolveAssignment(QualType& Left, QualType& Right, OperatorType Op);
+        [[nodiscard]] static QualType ResolvePointerArithmetic(QualType Left, QualType Right, OperatorType Op,
             CompilationContext& CContext);
-        [[nodiscard]] static DataType* ResolveBinary(DataType*& Left, DataType*& Right, OperatorType Op,
+        [[nodiscard]] static QualType ResolveBinary(QualType& Left, QualType& Right, OperatorType Op,
             CompilationContext& CContext);
 
         [[nodiscard]] static BinaryOperatorKind GetBinaryOperatorKind(OperatorType Op);
 
-        [[nodiscard]] static DataType* ResolveUnary(DataType*& Operand, OperatorType Op);
+        [[nodiscard]] static QualType ResolveUnary(QualType& Operand, OperatorType Op);
 
     private:
-        static bool CastToJointType(DataType*& Left, DataType*& Right);
-        [[nodiscard]] static DataType* GetJointType(DataType* Left, DataType* Right);
-        static DataType* Normalize(DataType*& Left, DataType*& Right, DataType* Joint);
+        static bool CastToJointType(QualType& Left, QualType& Right);
+        [[nodiscard]] static QualType GetJointType(QualType Left, QualType Right);
+        static QualType Normalize(QualType& Left, QualType& Right, QualType Joint);
         [[nodiscard]] static OperatorType GetSecondOpCompoundAssignment(OperatorType Op);
     };
 }

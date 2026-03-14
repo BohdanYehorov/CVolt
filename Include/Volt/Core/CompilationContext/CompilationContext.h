@@ -71,9 +71,8 @@ namespace Volt
 		[[nodiscard]] CharType* GetCharType();
 		[[nodiscard]] IntegerType* GetIntegerType(size_t BitWidth);
 		[[nodiscard]] FloatingPointType* GetFPType(size_t BitWidth);
-		[[nodiscard]] PointerType* GetPointerType(DataType *BaseType);
-		[[nodiscard]] ArrayType* GetArrayType(DataType *BaseType, size_t Length);
-		[[nodiscard]] ConstType* GetConstType(DataType *BaseType);
+		[[nodiscard]] PointerType* GetPointerType(QualType BaseType);
+		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);
 
 		friend struct Token;

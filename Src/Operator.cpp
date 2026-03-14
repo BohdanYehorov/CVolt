@@ -170,13 +170,13 @@ namespace Volt
         }
     }
 
-    DataType *Operator::ResolveArithmetic(DataType *&Left, DataType *&Right, OperatorType Op)
+    QualType Operator::ResolveArithmetic(QualType &Left, QualType &Right, OperatorType Op)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
-        DataType* JointType = GetJointType(Left, Right);
-        if (!JointType) return nullptr;
+        QualType JointType = GetJointType(Left, Right);
+        if (!JointType) return {};
 
         TypeCategory Category = JointType->GetCategory();
 
@@ -189,7 +189,7 @@ namespace Volt
             {
                 if (Category == CHAR || Category == INTEGER || Category == FLOATING_POINT)
                     return Normalize(Left, Right, JointType);
-                return nullptr;
+                return {};
             }
 
             case MOD:
@@ -201,21 +201,21 @@ namespace Volt
             {
                 if (Category == CHAR || Category == INTEGER)
                     return Normalize(Left, Right, JointType);
-                return nullptr;
+                return {};
             }
             default:
-                return nullptr;
+                return {};
         }
     }
 
-    DataType *Operator::ResolveComparison(DataType *&Left, DataType *&Right, OperatorType Op,
+    QualType Operator::ResolveComparison(QualType &Left, QualType &Right, OperatorType Op,
         CompilationContext& CContext)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
-        DataType* JointType = GetJointType(Left, Right);
-        if (!JointType) return nullptr;
+        QualType JointType = GetJointType(Left, Right);
+        if (!JointType) return {};
 
         TypeCategory Category = JointType->GetCategory();
 
@@ -231,9 +231,9 @@ namespace Volt
                     Category == POINTER)
                 {
                     Normalize(Left, Right, JointType);
-                    return CContext.GetBoolType();
+                    return { CContext.GetBoolType(), 0 };
                 }
-                return nullptr;
+                return {};
             }
 
             case GT:
@@ -246,17 +246,17 @@ namespace Volt
                     Category == FLOATING_POINT)
                 {
                     Normalize(Left, Right, JointType);
-                    return CContext.GetBoolType();
+                    return { CContext.GetBoolType(), 0 };
                 }
-                return nullptr;
+                return {};
             }
 
             default:
-                return nullptr;
+                return {};
         }
     }
 
-    DataType *Operator::ResolveLogical(DataType *&Left, DataType *&Right, OperatorType Op,
+    QualType Operator::ResolveLogical(QualType &Left, QualType &Right, OperatorType Op,
         CompilationContext& CContext)
     {
         using enum TypeCategory;
@@ -264,26 +264,26 @@ namespace Volt
 
         DataType* BoolTy = CContext.GetBoolType();
         if (!Left->ImplicitCast(BoolTy) || !Right->ImplicitCast(BoolTy))
-            return nullptr;
+            return {};
 
         switch (Op)
         {
             case LOGICAL_AND:
             case LOGICAL_OR:
-                return Normalize(Left, Right, BoolTy);
+                return Normalize(Left, Right, QualType(BoolTy, 0));
 
             default:
-                return nullptr;
+                return {};
         }
     }
 
-    DataType *Operator::ResolveAssignment(DataType *&Left, DataType *&Right, OperatorType Op)
+    QualType Operator::ResolveAssignment(QualType &Left, QualType &Right, OperatorType Op)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
-        if (!Right->ImplicitCast(Left))
-            return nullptr;
+        if (!Right.ImplicitCast(Left))
+            return {};
 
         TypeCategory Category = Left->GetCategory();
 
@@ -293,24 +293,24 @@ namespace Volt
             {
                 if (Category != VOID)
                 {
-                    Right = Right->ImplicitCast(Left);
+                    Right = Left;
                     return Left;
                 }
-                return nullptr;
+                return {};
             }
 
             default:
             {
                 OperatorType SecondOp = GetSecondOpCompoundAssignment(Op);
                 if (SecondOp == UNKNOWN)
-                    return nullptr;
+                    return {};
 
-                DataType *TmpLeft = Left, *TmpRight = Right;
-                DataType* Result = ResolveArithmetic(TmpLeft, TmpLeft, SecondOp);
-                if (!Result) return nullptr;
+                QualType TmpLeft = Left, TmpRight = Right;
+                QualType Result = ResolveArithmetic(TmpLeft, TmpRight, SecondOp);
+                if (!Result) return {};
 
-                if (!Result->ImplicitCast(Left))
-                    return nullptr;
+                if (!Result.ImplicitCast(Left))
+                    return {};
 
                 Right = Left;
                 return Left;
@@ -318,7 +318,7 @@ namespace Volt
         }
     }
 
-    DataType *Operator::ResolvePointerArithmetic(DataType *Left, DataType *Right, OperatorType Op,
+    QualType Operator::ResolvePointerArithmetic(QualType Left, QualType Right, OperatorType Op,
         CompilationContext& CContext)
     {
         using enum TypeCategory;
@@ -332,7 +332,7 @@ namespace Volt
             if (Op == ADD || Op == SUB)
                 return Left;
 
-            return nullptr;
+            return {};
         }
 
         if (LeftCategory == INTEGER && RightCategory == POINTER)
@@ -340,29 +340,29 @@ namespace Volt
             if (Op == ADD)
                 return Right;
 
-            return nullptr;
+            return {};
         }
 
         if (LeftCategory == POINTER && RightCategory == POINTER)
         {
             if (Op != SUB)
-                return nullptr;
+                return {};
 
-            if (Cast<PointerType>(Left)->BaseType != Cast<PointerType>(Right)->BaseType)
-                return nullptr;
+            if (Cast<PointerType>(Left.GetType())->BaseType != Cast<PointerType>(Right.GetType())->BaseType)
+                return {};
 
-            return CContext.GetIntegerType(64);
+            return { CContext.GetIntegerType(64), 0 };
         }
 
-        return nullptr;
+        return {};
     }
 
-    DataType *Operator::ResolveBinary(DataType *&Left, DataType *&Right, OperatorType Op, CompilationContext& CContext)
+    QualType Operator::ResolveBinary(QualType &Left, QualType &Right, OperatorType Op, CompilationContext& CContext)
     {
         switch (GetBinaryOperatorKind(Op))
         {
             case BinaryOperatorKind::Arithmetic:
-                if (DataType* PtrArithmeticResType = ResolvePointerArithmetic(Left, Right, Op, CContext))
+                if (QualType PtrArithmeticResType = ResolvePointerArithmetic(Left, Right, Op, CContext))
                     return PtrArithmeticResType;
                 return ResolveArithmetic(Left, Right, Op);
             case BinaryOperatorKind::Comparison:
@@ -372,7 +372,7 @@ namespace Volt
             case BinaryOperatorKind::Assignment:
                 return ResolveAssignment(Left, Right, Op);
             default:
-                return nullptr;
+                return {};
         }
     }
 
@@ -423,7 +423,7 @@ namespace Volt
         }
     }
 
-    DataType *Operator::ResolveUnary(DataType *&Operand, OperatorType Op)
+    QualType Operator::ResolveUnary(QualType &Operand, OperatorType Op)
     {
         using enum TypeCategory;
         using enum OperatorType;
@@ -440,7 +440,7 @@ namespace Volt
                 if (Category == CHAR || Category == INTEGER || Category == FLOATING_POINT)
                     return Operand;
 
-                return nullptr;
+                return {};
             }
 
             case BIT_NOT:
@@ -448,7 +448,7 @@ namespace Volt
                 if (Category == CHAR || Category == INTEGER)
                     return Operand;
 
-                return nullptr;
+                return {};
             }
 
             case LOGICAL_NOT:
@@ -456,15 +456,15 @@ namespace Volt
                 if (Category == BOOLEAN)
                     return Operand;
 
-                return nullptr;
+                return {};
             }
 
             default:
-                return nullptr;
+                return {};
         }
     }
 
-    bool Operator::CastToJointType(DataType *&Left, DataType *&Right)
+    bool Operator::CastToJointType(QualType &Left, QualType &Right)
     {
         if (Left == Right) return true;
 
@@ -474,22 +474,23 @@ namespace Volt
         if (LeftRank == -1 || RightRank == -1)
             return false;
 
-        DataType*& Dst = LeftRank > RightRank ? Left : Right;
-        DataType*& Src = Dst == Left ? Right : Left;
-        Src = Src->ImplicitCast(Dst);
-        if (!Src) return false;
+        QualType& Dst = LeftRank > RightRank ? Left : Right;
+        QualType& Src = Dst == Left ? Right : Left;
+        // Src = Src->ImplicitCast(Dst);
+        if (!Src.ImplicitCast(Dst)) return false;
+        Src = Dst;
 
         return true;
     }
 
-    DataType *Operator::GetJointType(DataType *Left, DataType *Right)
+    QualType Operator::GetJointType(QualType Left, QualType Right)
     {
         if (CastToJointType(Left, Right))
             return Left;
-        return nullptr;
+        return {};
     }
 
-    DataType *Operator::Normalize(DataType *&Left, DataType *&Right, DataType *Joint)
+    QualType Operator::Normalize(QualType &Left, QualType &Right, QualType Joint)
     {
         Left = Joint;
         Right = Joint;

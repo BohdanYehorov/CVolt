@@ -33,13 +33,13 @@ namespace Volt
         {
             size_t Res = std::hash<size_t>{}(ArrType->Object_GetType());
             CombineHashes(Res, std::hash<size_t>{}(ArrType->Length));
-            CombineHashes(Res, operator()(ArrType->BaseType));
+            CombineHashes(Res, operator()(ArrType->BaseType.GetType()));
             Type->CachedHash = Res;
         }
         else if (const auto PtrType = Cast<const PointerType>(Type))
         {
             size_t Res = std::hash<size_t>{}(PtrType->Object_GetType());
-            CombineHashes(Res, operator()(PtrType->BaseType));
+            CombineHashes(Res, operator()(PtrType->BaseType.GetType()));
             Type->CachedHash = Res;
         }
 

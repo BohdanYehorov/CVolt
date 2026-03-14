@@ -1,7 +1,8 @@
 fun:int Main()
 {
-    let:const int Num = 5;
-    Out(Num);
+    let:int Num = 6;
+    Num += 4;
+    Out(++Num);
 
     return 0;
 }

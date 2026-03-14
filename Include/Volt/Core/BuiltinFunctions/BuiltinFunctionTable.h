@@ -43,13 +43,11 @@ namespace Volt
 
 	private:
 		template <typename T, typename ...Rest>
-		void FillParams(SmallVec8<DataType*>& Params);
+		void FillParams(SmallVec8<QualType>& Params);
 	};
 
-
-
 	template<typename T, typename ... Rest>
-	void BuiltinFunctionTable::FillParams(SmallVec8<DataType*> &Params)
+	void BuiltinFunctionTable::FillParams(SmallVec8<QualType> &Params)
 	{
 		Params.push_back(TypeConv::GetDataType<T>(CContext));
 		if constexpr (sizeof...(Rest) > 0)
@@ -59,8 +57,8 @@ namespace Volt
 	template<typename Ret, typename ... Args>
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)(Args...))
 	{
-		DataType* RetType = TypeConv::GetDataType<Ret>(CContext);
-		SmallVec8<DataType*> Params;
+		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
+		SmallVec8<QualType> Params;
 		FillParams<Args...>(Params);
 		FunctionSignature Signature{ Name, Params };
 		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
@@ -70,7 +68,7 @@ namespace Volt
 	template<typename Ret>
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)())
 	{
-		DataType* RetType = TypeConv::GetDataType<Ret>(CContext);
+		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
 		FunctionSignature Signature{ Name, {} };
 		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
 			RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr));

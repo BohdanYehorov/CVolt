@@ -13,8 +13,8 @@ namespace Volt
 	{
 		GENERATED_BODY(CalleeBase, Object)
 	public:
-		DataType* ReturnType;
-		CalleeBase(DataType* ReturnType)
+		QualType ReturnType;
+		CalleeBase(QualType ReturnType)
 			: ReturnType(ReturnType) {}
 	};
 }

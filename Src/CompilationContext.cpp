@@ -70,43 +70,30 @@ namespace Volt
 		return CachedFPTypes[Index];
 	}
 
-	PointerType *CompilationContext::GetPointerType(DataType *BaseType)
+	PointerType *CompilationContext::GetPointerType(QualType BaseType)
 	{
-		PointerType PtrDataType(BaseType);
+		if (!BaseType->PointerVariants)
+			BaseType->InitPointerVariants();
 
-		if (auto Iter = CachedTypes.find(&PtrDataType); Iter != CachedTypes.end())
-			return Cast<PointerType>(Iter->Type);
+		size_t Index = BaseType.GetQuals();
 
-		auto PtrTypeNode = MainArena.Create<PointerType>(BaseType);
-		CachedTypes.insert(PtrTypeNode);
+		if (!BaseType->PointerVariants[Index])
+			BaseType->PointerVariants[Index] = MainArena.Create<PointerType>(BaseType);
 
-		return PtrTypeNode;
+		return BaseType->PointerVariants[Index];
 	}
 
-	ArrayType *CompilationContext::GetArrayType(DataType *BaseType, size_t Length)
+	ArrayType *CompilationContext::GetArrayType(QualType BaseType, size_t Length)
 	{
-		ArrayType ArrDataType(BaseType, Length);
+		if (!BaseType->ArrayVariants)
+			BaseType->InitArrayVariants();
 
-		if (auto Iter = CachedTypes.find(&ArrDataType); Iter != CachedTypes.end())
-			return Cast<ArrayType>(Iter->Type);
+		size_t Index = BaseType.GetQuals();
 
-		auto ArrType = MainArena.Create<ArrayType>(BaseType, Length);
-		CachedTypes.insert(ArrType);
+		if (!BaseType->ArrayVariants[Index])
+			BaseType->ArrayVariants[Index] = MainArena.Create<ArrayType>(BaseType, Length);
 
-		return ArrType;
-	}
-
-	ConstType *CompilationContext::GetConstType(DataType *BaseType)
-	{
-		ConstType ConstDataType(BaseType);
-
-		if (auto Iter = CachedTypes.find(&ConstDataType); Iter != CachedTypes.end())
-			return Cast<ConstType>(Iter->Type);
-
-		auto CstType = MainArena.Create<ConstType>(BaseType);
-		CachedTypes.insert(CstType);
-
-		return CstType;
+		return BaseType->ArrayVariants[Index];
 	}
 
 	llvm::Type *CompilationContext::GetLLVMType(DataType *Type)

@@ -3,7 +3,7 @@
 //
 
 #include "Volt/Compiler/Hash/Hash.h"
-#include "Volt/Compiler/Functions/FunctionSignature.h"
+#include <llvm/ADT/ArrayRef.h>
 
 namespace Volt
 {

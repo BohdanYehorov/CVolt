@@ -64,15 +64,21 @@ namespace Volt::TypeConv
 	}
 
 	template <typename T>
-	DataType* GetDataType(CompilationContext& CContext)
+	QualType GetDataType(CompilationContext& CContext)
 	{
+		if constexpr (std::is_const_v<T>)
+		{
+			using BaseType = std::remove_const_t<T>;
+			return { GetDataType<BaseType>(CContext), QualType::CONST };
+		}
+
 		if constexpr (std::is_pointer_v<T>)
 		{
 			using BaseType = std::remove_pointer_t<T>;
-			return CContext.GetPointerType(GetDataType<BaseType>(CContext));
+			return { CContext.GetPointerType(GetDataType<BaseType>(CContext)), 0 };
 		}
 
-		return GetBaseType<T>(CContext);
+		return { GetBaseType<T>(CContext), 0 };
 	}
 }
 

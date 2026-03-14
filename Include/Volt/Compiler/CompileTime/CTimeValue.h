@@ -17,18 +17,18 @@ namespace Volt
 		GENERATED_BODY(CTimeValue, Object)
 	public:
 		static CTimeValue* CreateRaw(CompilationContext& CContext);
-		static CTimeValue* CreateInteger(DataType* IntType, Int64 Integer, Arena& MainArena);
-		static CTimeValue* CreateFloat(DataType* FloatType, double Float, Arena& MainArena);
-		static CTimeValue* CreateBool(DataType* BoolType, bool Bool, Arena& MainArena);
-		static CTimeValue* CreateChar(DataType* CharType, char Char, Arena& MainArena);
+		static CTimeValue* CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena);
+		static CTimeValue* CreateFloat(QualType FloatType, double Float, Arena& MainArena);
+		static CTimeValue* CreateBool(QualType BoolType, bool Bool, Arena& MainArena);
+		static CTimeValue* CreateChar(QualType CharType, char Char, Arena& MainArena);
 
-		static CTimeValue* CreateEmpty(DataType* Type, Arena& MainArena);
+		static CTimeValue* CreateEmpty(QualType Type, Arena& MainArena);
 
 		template <typename T>
-		static CTimeValue* CreateFromType(DataType* Type, T Value, Arena& TypesArena);
+		static CTimeValue* CreateFromType(QualType Type, T Value, Arena& TypesArena);
 
 	public:
-		DataType* Type;
+		QualType Type;
 		union
 		{
 			Int64 Int;
@@ -38,10 +38,10 @@ namespace Volt
 		};
 		bool IsEmpty = true;
 
-		bool ImplicitCast(DataType* To) { return CastTo(To, false); }
-		bool ExplicitCast(DataType* To) { return CastTo(To, true); }
+		bool ImplicitCast(QualType To) { return CastTo(To, false); }
+		bool ExplicitCast(QualType To) { return CastTo(To, true); }
 
-		bool CastTo(DataType* To, bool Explicit)
+		bool CastTo(QualType To, bool Explicit)
 		{
 			if (CanCastTo(To, Explicit))
 			{
@@ -62,11 +62,11 @@ namespace Volt
 		bool CastIntegerTo(TypeCategory To, bool Explicit);
 		bool CastFloatTo(TypeCategory To, bool Explicit);
 
-		bool CanCastTo(DataType* To, bool Explicit);
+		bool CanCastTo(QualType To, bool Explicit);
 	};
 
 	template<typename T>
-	CTimeValue *CTimeValue::CreateFromType(DataType *Type, T Value, Arena &TypesArena)
+	CTimeValue *CTimeValue::CreateFromType(QualType Type, T Value, Arena &TypesArena)
 	{
 		switch (Type->GetCategory())
 		{

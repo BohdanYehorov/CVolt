@@ -15,10 +15,10 @@ namespace Volt
     struct FunctionSignature
     {
         std::string Name;
-        SmallVec8<DataType*> Params;
+        SmallVec8<QualType> Params;
 
         FunctionSignature() = default;
-        FunctionSignature(const std::string& Name, llvm::ArrayRef<DataType*> Params)
+        FunctionSignature(const std::string& Name, llvm::ArrayRef<QualType> Params)
                 : Name(Name), Params(Params) {}
 
         [[nodiscard]] bool operator==(const FunctionSignature& Other) const
@@ -28,7 +28,7 @@ namespace Volt
 
             for (size_t i = 0; i < Params.size(); i++)
                 // if (Params[i] != Other.Params[i])
-                if (!Params[i]->IsEqual(Other.Params[i]))
+                if (!Params[i].IsEqual(Other.Params[i]))
                     return false;
 
             return true;

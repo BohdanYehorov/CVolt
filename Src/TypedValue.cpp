@@ -9,21 +9,6 @@ namespace Volt
 {
 	bool TypedValue::CastTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
-		if (auto ConstTy = Cast<ConstType>(To))
-			return CastTo(ConstTy->BaseType, Builder, CContext);
-
-		if (auto ConstTy = Cast<ConstType>(Type))
-		{
-			Type = ConstTy->BaseType;
-			if (!CastTo(To, Builder, CContext))
-			{
-				Type = ConstTy;
-				return false;
-			}
-
-			return true;
-		}
-
 		switch (Type->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:

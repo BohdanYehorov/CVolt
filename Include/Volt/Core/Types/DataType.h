@@ -28,17 +28,32 @@ namespace Volt
         CONSTANT
     };
 
-    class DataType : public Object
+    class PointerType;
+    class ReferenceType;
+    class ArrayType;
+
+    class alignas(8) DataType : public Object
     {
         GENERATED_BODY(DataTypeBase, Object)
     private:
         mutable size_t CachedHash = 0;
         llvm::Type* CachedType = nullptr;
 
+        PointerType** PointerVariants = nullptr;
+        ReferenceType** ReferenceVariants = nullptr;
+        ArrayType** ArrayVariants = nullptr;
+
     public:
+        ~DataType() override;
+
+        void InitPointerVariants() { PointerVariants = AllocVariants<PointerType>(); }
+        void InitReferenceVariants() { ReferenceVariants = AllocVariants<ReferenceType>(); }
+        void InitArrayVariants() { ArrayVariants = AllocVariants<ArrayType>(); }
+
         virtual bool IsEqual(const DataType* Other) const = 0;
         virtual llvm::Type* ToLLVMType(llvm::LLVMContext& Context) const = 0;
         virtual int GetRank() const = 0;
+        virtual size_t GetHash() const = 0;
         virtual std::string ToString() const = 0;
         virtual TypeCategory GetCategory() const = 0;
 
@@ -50,8 +65,96 @@ namespace Volt
     protected:
         static DataType* GetJointType(DataType* Left, DataType* Right);
 
+    private:
+        template <typename T>
+        T** AllocVariants();
+
         friend class DataTypeHash;
         friend class CompilationContext;
+        template<typename T>
+        friend class Hash;
+    };
+
+    template<typename T>
+    T **DataType::AllocVariants()
+    {
+        const size_t Len = alignof(DataType);
+        T** Variants = new T*[Len];
+        for (size_t i = 0; i < Len; i++)
+            Variants[i] = nullptr;
+
+        return Variants;
+    }
+
+    class QualType
+    {
+        static_assert(alignof(DataType) >= 8);
+
+    public:
+        enum QualifierKind
+        {
+            CONST = 1 << 0
+        };
+
+    private:
+        uintptr_t Value;
+
+    public:
+        QualType() : Value(0) {}
+
+        // QualType(DataType* Type)
+        // {
+        //     Value = reinterpret_cast<uintptr_t>(Type);
+        // }
+
+        QualType(DataType* Type, UInt32 Quals)
+        {
+            assert(Quals < alignof(DataType));
+            Value = reinterpret_cast<uintptr_t>(Type) | Quals;
+        }
+
+        operator bool() const { return GetType() != nullptr; }
+        DataType* operator->() const { return GetType(); }
+
+        [[nodiscard]] bool operator==(const QualType& Other) const
+        {
+            return Value == Other.Value;
+        }
+
+        [[nodiscard]] bool operator!=(const QualType& Other) const
+        {
+            return Value != Other.Value;
+        }
+
+        [[nodiscard]] DataType* GetType() const
+        {
+            return reinterpret_cast<DataType*>(Value & ~(alignof(DataType) - 1));
+        }
+
+        [[nodiscard]] UInt32 GetQuals() const { return Value & (alignof(DataType) - 1); }
+        [[nodiscard]] bool HasQualifier(QualifierKind Kind) const { return (Value & Kind) != 0; }
+
+        void AddQualifiers(UInt32 Qualifiers)
+        {
+            assert(Qualifiers < alignof(DataType));
+            Value |= Qualifiers;
+        }
+
+        void RemoveQualifiers(UInt32 Qualifiers)
+        {
+            assert(Qualifiers < alignof(DataType));
+            Value &= ~Qualifiers;
+        }
+
+        [[nodiscard]] bool IsEqual(QualType Other) const
+        {
+            return GetQuals() == Other.GetQuals() && GetType()->IsEqual(Other.GetType());
+        }
+
+        [[nodiscard]] bool CastTo(QualType To, bool Explicit) const;
+        [[nodiscard]] bool ImplicitCast(QualType To) const { return CastTo(To, false); }
+        [[nodiscard]] bool ExplicitCast(QualType To) const { return CastTo(To, true); }
+        [[nodiscard]] size_t GetHash() const;
     };
 
     class PrimitiveDataType : public DataType
@@ -75,6 +178,7 @@ namespace Volt
         }
 
         int GetRank() const override { return 0; }
+        size_t GetHash() const override { return 0; }
         std::string ToString() const override { return "void"; }
         TypeCategory GetCategory() const override { return TypeCategory::VOID; }
 
@@ -98,6 +202,7 @@ namespace Volt
         }
 
         int GetRank() const override { return 1; }
+        size_t GetHash() const override { return 1; }
         std::string ToString() const override { return "bool"; }
         TypeCategory GetCategory() const override { return TypeCategory::BOOLEAN; }
 
@@ -120,7 +225,8 @@ namespace Volt
             return llvm::IntegerType::getInt8Ty(Context);
         }
 
-        int GetRank() const override { return 1; }
+        int GetRank() const override { return 2; }
+        size_t GetHash() const override { return 2; }
         std::string ToString() const override { return "char"; }
         TypeCategory GetCategory() const override { return TypeCategory::CHAR; }
 
@@ -146,6 +252,7 @@ namespace Volt
         }
 
         int GetRank() const override;
+        size_t GetHash() const override;
         std::string ToString() const override;
         TypeCategory GetCategory() const override { return TypeCategory::INTEGER; }
 
@@ -164,6 +271,7 @@ namespace Volt
         bool IsEqual(const DataType* Other) const override;
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
         int GetRank() const override;
+        size_t GetHash() const override;
         std::string ToString() const override;
         TypeCategory GetCategory() const override { return TypeCategory::FLOATING_POINT; }
 
@@ -175,8 +283,8 @@ namespace Volt
     {
         GENERATED_BODY(PointerType, DataType)
     public:
-        DataType* BaseType;
-        PointerType(DataType* BaseType)
+        QualType BaseType;
+        PointerType(QualType BaseType)
             : BaseType(BaseType) {}
 
     public:
@@ -188,6 +296,7 @@ namespace Volt
         }
 
         int GetRank() const override { return 11; }
+        size_t GetHash() const override;
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "*" : "?"; }
         TypeCategory GetCategory() const override { return TypeCategory::POINTER; }
 
@@ -199,8 +308,8 @@ namespace Volt
     {
         GENERATED_BODY(ReferenceType, DataType)
     public:
-        DataType* BaseType;
-        ReferenceType(DataType* BaseType)
+        QualType BaseType;
+        ReferenceType(QualType BaseType)
             : BaseType(BaseType) {}
 
     public:
@@ -212,6 +321,7 @@ namespace Volt
         }
 
         int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
+        size_t GetHash() const override;
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "$" : "?"; }
         TypeCategory GetCategory() const override { return TypeCategory::REFERENCE; }
 
@@ -226,13 +336,13 @@ namespace Volt
     {
         GENERATED_BODY(ArrayType, DataType)
     public:
-        DataType* BaseType;
+        QualType BaseType;
         size_t Length;
         bool LengthInit;
 
-        ArrayType(DataType* BaseType, size_t Length)
+        ArrayType(QualType BaseType, size_t Length)
             : BaseType(BaseType), Length(Length), LengthInit(true) {}
-        ArrayType(DataType* BaseType)
+        ArrayType(QualType BaseType)
             : BaseType(BaseType), Length(0), LengthInit(false) {}
 
     public:
@@ -245,33 +355,9 @@ namespace Volt
         }
 
         int GetRank() const override { return 12; }
+        size_t GetHash() const override;
         std::string ToString() const override;
         TypeCategory GetCategory() const override { return TypeCategory::ARRAY; }
-
-    protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override;
-    };
-
-    class ConstType : public DataType
-    {
-        GENERATED_BODY(ConstType, DataType)
-    public:
-        DataType* BaseType;
-        ConstType(DataType* BaseType)
-            : BaseType(BaseType) {}
-
-    public:
-        bool IsEqual(const DataType* Other) const override;
-
-        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
-        {
-            if (!BaseType) return nullptr;
-            return BaseType->ToLLVMType(Context);
-        }
-
-        int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
-        std::string ToString() const override { return BaseType ? "const " + BaseType->ToString() : "?"; }
-        TypeCategory GetCategory() const override { return TypeCategory::CONSTANT; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;

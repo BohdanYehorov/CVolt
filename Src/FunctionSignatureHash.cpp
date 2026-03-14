@@ -12,7 +12,7 @@ namespace Volt
     {
         size_t Seed =  std::hash<std::string>{}(FuncSign.Name);
         for (auto Param : FuncSign.Params)
-            CombineHashes(Seed, DataTypeHash{}(Param));
+            CombineHashes(Seed, Param.GetHash());
 
         return Seed;
     }

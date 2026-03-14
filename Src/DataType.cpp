@@ -4,8 +4,17 @@
 
 #include "Volt/Core/Types/DataType.h"
 
+#include "Volt/Compiler/Hash/Hash.h"
+
 namespace Volt
 {
+	DataType::~DataType()
+	{
+		delete[] PointerVariants;
+		delete[] ReferenceVariants;
+		delete[] ArrayVariants;
+	}
+
 	DataType *DataType::GetJointType(DataType *Left, DataType *Right)
 	{
 		if (Left == Right)
@@ -26,17 +35,25 @@ namespace Volt
 		return Src->ImplicitCast(Dst);
 	}
 
+	bool QualType::CastTo(QualType To, bool Explicit) const
+	{
+		if (*this == To)
+			return true;
+
+		return GetType()->CastTo(To.GetType(), Explicit) != nullptr;
+	}
+
+	size_t QualType::GetHash() const
+	{
+		size_t H = GetType()->GetHash();
+		CombineHashes(H, std::hash<size_t>{}(GetQuals()));
+		return H;
+	}
+
 	DataType *BoolType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
 			return To;
-
-		if (auto CstType = Cast<ConstType>(To))
-		{
-			if (ImplicitCast(CstType->BaseType))
-				return To;
-			return nullptr;
-		}
 
 		if (!Explicit)
 			return nullptr;
@@ -57,13 +74,6 @@ namespace Volt
 	{
 		if (this == To)
 			return To;
-
-		if (auto CstType = Cast<ConstType>(To))
-		{
-			if (ImplicitCast(CstType->BaseType))
-				return To;
-			return nullptr;
-		}
 
 		switch (To->GetCategory())
 		{
@@ -93,7 +103,19 @@ namespace Volt
 			case 16: return  4;
 			case 32: return  5;
 			case 64: return  6;
-			default: return -1;
+			default: assert(false);
+		}
+	}
+
+	size_t IntegerType::GetHash() const
+	{
+		switch (BitWidth)
+		{
+			case 8:  return  3;
+			case 16: return  4;
+			case 32: return  5;
+			case 64: return  6;
+			default: assert(false);
 		}
 	}
 
@@ -112,13 +134,6 @@ namespace Volt
 	{
 		if (this == To)
 			return To;
-
-		if (auto CstType = Cast<ConstType>(To))
-		{
-			if (ImplicitCast(CstType->BaseType))
-				return To;
-			return nullptr;
-		}
 
 		switch (To->GetCategory())
 		{
@@ -160,7 +175,19 @@ namespace Volt
 			case 32:  return  8;
 			case 64:  return  9;
 			case 128: return 10;
-			default:  return -1;
+			default:  assert(false);
+		}
+	}
+
+	size_t FloatingPointType::GetHash() const
+	{
+		switch (BitWidth)
+		{
+			case 16:  return  7;
+			case 32:  return  8;
+			case 64:  return  9;
+			case 128: return 10;
+			default:  assert(false);
 		}
 	}
 
@@ -179,13 +206,6 @@ namespace Volt
 		if (this == To)
 			return To;
 
-		if (auto CstType = Cast<ConstType>(To))
-		{
-			if (ImplicitCast(CstType->BaseType))
-				return To;
-			return nullptr;
-		}
-
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
@@ -202,8 +222,15 @@ namespace Volt
 	bool PointerType::IsEqual(const DataType *Other) const
 	{
 		if (auto PtrType = Cast<const PointerType>(Other))
-			return BaseType->IsEqual(PtrType->BaseType);
+			return BaseType->IsEqual(PtrType->BaseType.GetType());
 		return false;
+	}
+
+	size_t PointerType::GetHash() const
+	{
+		size_t Hash = 11;
+		CombineHashes(Hash, BaseType->GetHash());
+		return Hash;
 	}
 
 	DataType *PointerType::CastTo(DataType *To, bool Explicit) const
@@ -211,15 +238,11 @@ namespace Volt
 		if (this == To)
 			return To;
 
-		if (auto CstType = Cast<ConstType>(To))
-		{
-			if (ImplicitCast(CstType->BaseType))
-				return To;
-			return nullptr;
-		}
-
 		if (auto PtrType = Cast<PointerType>(To))
 		{
+			if (BaseType.HasQualifier(QualType::CONST) && !PtrType->BaseType.HasQualifier(QualType::CONST))
+				return nullptr;
+
 			if (PtrType->BaseType->GetCategory() == TypeCategory::VOID)
 				return To;
 
@@ -241,8 +264,15 @@ namespace Volt
 	bool ReferenceType::IsEqual(const DataType *Other) const
 	{
 		if (auto RefType = Cast<const ReferenceType>(Other))
-			return BaseType->IsEqual(RefType->BaseType);
+			return BaseType->IsEqual(RefType->BaseType.GetType());
 		return false;
+	}
+
+	size_t ReferenceType::GetHash() const
+	{
+		size_t Hash = 12;
+		CombineHashes(Hash, BaseType->GetHash());
+		return Hash;
 	}
 
 	bool ArrayType::IsEqual(const DataType *Other) const
@@ -251,8 +281,16 @@ namespace Volt
 			return false;
 
 		if (auto ArrType = Cast<const ArrayType>(Other))
-			return BaseType->IsEqual(ArrType->BaseType) && Length == ArrType->Length;
+			return BaseType->IsEqual(ArrType->BaseType.GetType()) && Length == ArrType->Length;
 		return false;
+	}
+
+	size_t ArrayType::GetHash() const
+	{
+		size_t Hash = 13;
+		CombineHashes(Hash, BaseType->GetHash());
+		CombineHashes(Hash, Length);
+		return Hash;
 	}
 
 	std::string ArrayType::ToString() const
@@ -265,36 +303,6 @@ namespace Volt
 		if (this == To)
 			return To;
 
-		if (auto CstType = Cast<ConstType>(To))
-		{
-			if (ImplicitCast(CstType->BaseType))
-				return To;
-			return nullptr;
-		}
-
 		return nullptr;
-	}
-
-	bool ConstType::IsEqual(const DataType *Other) const
-	{
-		if (auto CstType = Cast<const ConstType>(Other))
-			return BaseType->IsEqual(CstType->BaseType);
-		return false;
-	}
-
-	DataType* ConstType::CastTo(DataType *To, bool Explicit) const
-	{
-		if (this == To)
-			return To;
-
-		if (auto CstType = Cast<ConstType>(To))
-		{
-			if (BaseType->CastTo(CstType->BaseType, Explicit))
-				return To;
-
-			return nullptr;
-		}
-
-		return BaseType->CastTo(To, Explicit);
 	}
 }

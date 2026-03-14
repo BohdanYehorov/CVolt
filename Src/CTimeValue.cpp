@@ -11,7 +11,7 @@ namespace Volt
 		return CContext.MainArena.Create<CTimeValue>();
 	}
 
-	CTimeValue *CTimeValue::CreateInteger(DataType* IntType, Int64 Integer, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = IntType;
@@ -20,7 +20,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateFloat(DataType* FloatType, double Float, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateFloat(QualType FloatType, double Float, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = FloatType;
@@ -29,7 +29,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateBool(DataType* BoolType, bool Bool, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateBool(QualType BoolType, bool Bool, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = BoolType;
@@ -38,7 +38,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateChar(DataType* CharType, char Char, Arena &MainArena)
+	CTimeValue *CTimeValue::CreateChar(QualType CharType, char Char, Arena &MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = CharType;
@@ -47,7 +47,7 @@ namespace Volt
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateEmpty(DataType* Type, Arena& MainArena)
+	CTimeValue *CTimeValue::CreateEmpty(QualType Type, Arena& MainArena)
 	{
 		auto Value = MainArena.Create<CTimeValue>();
 		Value->Type = Type;
@@ -96,10 +96,10 @@ namespace Volt
 	{
 		using enum OperatorType;
 
-		DataType* LeftType = Left->Type;
-		DataType* RightType = Right->Type;
+		QualType LeftType = Left->Type;
+		QualType RightType = Right->Type;
 
-		DataType* ResultType = Operator::ResolveBinary(LeftType, RightType, Op, CContext);
+		QualType ResultType = Operator::ResolveBinary(LeftType, RightType, Op, CContext);
 
 		if (!Left->ImplicitCast(LeftType) || !Right->ImplicitCast(RightType))
 			return nullptr;
@@ -141,7 +141,8 @@ namespace Volt
 
 		if (Operand->IsEmpty)
 		{
-			if (auto Type = Operator::ResolveUnary(Operand->Type, Op))
+			QualType OperandType = Operand->Type;
+			if (auto Type = Operator::ResolveUnary(OperandType, Op))
 				return CreateEmpty(Type, CContext.MainArena);
 
 			return nullptr;
@@ -190,7 +191,7 @@ namespace Volt
 			}
 			case OperatorType::LOGICAL_NOT:
 			{
-				if (Operand->ImplicitCast(CContext.GetBoolType()))
+				if (Operand->ImplicitCast(QualType(CContext.GetBoolType(), QualType::CONST)))
 					return CreateBool(Operand->Type, !Operand->Bool, CContext.MainArena);
 
 				return nullptr;
@@ -316,20 +317,16 @@ namespace Volt
 		}
 	}
 
-	bool CTimeValue::CanCastTo(DataType* To, bool Explicit)
+	bool CTimeValue::CanCastTo(QualType To, bool Explicit)
 	{
-		if (auto ConstTy = Cast<ConstType>(To))
-			return CanCastTo(ConstTy->BaseType, Explicit);
-
-		DataType* NewType = Type->CastTo(To, Explicit);
-		if (!NewType)
+		if (!Type.CastTo(To, Explicit))
 			return false;
 
 		if (IsEmpty)
 			return true;
 
 		TypeCategory OldTypeCategory = Type->GetCategory();
-		TypeCategory NewTypeCategory = NewType->GetCategory();
+		TypeCategory NewTypeCategory = To->GetCategory();
 
 		switch (OldTypeCategory)
 		{

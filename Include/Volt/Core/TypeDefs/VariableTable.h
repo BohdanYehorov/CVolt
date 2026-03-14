@@ -9,6 +9,7 @@
 
 namespace Volt
 {
+	using CTimeVariableTable = std::unordered_map<std::string, CTimeValue*>;
 	using VariableTable = std::unordered_map<std::string, TypedValue*>;
 }
 

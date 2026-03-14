@@ -21,6 +21,15 @@
 
 namespace Volt
 {
+    struct CTimeScopeEntry
+    {
+        std::string Name;
+        CTimeValue* Previous = nullptr;
+
+        CTimeScopeEntry(const std::string& Name, CTimeValue* Prev = nullptr)
+            : Name(Name), Previous(Prev) {}
+    };
+
     class TypeChecker
     {
     private:
@@ -34,12 +43,12 @@ namespace Volt
         Array<TypeError> Errors;
 
         FunctionTable Functions;
-        VariableTable Variables;
+        CTimeVariableTable Variables;
 
-        Array<Array<ScopeEntry>> ScopeStack;
+        Array<Array<CTimeScopeEntry>> ScopeStack;
 
-        SmallVec8<std::pair<std::string, DataType*>> FunctionParams;
-        DataType* FunctionReturnType = nullptr;
+        SmallVec8<std::pair<std::string, QualType>> FunctionParams;
+        QualType FunctionReturnType;
 
     public:
         TypeChecker(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
@@ -94,8 +103,8 @@ namespace Volt
         CTimeValue *VisitFor(ForNode *For);
         CTimeValue *VisitReturn(ReturnNode *Return);
 
-        DataType *VisitType(DataTypeNodeBase *Type);
-        CTimeValue* GetLValue(ASTNode* Node);
+        QualType VisitType(DataTypeNodeBase *Type);
+        CTimeValue* GetLValue(ASTNode* Node, bool IgnoreConstants = false);
 
         template <typename MapT>
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);
@@ -106,7 +115,7 @@ namespace Volt
         void EnterScope();
         void ExitScope();
 
-        void DeclareVariable(const std::string& Name, DataType* Type);
+        void DeclareVariable(const std::string& Name, QualType Type);
         DataType* GetVariable(const std::string& Name);
 
         friend class LLVMCompiler;
@@ -119,7 +128,7 @@ namespace Volt
             return Iter;
 
         size_t ArgsCount = Signature.Params.size();
-        llvm::ArrayRef<DataType*> ArgTypes = Signature.Params;
+        llvm::ArrayRef<QualType> ArgTypes = Signature.Params;
 
         size_t MinCasts = ArgsCount;
         int BestRank = std::numeric_limits<int>::max();
@@ -136,10 +145,10 @@ namespace Volt
             bool Valid = true;
             for (size_t i = 0; i < ArgsCount; i++)
             {
-                DataType* CandidateArgType = CandidateSignature.Params[i];
-                DataType* ArgType = ArgTypes[i];
+                QualType CandidateArgType = CandidateSignature.Params[i];
+                QualType ArgType = ArgTypes[i];
 
-                if (!ArgType->ImplicitCast(CandidateArgType))
+                if (!ArgType.ImplicitCast(CandidateArgType))
                 {
                     Valid = false;
                     break;

@@ -13,26 +13,26 @@ include_directories(
 add_definitions(${LLVM_DEFINITIONS})
 
 set(SOURCES
-    Src/Lexer.cpp
-    Src/Arena.cpp
-    Src/Parser.cpp
-    Src/Operator.cpp
-    Src/BufferView.cpp
-    Src/LLVMCompiler.cpp
-    Src/Hash.cpp
-    Src/DataTypeHash.cpp
-    Src/FunctionSignatureHash.cpp
-    Src/ParserFuzzer.cpp
-    Src/TypeChecker.cpp
-    Src/BuiltinFunctionTable.cpp
-    Src/CTimeValue.cpp
-    Src/CompilationContext.cpp
-    Src/Token.cpp
-    Src/LexError.cpp
-    Src/ParseError.cpp
-    Src/TypeError.cpp
-    Src/JITEngine.cpp
-    Src/DataType.cpp
+        Src/Lexer.cpp
+        Src/Arena.cpp
+        Src/Parser.cpp
+        Src/Operator.cpp
+        Src/BufferView.cpp
+        Src/LLVMCompiler.cpp
+        Src/Hash.cpp
+        Src/DataTypeHash.cpp
+        Src/FunctionSignatureHash.cpp
+        Src/ParserFuzzer.cpp
+        Src/TypeChecker.cpp
+        Src/BuiltinFunctionTable.cpp
+        Src/CTimeValue.cpp
+        Src/CompilationContext.cpp
+        Src/Token.cpp
+        Src/LexError.cpp
+        Src/ParseError.cpp
+        Src/TypeError.cpp
+        Src/JITEngine.cpp
+        Src/DataType.cpp
         Src/TypedValue.cpp
 )
 
