@@ -116,7 +116,7 @@ namespace Volt
         void ExitScope();
 
         void DeclareVariable(const std::string& Name, QualType Type);
-        DataType* GetVariable(const std::string& Name);
+        QualType GetVariable(const std::string& Name);
 
         friend class LLVMCompiler;
     };

@@ -204,14 +204,14 @@ namespace Volt
 
     CTimeValue *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        DataType* VarType = GetVariable(Identifier->Value.str());
+        QualType VarType = GetVariable(Identifier->Value.str());
         if (!VarType)
         {
             SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
             return nullptr;
         }
 
-        Identifier->CompileTimeValue = CTimeValue::CreateEmpty(QualType(VarType, 0), MainArena); // <-
+        Identifier->CompileTimeValue = CTimeValue::CreateEmpty(VarType, MainArena);
         return Identifier->CompileTimeValue;
     }
 
@@ -623,11 +623,13 @@ namespace Volt
 
             throw std::runtime_error("Array length mast be defined in compiler time");
         }
-        // if (auto Const = Cast<ConstTypeNode>(Type))
-        // {
-        //     Const->ResolvedType = CContext.GetConstType(VisitType(Const->BaseType));
-        //     return Const->ResolvedType;
-        // }
+        if (auto QualTy = Cast<QualTypeNode>(Type))
+        {
+            QualType QType = VisitType(QualTy->Type);
+            QualTy->ResolvedType = QType.GetType();
+            QType.AddQualifiers(QualTy->Quals);
+            return QType;
+        }
 
         return {};
     }
@@ -702,11 +704,11 @@ namespace Volt
         ScopeStack.Back().Add({ Name, nullptr });
     }
 
-    DataType* TypeChecker::GetVariable(const std::string &Name)
+    QualType TypeChecker::GetVariable(const std::string &Name)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            return Iter->second->Type.GetType(); // <-
+            return Iter->second->Type;
 
-        return nullptr;
+        return { };
     }
 }

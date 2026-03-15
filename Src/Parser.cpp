@@ -533,61 +533,21 @@ namespace Volt
         if (!IsValidIndex())
             return nullptr;
 
-        bool IsConst = false;
-        if (ConsumeIf(TokenType::TYPE_CONST))
-            IsConst = true;
+        const Token* TokPtr;
+        if (ConsumeIf(TokenType::TYPE_CONST, TokPtr))
+            return NodesArena.Create<QualTypeNode>(
+                ParseWrappedType(), QualType::CONST, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
 
-        const Token& Tok = CurrentToken();
+        return ParseWrappedType();
+    }
 
-        size_t StartPos = Tok.Pos;
-        size_t StartLine = Tok.Line;
-        size_t StartColumn = Tok.Column;
+    DataTypeNodeBase *Parser::ParseWrappedType()
+    {
+        DataTypeNodeBase* TypeNode = ParsePrimitiveType();
+        if (!TypeNode)
+            return nullptr;
 
-        PrimitiveDataType* Type;
-        switch (Tok.Type)
-        {
-            case TokenType::TYPE_VOID:
-                Type = CContext.GetVoidType();
-                break;
-            case TokenType::TYPE_BOOL:
-                Type = CContext.GetBoolType();
-                break;
-            case TokenType::TYPE_CHAR:
-                Type = CContext.GetCharType();
-                break;
-            case TokenType::TYPE_BYTE:
-                Type = CContext.GetIntegerType(8);
-                break;
-            case TokenType::TYPE_INT:
-                Type = CContext.GetIntegerType(32);
-                break;
-            case TokenType::TYPE_LONG:
-                Type = CContext.GetIntegerType(64);
-                break;
-            case TokenType::TYPE_FLOAT:
-                Type = CContext.GetFPType(32);
-                break;
-            case TokenType::TYPE_DOUBLE:
-                Type = CContext.GetFPType(64);
-                break;
-            default:
-                return nullptr;
-        }
-        Consume();
-
-        DataTypeNodeBase* TypeNode = NodesArena.Create<PrimitiveTypeNode>(
-            Type, Tok.Pos, Tok.Line, Tok.Column);
-
-        if (!IsValidIndex())
-        {
-            if (IsConst)
-                return NodesArena.Create<ConstTypeNode>(
-                    TypeNode, StartPos, StartLine, StartColumn);
-
-            return TypeNode;
-        }
-
-        while (true)
+        while (IsValidIndex())
         {
             switch (const Token& Tok = CurrentToken(); Tok.Type)
             {
@@ -616,14 +576,61 @@ namespace Volt
                     break;
                 }
                 default:
-                    if (IsConst)
-                        return NodesArena.Create<ConstTypeNode>(
-                            TypeNode, StartPos, StartLine, StartColumn);
-
                     return TypeNode;
             }
         }
+
+        return TypeNode;
     }
+
+    DataTypeNodeBase *Parser::ParsePrimitiveType()
+    {
+        const Token& Tok = CurrentToken();
+
+        PrimitiveDataType* Type;
+        switch (Tok.Type)
+        {
+            case TokenType::TYPE_VOID:
+                Type = CContext.GetVoidType();
+                break;
+            case TokenType::TYPE_BOOL:
+                Type = CContext.GetBoolType();
+                break;
+            case TokenType::TYPE_CHAR:
+                Type = CContext.GetCharType();
+                break;
+            case TokenType::TYPE_BYTE:
+                Type = CContext.GetIntegerType(8);
+                break;
+            case TokenType::TYPE_INT:
+                Type = CContext.GetIntegerType(32);
+                break;
+            case TokenType::TYPE_LONG:
+                Type = CContext.GetIntegerType(64);
+                break;
+            case TokenType::TYPE_FLOAT:
+                Type = CContext.GetFPType(32);
+                break;
+            case TokenType::TYPE_DOUBLE:
+                Type = CContext.GetFPType(64);
+                break;
+            case TokenType::OP_LPAREN:
+            {
+                Consume();
+                DataTypeNodeBase* Node = ParseDataType();
+                if (!Expect(TokenType::OP_RPAREN))
+                    return nullptr;
+                return Node;
+            }
+            default:
+                return nullptr;
+        }
+        Consume();
+
+        return  NodesArena.Create<PrimitiveTypeNode>(
+            Type, Tok.Pos, Tok.Line, Tok.Column);
+    }
+
     ASTNode* Parser::ParseParameter()
     {
         DepthIncScope DScope(Depth);
