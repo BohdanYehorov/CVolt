@@ -4,6 +4,7 @@
 
 #include "Volt/Core/Value/TypedValue.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
+#include <llvm/Support/ErrorHandling.h>
 
 namespace Volt
 {
@@ -21,6 +22,8 @@ namespace Volt
 				return CastFloatTo(To, Builder, CContext);
 			case TypeCategory::POINTER:
 				return CastPointerTo(To, Builder);
+			case TypeCategory::REFERENCE:
+				return CastReferenceTo(To, Builder, CContext);
 			default:
 				return false;
 		}
@@ -113,6 +116,10 @@ namespace Volt
 				Type = To;
 				return true;
 
+			case TypeCategory::REFERENCE:
+				Type = To;
+				return true;
+
 			default:
 				return false;
 		}
@@ -172,5 +179,23 @@ namespace Volt
 			default:
 				return false;
 		}
+	}
+
+	bool TypedValue::CastReferenceTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (auto RefType = Cast<ReferenceType>(Type))
+		{
+			if (!RefType->BaseType->CastTo(To, true))
+				return false;
+
+			Value = Builder.CreateLoad(CContext.GetLLVMType(RefType->BaseType.GetType()), Value);
+			Type = RefType->BaseType.GetType();
+			if (!CastTo(To, Builder, CContext))
+				llvm_unreachable("Cast failed");
+
+			return true;
+		}
+
+		return false;
 	}
 }

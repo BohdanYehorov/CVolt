@@ -1,7 +1,8 @@
 fun:int Main()
 {
-    let:const int Num = 5;
-    let:(const int)* Ptr = $Num;
+    let:int Num = 5;
+    *$Num = 10;
+
     Out(Num);
 
     return 0;

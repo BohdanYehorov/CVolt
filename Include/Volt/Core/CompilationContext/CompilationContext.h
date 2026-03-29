@@ -72,6 +72,7 @@ namespace Volt
 		[[nodiscard]] IntegerType* GetIntegerType(size_t BitWidth);
 		[[nodiscard]] FloatingPointType* GetFPType(size_t BitWidth);
 		[[nodiscard]] PointerType* GetPointerType(QualType BaseType);
+		[[nodiscard]] ReferenceType* GetReferenceType(QualType BaseType);
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);
 

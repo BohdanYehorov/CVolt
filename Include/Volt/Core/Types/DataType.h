@@ -24,8 +24,7 @@ namespace Volt
         FLOATING_POINT,
         POINTER,
         REFERENCE,
-        ARRAY,
-        CONSTANT
+        ARRAY
     };
 
     class PointerType;
@@ -43,7 +42,11 @@ namespace Volt
         ReferenceType** ReferenceVariants = nullptr;
         ArrayType** ArrayVariants = nullptr;
 
+    protected:
+        TypeCategory Category;
+
     public:
+        DataType(TypeCategory Category) : Category(Category) {}
         ~DataType() override;
 
         void InitPointerVariants() { PointerVariants = AllocVariants<PointerType>(); }
@@ -55,12 +58,23 @@ namespace Volt
         virtual int GetRank() const = 0;
         virtual size_t GetHash() const = 0;
         virtual std::string ToString() const = 0;
-        virtual TypeCategory GetCategory() const = 0;
+        // virtual TypeCategory GetCategory() const = 0;
+
+        virtual DataType* CastTo(DataType* To, bool Explicit) const = 0;
 
         [[nodiscard]] DataType* ImplicitCast(DataType* To) const { return CastTo(To, false); }
         [[nodiscard]] DataType* ExplicitCast(DataType* To) const { return CastTo(To, true); }
 
-        virtual DataType* CastTo(DataType* To, bool Explicit) const = 0;
+        [[nodiscard]] bool IsVoidType() const { return Category == TypeCategory::VOID; }
+        [[nodiscard]] bool IsBoolType() const { return Category == TypeCategory::BOOLEAN; }
+        [[nodiscard]] bool IsCharType() const { return Category == TypeCategory::CHAR; }
+        [[nodiscard]] bool IsIntegerType() const { return Category == TypeCategory::INTEGER; }
+        [[nodiscard]] bool IsFloatingPointType() const { return Category == TypeCategory::FLOATING_POINT; }
+        [[nodiscard]] bool IsPointerType() const { return Category == TypeCategory::POINTER; }
+        [[nodiscard]] bool IsReferenceType() const { return Category == TypeCategory::REFERENCE; }
+        [[nodiscard]] bool IsArrayType() const { return Category == TypeCategory::ARRAY; }
+
+        [[nodiscard]] TypeCategory GetCategory() const { return Category; }
 
     protected:
         static DataType* GetJointType(DataType* Left, DataType* Right);
@@ -131,6 +145,12 @@ namespace Volt
             return reinterpret_cast<DataType*>(Value & ~(alignof(DataType) - 1));
         }
 
+        template <typename T>
+        [[nodiscard]] T* CastAs() const
+        {
+            return Cast<T>(GetType());
+        }
+
         [[nodiscard]] UInt32 GetQuals() const { return Value & (alignof(DataType) - 1); }
         [[nodiscard]] bool HasQualifier(QualifierKind Kind) const { return (Value & Kind) != 0; }
 
@@ -160,6 +180,8 @@ namespace Volt
     class PrimitiveDataType : public DataType
     {
         GENERATED_BODY(PrimitiveDataType, DataType)
+    public:
+        PrimitiveDataType(TypeCategory Category) : DataType(Category) {}
     };
 
     class VoidType : public PrimitiveDataType
@@ -167,6 +189,8 @@ namespace Volt
         GENERATED_BODY(VoidType, PrimitiveDataType)
 
     public:
+        VoidType() : PrimitiveDataType(TypeCategory::VOID) {}
+
         bool IsEqual(const DataType* Other) const override
         {
             return Cast<const VoidType>(Other) != nullptr;
@@ -180,7 +204,7 @@ namespace Volt
         int GetRank() const override { return 0; }
         size_t GetHash() const override { return 0; }
         std::string ToString() const override { return "void"; }
-        TypeCategory GetCategory() const override { return TypeCategory::VOID; }
+        // TypeCategory GetCategory() const override { return TypeCategory::VOID; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override { return nullptr; }
@@ -191,6 +215,8 @@ namespace Volt
         GENERATED_BODY(BoolType, PrimitiveDataType)
 
     public:
+        BoolType() : PrimitiveDataType(TypeCategory::BOOLEAN) {}
+
         bool IsEqual(const DataType* Other) const override
         {
             return Cast<const BoolType>(Other) != nullptr;
@@ -204,7 +230,7 @@ namespace Volt
         int GetRank() const override { return 1; }
         size_t GetHash() const override { return 1; }
         std::string ToString() const override { return "bool"; }
-        TypeCategory GetCategory() const override { return TypeCategory::BOOLEAN; }
+        // TypeCategory GetCategory() const override { return TypeCategory::BOOLEAN; }
 
     protected:
         DataType* CastTo(DataType* To, bool Explicit) const override;
@@ -215,6 +241,8 @@ namespace Volt
         GENERATED_BODY(CharType, PrimitiveDataType)
 
     public:
+        CharType() : PrimitiveDataType(TypeCategory::CHAR) {}
+
         bool IsEqual(const DataType* Other) const override
         {
             return Cast<const CharType>(Other) != nullptr;
@@ -228,7 +256,7 @@ namespace Volt
         int GetRank() const override { return 2; }
         size_t GetHash() const override { return 2; }
         std::string ToString() const override { return "char"; }
-        TypeCategory GetCategory() const override { return TypeCategory::CHAR; }
+        // TypeCategory GetCategory() const override { return TypeCategory::CHAR; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
@@ -240,8 +268,8 @@ namespace Volt
     public:
         size_t BitWidth;
         bool IsSigned;
-        IntegerType(size_t BitWidth, bool IsSigned = false)
-            : BitWidth(BitWidth), IsSigned(IsSigned) {}
+        IntegerType(size_t BitWidth, bool IsSigned = true)
+            : PrimitiveDataType(TypeCategory::INTEGER), BitWidth(BitWidth), IsSigned(IsSigned) {}
 
     public:
         bool IsEqual(const DataType* Other) const override;
@@ -254,7 +282,7 @@ namespace Volt
         int GetRank() const override;
         size_t GetHash() const override;
         std::string ToString() const override;
-        TypeCategory GetCategory() const override { return TypeCategory::INTEGER; }
+        // TypeCategory GetCategory() const override { return TypeCategory::INTEGER; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
@@ -265,7 +293,8 @@ namespace Volt
         GENERATED_BODY(FloatingPointType, PrimitiveDataType)
     public:
         size_t BitWidth;
-        FloatingPointType(size_t BitWidth) : BitWidth(BitWidth) {}
+        FloatingPointType(size_t BitWidth)
+            : PrimitiveDataType(TypeCategory::FLOATING_POINT), BitWidth(BitWidth) {}
 
     public:
         bool IsEqual(const DataType* Other) const override;
@@ -273,7 +302,7 @@ namespace Volt
         int GetRank() const override;
         size_t GetHash() const override;
         std::string ToString() const override;
-        TypeCategory GetCategory() const override { return TypeCategory::FLOATING_POINT; }
+        // TypeCategory GetCategory() const override { return TypeCategory::FLOATING_POINT; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
@@ -285,7 +314,7 @@ namespace Volt
     public:
         QualType BaseType;
         PointerType(QualType BaseType)
-            : BaseType(BaseType) {}
+            : DataType(TypeCategory::POINTER), BaseType(BaseType) {}
 
     public:
         bool IsEqual(const DataType* Other) const override;
@@ -298,7 +327,7 @@ namespace Volt
         int GetRank() const override { return 11; }
         size_t GetHash() const override;
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "*" : "?"; }
-        TypeCategory GetCategory() const override { return TypeCategory::POINTER; }
+        // TypeCategory GetCategory() const override { return TypeCategory::POINTER; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
@@ -310,7 +339,7 @@ namespace Volt
     public:
         QualType BaseType;
         ReferenceType(QualType BaseType)
-            : BaseType(BaseType) {}
+            : DataType(TypeCategory::REFERENCE), BaseType(BaseType) {}
 
     public:
         bool IsEqual(const DataType* Other) const override;
@@ -323,13 +352,12 @@ namespace Volt
         int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
         size_t GetHash() const override;
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "$" : "?"; }
-        TypeCategory GetCategory() const override { return TypeCategory::REFERENCE; }
+        // TypeCategory GetCategory() const override { return TypeCategory::REFERENCE; }
+
+        bool CanBind(QualType Type) const;
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override
-        {
-            throw std::runtime_error("Cast references is unsupported");
-        }
+        DataType* CastTo(DataType *To, bool Explicit) const override;
     };
 
     class ArrayType : public DataType
@@ -340,10 +368,10 @@ namespace Volt
         size_t Length;
         bool LengthInit;
 
-        ArrayType(QualType BaseType, size_t Length)
-            : BaseType(BaseType), Length(Length), LengthInit(true) {}
-        ArrayType(QualType BaseType)
-            : BaseType(BaseType), Length(0), LengthInit(false) {}
+        ArrayType(QualType BaseType, size_t Length) : DataType(TypeCategory::ARRAY),
+            BaseType(BaseType), Length(Length), LengthInit(true) {}
+        ArrayType(QualType BaseType) : DataType(TypeCategory::ARRAY),
+            BaseType(BaseType), Length(0), LengthInit(false) {}
 
     public:
         bool IsEqual(const DataType* Other) const override;
@@ -357,7 +385,7 @@ namespace Volt
         int GetRank() const override { return 12; }
         size_t GetHash() const override;
         std::string ToString() const override;
-        TypeCategory GetCategory() const override { return TypeCategory::ARRAY; }
+        // TypeCategory GetCategory() const override { return TypeCategory::ARRAY; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;

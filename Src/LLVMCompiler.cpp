@@ -14,7 +14,7 @@ namespace Volt
         CompileNode(ASTTree);
     }
 
-    TypedValue *LLVMCompiler::CompileNode(ASTNode *Node)
+    TypedValue *LLVMCompiler::CompileNode(const ASTNode *Node)
     {
         if (Node->CompileTimeValue && !Node->CompileTimeValue->IsEmpty)
         {
@@ -37,68 +37,68 @@ namespace Volt
             }
         }
 
-        if (auto Sequence = Cast<SequenceNode>(Node))
+        if (auto Sequence = Cast<const SequenceNode>(Node))
         {
             for (auto Statement : Sequence->Statements)
                 CompileNode(Statement);
 
             return nullptr;
         }
-        if (const auto Block = Cast<BlockNode>(Node))
+        if (const auto Block = Cast<const BlockNode>(Node))
             return CompileBlock(Block);
-        if (const auto Char = Cast<CharNode>(Node))
+        if (const auto Char = Cast<const CharNode>(Node))
             return CompileChar(Char);
-        if (const auto Int = Cast<IntegerNode>(Node))
+        if (const auto Int = Cast<const IntegerNode>(Node))
             return CompileInt(Int);
-        if (const auto Bool = Cast<BoolNode>(Node))
+        if (const auto Bool = Cast<const BoolNode>(Node))
             return CompileBool(Bool);
-        if (const auto Float = Cast<FloatingPointNode>(Node))
+        if (const auto Float = Cast<const FloatingPointNode>(Node))
             return CompileFloat(Float);
-        if (const auto String = Cast<StringNode>(Node))
+        if (const auto String = Cast<const StringNode>(Node))
             return CompileString(String);
-        if (const auto Array = Cast<ArrayNode>(Node))
+        if (const auto Array = Cast<const ArrayNode>(Node))
             return CompileArray(Array);
-        if (const auto Identifier = Cast<IdentifierNode>(Node))
+        if (const auto Identifier = Cast<const IdentifierNode>(Node))
             return CompileIdentifier(Identifier);
-        if (const auto Ref = Cast<RefNode>(Node))
+        if (const auto Ref = Cast<const RefNode>(Node))
             return CompileRef(Ref);
-        if (const auto Unref = Cast<UnrefNode>(Node))
+        if (const auto Unref = Cast<const UnrefNode>(Node))
             return CompileUnref(Unref);
-        if (const auto Prefix = Cast<PrefixOpNode>(Node))
+        if (const auto Prefix = Cast<const PrefixOpNode>(Node))
             return CompilePrefix(Prefix);
-        if (const auto Suffix = Cast<SuffixOpNode>(Node))
+        if (const auto Suffix = Cast<const SuffixOpNode>(Node))
             return CompileSuffix(Suffix);
-        if (const auto Unary = Cast<UnaryOpNode>(Node))
+        if (const auto Unary = Cast<const UnaryOpNode>(Node))
             return CompileUnary(Unary);
-        if (const auto Comparison = Cast<ComparisonNode>(Node))
+        if (const auto Comparison = Cast<const ComparisonNode>(Node))
             return CompileComparison(Comparison);
-        if (const auto Logical = Cast<LogicalNode>(Node))
+        if (const auto Logical = Cast<const LogicalNode>(Node))
             return CompileLogical(Logical);
-        if (const auto AssignOp = Cast<AssignmentNode>(Node))
+        if (const auto AssignOp = Cast<const AssignmentNode>(Node))
             return CompileAssignment(AssignOp);
-        if (const auto BinaryOp = Cast<BinaryOpNode>(Node))
+        if (const auto BinaryOp = Cast<const BinaryOpNode>(Node))
             return CompileBinary(BinaryOp);
-        if (const auto Call = Cast<CallNode>(Node))
+        if (const auto Call = Cast<const CallNode>(Node))
             return CompileCall(Call);
-        if (const auto Subscript = Cast<SubscriptNode>(Node))
+        if (const auto Subscript = Cast<const SubscriptNode>(Node))
             return CompileSubscript(Subscript);
-        if (const auto ExplicitCast = Cast<ExplicitCastNode>(Node))
+        if (const auto ExplicitCast = Cast<const ExplicitCastNode>(Node))
             return CompileExplicitCast(ExplicitCast);
-        if (const auto Var = Cast<VariableNode>(Node))
+        if (const auto Var = Cast<const VariableNode>(Node))
             return CompileVariable(Var);
-        if (const auto Function = Cast<FunctionNode>(Node))
+        if (const auto Function = Cast<const FunctionNode>(Node))
             return CompileFunction(Function);
-        if (const auto Return = Cast<ReturnNode>(Node))
+        if (const auto Return = Cast<const ReturnNode>(Node))
             return CompileReturn(Return);
-        if (const auto If = Cast<IfNode>(Node))
+        if (const auto If = Cast<const IfNode>(Node))
             return CompileIf(If);
-        if (const auto While = Cast<WhileNode>(Node))
+        if (const auto While = Cast<const WhileNode>(Node))
             return CompileWhile(While);
-        if (const auto For = Cast<ForNode>(Node))
+        if (const auto For = Cast<const ForNode>(Node))
             return CompileFor(For);
-        if (Cast<BreakNode>(Node))
+        if (Cast<const BreakNode>(Node))
             return CompileBreak();
-        if (Cast<ContinueNode>(Node))
+        if (Cast<const ContinueNode>(Node))
             return CompileContinue();
 
         ERROR("Cannot resolve node: '" + Node->GetName() + "'");
@@ -641,6 +641,18 @@ namespace Volt
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
 
+        if (auto RefType = Cast<ReferenceType>(VarType))
+        {
+            TypedValue* Value = GetLValue(Var->Value);
+            if (!Value)
+                return nullptr;
+
+            Builder.CreateStore(Value->GetValue(), Alloca);
+            DeclareVariable(Var->Name.str(),
+                Create<TypedValue>(Alloca, VarType, true));
+            return nullptr;
+        }
+
         auto ArrType = Cast<ArrayType>(VarType);
         if (ArrType && Var->Value)
         {
@@ -916,7 +928,7 @@ namespace Volt
     TypedValue *LLVMCompiler::GetLValue(const ASTNode *Node)
     {
         if (const auto Identifier = Cast<const IdentifierNode>(Node))
-            return GetVariable(Identifier->Value.str());
+            return ResolveReference(GetVariable(Identifier->Value.str()));
 
         if (const auto Subscript = Cast<const SubscriptNode>(Node))
         {
@@ -964,87 +976,24 @@ namespace Volt
         return nullptr;
     }
 
+    TypedValue *LLVMCompiler::ResolveReference(TypedValue *Value)
+    {
+        if (auto RefType = Cast<ReferenceType>(Value->GetDataType()))
+        {
+            llvm::Type* LLVMType = CContext.GetLLVMType(RefType);
+            llvm::Value* LoadValue = Builder.CreateLoad(LLVMType, Value->GetValue());
+            return Create<TypedValue>(LoadValue, RefType->BaseType.GetType());
+        }
+
+        return Value;
+    }
+
     TypedValue *LLVMCompiler::ImplicitCast(TypedValue *Value, DataType* Target)
     {
         if (Value->CastTo(Target, Builder, CContext))
             return Value;
 
         return nullptr;
-
-        // DataType* SrcType = Value->GetDataType();
-        // llvm::Type* TargetLLVMType = CContext.GetLLVMType(Target);
-        // llvm::Type* SrcLLVMType = CContext.GetLLVMType(SrcType);
-        //
-        // if (SrcType == Target)
-        //     return Value;
-        //
-        // if (Cast<BoolType>(SrcType))
-        // {
-        //     if (Cast<IntegerType>(Target))
-        //         return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
-        //             TargetLLVMType), Target);
-        //
-        //     if (Cast<FloatingPointType>(Target))
-        //         return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
-        //             TargetLLVMType), Target);
-        //
-        //     if (Cast<PointerType>(Target))
-        //         return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
-        //                     llvm::ConstantPointerNull::get(
-        //                     llvm::cast<llvm::PointerType>(SrcLLVMType))), Target);
-        // }
-        //
-        // if (auto SrcIntType = Cast<IntegerType>(SrcType))
-        // {
-        //     if (Cast<BoolType>(Target))
-        //         return Create<TypedValue>(Builder.CreateICmpNE(Value->GetValue(),
-        //                     llvm::ConstantInt::get(SrcLLVMType, 0)), Target);
-        //
-        //     if (auto TargetIntType = Cast<IntegerType>(Target))
-        //     {
-        //         if (SrcIntType->BitWidth < TargetIntType->BitWidth)
-        //             return Create<TypedValue>(Builder.CreateSExt(Value->GetValue(),
-        //                 TargetLLVMType), Target);
-        //
-        //         return Create<TypedValue>(Builder.CreateTrunc(Value->GetValue(),
-        //             TargetLLVMType), Target);
-        //     }
-        //
-        //     if (Cast<FloatingPointType>(Target))
-        //         return Create<TypedValue>(Builder.CreateSIToFP(Value->GetValue(),
-        //             TargetLLVMType), Target);
-        // }
-        //
-        // if (auto SrcFloatType = Cast<FloatingPointType>(SrcType))
-        // {
-        //     if (Cast<BoolType>(Target))
-        //         return Create<TypedValue>(Builder.CreateFCmpONE(Value->GetValue(),
-        //                     llvm::ConstantFP::get(SrcLLVMType, 0.0 )), Target);
-        //
-        //     if (Cast<IntegerType>(Target))
-        //         return Create<TypedValue>(Builder.CreateFPToSI(Value->GetValue(),
-        //             TargetLLVMType), Target);
-        //
-        //     if (auto TargetFloatType = Cast<FloatingPointType>(Target))
-        //     {
-        //         if (SrcFloatType->BitWidth < TargetFloatType->BitWidth)
-        //             return Create<TypedValue>(Builder.CreateFPExt(Value->GetValue(),
-        //                 TargetLLVMType), Target);
-        //
-        //         return Create<TypedValue>(Builder.CreateFPTrunc(Value->GetValue(),
-        //             TargetLLVMType), Target);
-        //     }
-        // }
-        //
-        // if (Cast<PointerType>(SrcType))
-        //     if (auto DstPtrType = Cast<PointerType>(Target))
-        //         if (DstPtrType->BaseType->GetCategory() == TypeCategory::VOID)
-        //             return Value;
-        //
-        // // ERROR(std::format("Cannot convert '{}' to '{}'",
-        // //     DataTypeUtils::TypeToString(SrcType), DataTypeUtils::TypeToString(Target)))
-        //
-        // return nullptr;
     }
 
     bool LLVMCompiler::CanImplicitCast(DataType* Src, DataType* Dst)

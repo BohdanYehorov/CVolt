@@ -106,6 +106,8 @@ namespace Volt
         QualType VisitType(DataTypeNodeBase *Type);
         CTimeValue* GetLValue(ASTNode* Node, bool IgnoreConstants = false);
 
+        static QualType GetNotReferenceType(QualType Type);
+
         template <typename MapT>
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);
 

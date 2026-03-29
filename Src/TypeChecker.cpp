@@ -264,7 +264,7 @@ namespace Volt
             case OperatorType::INC:
             case OperatorType::DEC:
             {
-                if (SuffixType->GetCategory() == TypeCategory::INTEGER)
+                if (SuffixType->IsIntegerType())
                 {
                     Suffix->CompileTimeValue = CTimeValue::CreateEmpty(SuffixType, MainArena);
                     return Suffix->CompileTimeValue;
@@ -467,10 +467,25 @@ namespace Volt
     CTimeValue *TypeChecker::VisitVariable(VariableNode *Variable)
     {
         QualType VarType = VisitType(Variable->Type);
-        CTimeValue* Value = VisitNode(Variable->Value);
 
         if (!VarType)
             return nullptr;
+
+        if (auto RefType = VarType.CastAs<ReferenceType>())
+        {
+            CTimeValue* Value = GetLValue(Variable->Value);
+
+            if (!Value || !RefType->CanBind(Value->Type))
+            {
+                SendError(TypeErrorKind::InvalidBind, Variable);
+                return nullptr;
+            }
+
+            DeclareVariable(Variable->Name.str(), VarType);
+            return nullptr;
+        }
+
+        CTimeValue* Value = VisitNode(Variable->Value);
 
         if (Value && !Value->Type.ImplicitCast(VarType))
         {
@@ -612,10 +627,15 @@ namespace Volt
             Ptr->ResolvedType = CContext.GetPointerType(VisitType(Ptr->BaseType));
             return { Ptr->ResolvedType, 0 };
         }
+        if (auto Ref = Cast<ReferenceTypeNode>(Type))
+        {
+            Ref->ResolvedType = CContext.GetReferenceType(VisitType(Ref->BaseType));
+            return { Ref->ResolvedType, 0 };
+        }
         if (auto Array = Cast<ArrayTypeNode>(Type))
         {
             CTimeValue* Length = VisitNode(Array->Length);
-            if (Length && Length->Type->GetCategory() == TypeCategory::INTEGER)
+            if (Length && Length->Type->IsIntegerType())
             {
                 Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
                 return { Array->ResolvedType, 0 };
@@ -653,13 +673,25 @@ namespace Volt
         if (!Value)
             return nullptr;
 
-        if (!IgnoreConstants && Value->Type.HasQualifier(QualType::CONST))
+        if (!IgnoreConstants)
         {
-            SendError(TypeErrorKind::AssignReadOnlyType, Node->Line, Node->Column);
-            return nullptr;
+            QualType Type = GetNotReferenceType(Value->Type);
+            if (Type.HasQualifier(QualType::CONST))
+            {
+                SendError(TypeErrorKind::AssignReadOnlyType, Node->Line, Node->Column);
+                return nullptr;
+            }
         }
 
         return Value;
+    }
+
+    QualType TypeChecker::GetNotReferenceType(QualType Type)
+    {
+        if (auto RefType = Type.CastAs<ReferenceType>())
+            Type = RefType->BaseType;
+
+        return Type;
     }
 
     bool TypeChecker::CanCastPointers(PointerType *Src, PointerType *Dst)

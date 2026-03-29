@@ -18,6 +18,7 @@ namespace Volt
 		Redeclaration,
 		ImmutableAssignment,
 		InvalidAssignment,
+		InvalidBind,
 		AssignNonLValue,
 		AssignReadOnlyType,
 		AssignmentTypeMismatch,

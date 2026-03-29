@@ -526,7 +526,22 @@ namespace Volt
         return nullptr;
     }
 
-    DataTypeNodeBase* Parser::ParseDataType()
+    DataTypeNodeBase *Parser::ParseReferenceType()
+    {
+        DepthIncScope DScope(Depth);
+
+        DataTypeNodeBase* TypeNode = ParseQualType();
+        if (!TypeNode)
+            return nullptr;
+
+        if (ConsumeIf(TokenType::OP_REFERENCE))
+            return NodesArena.Create<ReferenceTypeNode>(
+                TypeNode, TypeNode->Pos, TypeNode->Line, TypeNode->Column);
+
+        return TypeNode;
+    }
+
+    DataTypeNodeBase *Parser::ParseQualType()
     {
         DepthIncScope DScope(Depth);
 
@@ -543,6 +558,8 @@ namespace Volt
 
     DataTypeNodeBase *Parser::ParseWrappedType()
     {
+        DepthIncScope DScope(Depth);
+
         DataTypeNodeBase* TypeNode = ParsePrimitiveType();
         if (!TypeNode)
             return nullptr;
@@ -556,11 +573,11 @@ namespace Volt
                         TypeNode, Tok.Pos, Tok.Line, Tok.Column);
                     Consume();
                     break;
-                case TokenType::OP_REFERENCE:
-                    TypeNode = NodesArena.Create<ReferenceTypeNode>(
-                        TypeNode, Tok.Pos, Tok.Line, Tok.Column);
-                    Consume();
-                    break;
+                // case TokenType::OP_REFERENCE:
+                //     TypeNode = NodesArena.Create<ReferenceTypeNode>(
+                //         TypeNode, Tok.Pos, Tok.Line, Tok.Column);
+                //     Consume();
+                //     break;
                 case TokenType::OP_LBRACKET:
                 {
                     Consume();
@@ -585,6 +602,8 @@ namespace Volt
 
     DataTypeNodeBase *Parser::ParsePrimitiveType()
     {
+        DepthIncScope DScope(Depth);
+
         const Token& Tok = CurrentToken();
 
         PrimitiveDataType* Type;
@@ -617,7 +636,7 @@ namespace Volt
             case TokenType::OP_LPAREN:
             {
                 Consume();
-                DataTypeNodeBase* Node = ParseDataType();
+                DataTypeNodeBase* Node = ParseQualType();
                 if (!Expect(TokenType::OP_RPAREN))
                     return nullptr;
                 return Node;

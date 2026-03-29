@@ -58,7 +58,7 @@ namespace Volt
         std::unique_ptr<llvm::Module>& GetModule() { return Module; }
 
     private:
-        TypedValue *CompileNode(ASTNode *Node);
+        TypedValue *CompileNode(const ASTNode *Node);
         TypedValue *CompileBlock(const BlockNode *Block);
         TypedValue *CompileInt(const IntegerNode *Int);
         TypedValue *CompileFloat(const FloatingPointNode *Float);
@@ -95,6 +95,7 @@ namespace Volt
         void ExitScope();
 
         TypedValue *GetLValue(const ASTNode *Node);
+        TypedValue *ResolveReference(TypedValue* Value);
 
         TypedValue *ImplicitCast(TypedValue *Value, DataType* Target);
         static bool CanImplicitCast(DataType* Src, DataType* Dst);

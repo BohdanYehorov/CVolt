@@ -83,6 +83,19 @@ namespace Volt
 		return BaseType->PointerVariants[Index];
 	}
 
+	ReferenceType *CompilationContext::GetReferenceType(QualType BaseType)
+	{
+		if (!BaseType->ReferenceVariants)
+			BaseType->InitReferenceVariants();
+
+		size_t Index = BaseType.GetQuals();
+
+		if (!BaseType->ReferenceVariants[Index])
+			BaseType->ReferenceVariants[Index] = MainArena.Create<ReferenceType>(BaseType);
+
+		return BaseType->ReferenceVariants[Index];
+	}
+
 	ArrayType *CompilationContext::GetArrayType(QualType BaseType, size_t Length)
 	{
 		if (!BaseType->ArrayVariants)

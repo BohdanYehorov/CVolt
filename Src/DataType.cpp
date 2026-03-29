@@ -275,6 +275,20 @@ namespace Volt
 		return Hash;
 	}
 
+	bool ReferenceType::CanBind(QualType Type) const
+	{
+		if (!BaseType.HasQualifier(QualType::CONST) &&
+			Type.HasQualifier(QualType::CONST))
+			return false;
+
+		return Type.GetType() == BaseType.GetType();
+	}
+
+	DataType *ReferenceType::CastTo(DataType *To, bool Explicit) const
+	{
+		return BaseType->CastTo(To, Explicit);
+	}
+
 	bool ArrayType::IsEqual(const DataType *Other) const
 	{
 		if (!LengthInit)
