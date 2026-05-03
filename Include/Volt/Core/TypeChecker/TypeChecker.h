@@ -150,6 +150,15 @@ namespace Volt
                 QualType CandidateArgType = CandidateSignature.Params[i];
                 QualType ArgType = ArgTypes[i];
 
+                if (auto RefType = CandidateArgType.CastAs<ReferenceType>())
+                {
+                    if (RefType->CanBind(ArgType))
+                        continue;
+
+                    Valid = false;
+                    break;
+                }
+
                 if (!ArgType.ImplicitCast(CandidateArgType))
                 {
                     Valid = false;

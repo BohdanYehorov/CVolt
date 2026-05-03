@@ -558,15 +558,27 @@ namespace Volt
 
         for (const auto Arg : Args)
         {
-            TypedValue* ArgValue = CompileNode(Arg);
-            if (!ArgValue)
-                return nullptr;
-
-            if (Arg->ExpectedType)
-                if (!ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
+            if (Arg->ExpectedType->IsReferenceType())
+            {
+                TypedValue* ArgValue = GetLValue(Arg);
+                if (!ArgValue)
                     return nullptr;
 
-            LLVMArgs.push_back(ArgValue->GetValue());
+                LLVMArgs.push_back(ArgValue->GetValue());
+            }
+            else
+            {
+                TypedValue* ArgValue = CompileNode(Arg);
+
+                if (!ArgValue)
+                    return nullptr;
+
+                if (Arg->ExpectedType)
+                    if (!ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
+                        return nullptr;
+
+                LLVMArgs.push_back(ArgValue->GetValue());
+            }
         }
 
         if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))

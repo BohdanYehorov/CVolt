@@ -116,10 +116,10 @@ namespace Volt
     public:
         QualType() : Value(0) {}
 
-        // QualType(DataType* Type)
-        // {
-        //     Value = reinterpret_cast<uintptr_t>(Type);
-        // }
+        QualType(DataType* Type)
+        {
+            Value = reinterpret_cast<uintptr_t>(Type);
+        }
 
         QualType(DataType* Type, UInt32 Quals)
         {

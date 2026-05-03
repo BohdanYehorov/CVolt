@@ -134,8 +134,7 @@ namespace Volt
 	{
 		if (this != &Other)
 		{
-			if (Data)
-				Deallocate(Data);
+			Deallocate();
 
 			Data = Alloc.Allocate(Other.Cap);
 			for (SizeType i = 0; i < Other.Len; i++)
@@ -161,8 +160,8 @@ namespace Volt
 			Len = Other.Len;
 
 			Other.Data = nullptr;
-			Other.Cap = Cap;
-			Other.Len = Len;
+			Other.Cap = 0;
+			Other.Len = 0;
 		}
 
 		return *this;

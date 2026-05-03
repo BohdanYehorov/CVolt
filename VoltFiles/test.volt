@@ -1,9 +1,12 @@
+fun:void Hello(int$ Num)
+{
+    Num = 6;
+}
+
 fun:int Main()
 {
-    let:int Num = 5;
-    *$Num = 10;
-
+    let:int Num;
+    Hello(Num);
     Out(Num);
-
     return 0;
 }
