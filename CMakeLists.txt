@@ -19,9 +19,9 @@ set(SOURCES
         Src/Operator.cpp
         Src/BufferView.cpp
         Src/LLVMCompiler.cpp
-        Src/Hash.cpp
-        Src/DataTypeHash.cpp
-        Src/FunctionSignatureHash.cpp
+        # Src/Hash.cpp
+        # Src/DataTypeHash.cpp
+        # Src/FunctionSignatureHash.cpp
         Src/ParserFuzzer.cpp
         Src/TypeChecker.cpp
         Src/BuiltinFunctionTable.cpp

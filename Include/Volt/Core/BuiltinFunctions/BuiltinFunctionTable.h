@@ -6,7 +6,7 @@
 #define CVOLT_BUILTINFUNCTIONTABLE_H
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Compiler/Functions/FunctionSignature.h"
-#include "Volt/Compiler/Hash/FunctionSignatureHash.h"
+#include "Volt/Core/Hash/Hash.h"
 #include "Volt/Core/Types/TypeConv.h"
 #include "Volt/Core/Functions/BuiltinFuncCallee.h"
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
@@ -17,7 +17,7 @@ namespace Volt
 	class BuiltinFunctionTable
 	{
 	public:
-		using Map = std::unordered_map<FunctionSignature, BuiltinFuncCallee*, FunctionSignatureHash>;
+		using Map = std::unordered_map<FunctionSignature, BuiltinFuncCallee*, Hash<FunctionSignature>>;
 
 	private:
 		Map Functions;

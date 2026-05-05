@@ -7,7 +7,7 @@
 
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Compiler/Hash/DataTypeHash.h"
+#include "Volt/Core/Hash/Hash.h"
 #include "Volt/Core/Lexer/Token.h"
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/ADT/String.h"
@@ -36,7 +36,7 @@ namespace Volt
 		};
 
 	private:
-		std::unordered_set<DataTypeWrap, DataTypeHash> CachedTypes;
+		std::unordered_set<DataTypeWrap, Hash<DataType>> CachedTypes;
 		VoidType* CachedVoidType = nullptr;
 		BoolType* CachedBoolType = nullptr;
 		CharType* CachedCharType = nullptr;

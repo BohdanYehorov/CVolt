@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include "Volt/Core/Types/DataType.h"
+#include "Volt/Compiler/Functions/FunctionSignature.h"
 
 namespace Volt
 {
@@ -44,6 +45,20 @@ namespace Volt
 			size_t H = Type->GetHash();
 			CombineHashes(H, Hash<UInt32>{}(Type.GetQuals()));
 			return H;
+		}
+	};
+
+	template <>
+	class Hash<FunctionSignature>
+	{
+	public:
+		size_t operator()(const FunctionSignature& Signature) const
+		{
+			size_t Seed =  std::hash<std::string>{}(Signature.Name);
+			for (auto Param : Signature.Params)
+				CombineHashes(Seed, Param.GetHash());
+
+			return Seed;
 		}
 	};
 }

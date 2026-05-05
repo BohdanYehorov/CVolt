@@ -3,8 +3,7 @@
 //
 
 #include "Volt/Core/Types/DataType.h"
-
-#include "Volt/Compiler/Hash/Hash.h"
+#include "Volt/Core/Hash/Hash.h"
 
 namespace Volt
 {

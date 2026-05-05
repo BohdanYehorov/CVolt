@@ -13,7 +13,7 @@
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
 #include "Volt/Compiler/CompileTime/ExprResult.h"
-#include "Volt/Core/TypeDefs/FunctionTable.h"
+#include "Volt/Core/TypeDefs/UMap.h"
 #include "Volt/Core/TypeDefs/VariableTable.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 
