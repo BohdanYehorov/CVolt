@@ -8,7 +8,7 @@
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Types/CompilerTypes.h"
 #include "Volt/Core/Memory/Arena.h"
-#include "Volt/Core/Value/TypedValue.h"
+#include "Volt/Core/Value/IRValue.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 #include <llvm/IR/IRBuilder.h>
@@ -58,46 +58,46 @@ namespace Volt
         std::unique_ptr<llvm::Module>& GetModule() const { return Module; }
 
     private:
-        TypedValue *CompileNode(const ASTNode *Node);
-        TypedValue *CompileBlock(const BlockNode *Block);
-        TypedValue *CompileInt(const IntegerNode *Int);
-        TypedValue *CompileFloat(const FloatingPointNode *Float);
-        TypedValue *CompileBool(const BoolNode *Bool);
-        TypedValue *CompileChar(const CharNode *Char);
-        TypedValue *CompileString(const StringNode *String);
-        TypedValue *CompileArray(const ArrayNode *Array);
-        TypedValue *CompileIdentifier(const IdentifierNode *Identifier);
-        TypedValue *CompileRef(const RefNode *Ref);
-        TypedValue *CompileUnref(const UnrefNode *Unref);
-        TypedValue *CompilePrefix(const PrefixOpNode *Prefix);
-        TypedValue *CompileSuffix(const SuffixOpNode *Suffix);
-        TypedValue *CompileUnary(const UnaryOpNode *Unary);
-        TypedValue *CompileComparison(const ComparisonNode *Comparison);
-        TypedValue *CompileLogical(const LogicalNode *Logical);
-        TypedValue *CompileAssignment(const AssignmentNode *Assignment);
-        TypedValue *CompileBinary(const BinaryOpNode *BinaryOp);
-        TypedValue *CompileCall(const CallNode *Call);
-        TypedValue *CompileSubscript(const SubscriptNode *Subscript);
-        TypedValue *CompileExplicitCast(const ExplicitCastNode *ExplicitCast);
-        TypedValue *CompileVariable(const VariableNode *Var);
-        TypedValue *CompileFunction(const FunctionNode *Function);
-        TypedValue *CompileReturn(const ReturnNode *Return);
-        TypedValue *CompileIf(const IfNode *If);
-        TypedValue *CompileWhile(const WhileNode *While);
-        TypedValue *CompileFor(const ForNode *For);
-        TypedValue *CompileBreak();
-        TypedValue *CompileContinue();
+        IRValue *CompileNode(const ASTNode *Node);
+        IRValue *CompileBlock(const BlockNode *Block);
+        IRValue *CompileInt(const IntegerNode *Int);
+        IRValue *CompileFloat(const FloatingPointNode *Float);
+        IRValue *CompileBool(const BoolNode *Bool);
+        IRValue *CompileChar(const CharNode *Char);
+        IRValue *CompileString(const StringNode *String);
+        IRValue *CompileArray(const ArrayNode *Array);
+        IRValue *CompileIdentifier(const IdentifierNode *Identifier);
+        IRValue *CompileRef(const RefNode *Ref);
+        IRValue *CompileUnref(const UnrefNode *Unref);
+        IRValue *CompilePrefix(const PrefixOpNode *Prefix);
+        IRValue *CompileSuffix(const SuffixOpNode *Suffix);
+        IRValue *CompileUnary(const UnaryOpNode *Unary);
+        IRValue *CompileComparison(const ComparisonNode *Comparison);
+        IRValue *CompileLogical(const LogicalNode *Logical);
+        IRValue *CompileAssignment(const AssignmentNode *Assignment);
+        IRValue *CompileBinary(const BinaryOpNode *BinaryOp);
+        IRValue *CompileCall(const CallNode *Call);
+        IRValue *CompileSubscript(const SubscriptNode *Subscript);
+        IRValue *CompileExplicitCast(const ExplicitCastNode *ExplicitCast);
+        IRValue *CompileVariable(const VariableNode *Var);
+        IRValue *CompileFunction(const FunctionNode *Function);
+        IRValue *CompileReturn(const ReturnNode *Return);
+        IRValue *CompileIf(const IfNode *If);
+        IRValue *CompileWhile(const WhileNode *While);
+        IRValue *CompileFor(const ForNode *For);
+        IRValue *CompileBreak();
+        IRValue *CompileContinue();
 
-        void DeclareVariable(const std::string& Name, TypedValue *Var);
-        TypedValue *GetVariable(const std::string &Name);
+        void DeclareVariable(const std::string& Name, IRValue *Var);
+        IRValue *GetVariable(const std::string &Name);
 
         void EnterScope();
         void ExitScope();
 
-        TypedValue *GetLValue(const ASTNode *Node);
-        TypedValue *ResolveReference(TypedValue* Value);
+        IRValue *GetLValue(const ASTNode *Node);
+        IRValue *ResolveReference(IRValue* Value);
 
-        TypedValue *ImplicitCast(TypedValue *Value, DataType* Target);
+        IRValue *ImplicitCast(IRValue *Value, DataType* Target);
         static bool CanImplicitCast(DataType* Src, DataType* Dst);
 
         static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);

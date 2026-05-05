@@ -2,8 +2,8 @@
 // Created by bohdan on 08.01.26.
 //
 
-#ifndef CVOLT_TYPEDVALUE_H
-#define CVOLT_TYPEDVALUE_H
+#ifndef CVOLT_IRValue_H
+#define CVOLT_IRValue_H
 
 #include "Volt/Core/Types/DataType.h"
 #include <llvm/IR/Value.h>
@@ -13,19 +13,19 @@ namespace Volt
 {
     class CompilationContext;
 
-    class TypedValue : public Object
+    class IRValue : public Object
     {
-        GENERATED_BODY(TypedValue, Object)
+        GENERATED_BODY(IRValue, Object)
     private:
         llvm::Value* Value = nullptr;
         DataType* Type = nullptr;
         bool IsLValue = false;
 
     public:
-        TypedValue() = default;
-        TypedValue(DataType* Type, bool IsLValue = false)
+        IRValue() = default;
+        IRValue(DataType* Type, bool IsLValue = false)
             : Type(Type), IsLValue(IsLValue) {}
-        TypedValue(llvm::Value* Value, DataType* Type, bool IsLValue = false)
+        IRValue(llvm::Value* Value, DataType* Type, bool IsLValue = false)
             : Value(Value), Type(Type), IsLValue(IsLValue) {}
 
         [[nodiscard]] llvm::Value* GetValue() const { return Value; }
@@ -44,4 +44,4 @@ namespace Volt
 }
 
 
-#endif //CVOLT_TYPEDVALUE_H
+#endif //CVOLT_IRValue_H

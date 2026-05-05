@@ -6,14 +6,14 @@
 #define CVOLT_INSTRUCTION_H
 
 #include <string>
-#include "Volt/Core/Value/TypedValue.h"
+#include "Volt/Core/Value/IRValue.h"
 
 namespace Volt
 {
     struct ScopeEntry
     {
         std::string Name;
-        TypedValue* Previous = nullptr;
+        IRValue* Previous = nullptr;
     };
 
     struct CompilerError : std::exception

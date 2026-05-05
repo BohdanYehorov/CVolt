@@ -83,7 +83,7 @@ namespace Volt
 		friend class LLVMCompiler;
 		friend BuiltinFunctionTable;
 		friend class JITEngine;
-		friend class CTimeValue;
+		friend class ExprResult;
 	};
 }
 

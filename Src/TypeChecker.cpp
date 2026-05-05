@@ -13,7 +13,7 @@ namespace Volt
                 " At position: [" << Error.Line << ":" << Error.Column << "]\n";
     }
 
-    CTimeValue *TypeChecker::VisitNode(ASTNode *Node)
+    ExprResult *TypeChecker::VisitNode(ASTNode *Node)
     {
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
@@ -100,7 +100,7 @@ namespace Volt
         ExitScope();
     }
 
-    CTimeValue *TypeChecker::VisitInt(IntegerNode *Int)
+    ExprResult *TypeChecker::VisitInt(IntegerNode *Int)
     {
         int BitWidth = 0;
         switch (Int->Type)
@@ -118,12 +118,12 @@ namespace Volt
                 return nullptr;
         }
 
-        Int->CompileTimeValue = CTimeValue::CreateInteger(
+        Int->CompileTimeValue = ExprResult::CreateInteger(
             QualType(CContext.GetIntegerType(BitWidth), QualType::CONST), Int->Value, MainArena);
         return Int->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitFloat(FloatingPointNode *Float)
+    ExprResult *TypeChecker::VisitFloat(FloatingPointNode *Float)
     {
         int BitWidth = 0;
         switch (Float->Type)
@@ -138,34 +138,34 @@ namespace Volt
                 return nullptr;
         }
 
-        Float->CompileTimeValue = CTimeValue::CreateFloat(
+        Float->CompileTimeValue = ExprResult::CreateFloat(
             QualType(CContext.GetFPType(BitWidth), QualType::CONST), Float->Value, MainArena);
         return Float->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitBool(BoolNode *Bool)
+    ExprResult *TypeChecker::VisitBool(BoolNode *Bool)
     {
-        Bool->CompileTimeValue = CTimeValue::CreateBool(
+        Bool->CompileTimeValue = ExprResult::CreateBool(
             QualType(CContext.GetBoolType(), QualType::CONST), Bool->Value, MainArena);
         return Bool->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitChar(CharNode *Char)
+    ExprResult *TypeChecker::VisitChar(CharNode *Char)
     {
-        Char->CompileTimeValue = CTimeValue::CreateChar(
+        Char->CompileTimeValue = ExprResult::CreateChar(
             QualType(CContext.GetCharType(), QualType::CONST), Char->Value, MainArena);
         return Char->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitString(StringNode *String)
+    ExprResult *TypeChecker::VisitString(StringNode *String)
     {
-        String->CompileTimeValue = CTimeValue::CreateEmpty(
+        String->CompileTimeValue = ExprResult::CreateEmpty(
             QualType(CContext.GetPointerType(QualType(CContext.GetCharType(),
                 QualType::CONST)), QualType::CONST), MainArena);
         return String->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitArray(ArrayNode *Array)
+    ExprResult *TypeChecker::VisitArray(ArrayNode *Array)
     {
         llvm::ArrayRef<ASTNode*> Elements = Array->Elements;
 
@@ -176,7 +176,7 @@ namespace Volt
         bool HasErrors = false;
         for (auto El : Elements)
         {
-            CTimeValue* ElValue = VisitNode(El);
+            ExprResult* ElValue = VisitNode(El);
             if (!ElValue)
                 return nullptr;
 
@@ -197,12 +197,12 @@ namespace Volt
         if (HasErrors)
             return nullptr;
 
-        Array->CompileTimeValue = CTimeValue::CreateEmpty(QualType(
+        Array->CompileTimeValue = ExprResult::CreateEmpty(QualType(
             CContext.GetArrayType(ElementsType, Elements.size()), QualType::CONST), MainArena);
         return Array->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
+    ExprResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
         QualType VarType = GetVariable(Identifier->Value.str());
         if (!VarType)
@@ -211,13 +211,13 @@ namespace Volt
             return nullptr;
         }
 
-        Identifier->CompileTimeValue = CTimeValue::CreateEmpty(VarType, MainArena);
+        Identifier->CompileTimeValue = ExprResult::CreateEmpty(VarType, MainArena);
         return Identifier->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitRef(RefNode *Ref)
+    ExprResult *TypeChecker::VisitRef(RefNode *Ref)
     {
-        CTimeValue* RefValue = GetLValue(Ref->Target, true);
+        ExprResult* RefValue = GetLValue(Ref->Target, true);
         if (!RefValue)
             return nullptr;
 
@@ -225,14 +225,14 @@ namespace Volt
         if (!RefType)
             return nullptr;
 
-        Ref->CompileTimeValue = CTimeValue::CreateEmpty(
+        Ref->CompileTimeValue = ExprResult::CreateEmpty(
             QualType(CContext.GetPointerType(RefType), 0), MainArena); // <-
         return Ref->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitUnref(UnrefNode *Unref)
+    ExprResult *TypeChecker::VisitUnref(UnrefNode *Unref)
     {
-        CTimeValue* UnrefValue = VisitNode(Unref->Target);
+        ExprResult* UnrefValue = VisitNode(Unref->Target);
         if (!UnrefValue)
             return nullptr;
 
@@ -242,16 +242,16 @@ namespace Volt
 
         if (auto PtrType = Cast<PointerType>(Type.GetType()))
         {
-            Unref->CompileTimeValue = CTimeValue::CreateEmpty(PtrType->BaseType, MainArena);
+            Unref->CompileTimeValue = ExprResult::CreateEmpty(PtrType->BaseType, MainArena);
             return Unref->CompileTimeValue;
         }
 
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
+    ExprResult *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
-        CTimeValue* SuffixValue = VisitNode(Suffix->Operand);
+        ExprResult* SuffixValue = VisitNode(Suffix->Operand);
         if (!SuffixValue)
             return nullptr;
 
@@ -266,7 +266,7 @@ namespace Volt
             {
                 if (SuffixType->IsIntegerType())
                 {
-                    Suffix->CompileTimeValue = CTimeValue::CreateEmpty(SuffixType, MainArena);
+                    Suffix->CompileTimeValue = ExprResult::CreateEmpty(SuffixType, MainArena);
                     return Suffix->CompileTimeValue;
                 }
 
@@ -279,9 +279,9 @@ namespace Volt
         }
     }
 
-    CTimeValue *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
+    ExprResult *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
-        CTimeValue* PrefixValue = GetLValue(Prefix->Operand);
+        ExprResult* PrefixValue = GetLValue(Prefix->Operand);
         if (!PrefixValue)
             return nullptr;
 
@@ -298,7 +298,7 @@ namespace Volt
             {
                 if (Category == TypeCategory::INTEGER || Category == TypeCategory::CHAR || Category == TypeCategory::FLOATING_POINT)
                 {
-                    Prefix->CompileTimeValue = CTimeValue::CreateEmpty(PrefixType,  MainArena);
+                    Prefix->CompileTimeValue = ExprResult::CreateEmpty(PrefixType,  MainArena);
                     return Prefix->CompileTimeValue;
                 }
                 SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
@@ -311,13 +311,13 @@ namespace Volt
         }
     }
 
-    CTimeValue *TypeChecker::VisitUnary(UnaryOpNode *Unary)
+    ExprResult *TypeChecker::VisitUnary(UnaryOpNode *Unary)
     {
-        CTimeValue* Operand = VisitNode(Unary->Operand);
+        ExprResult* Operand = VisitNode(Unary->Operand);
         if (!Operand)
             return nullptr;
 
-        if (auto Value = CTimeValue::ResolveUnary(Operand, Unary->Type, CContext))
+        if (auto Value = ExprResult::ResolveUnary(Operand, Unary->Type, CContext))
         {
             Unary->CompileTimeValue = Value;
             return Value;
@@ -326,26 +326,26 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitBinary(BinaryOpNode *Binary)
+    ExprResult *TypeChecker::VisitBinary(BinaryOpNode *Binary)
     {
-        CTimeValue* Left = nullptr;
+        ExprResult* Left = nullptr;
         if (Cast<AssignmentNode>(Binary))
             Left = GetLValue(Binary->Left);
         else
             Left = VisitNode(Binary->Left);
 
-        CTimeValue* Right = VisitNode(Binary->Right);
+        ExprResult* Right = VisitNode(Binary->Right);
 
         if (!Left || !Right)
             return nullptr;
 
-        Binary->CompileTimeValue = CTimeValue::ResolveBinary(Left, Right, Binary->Type, CContext);
+        Binary->CompileTimeValue = ExprResult::ResolveBinary(Left, Right, Binary->Type, CContext);
         Binary->LeftOperandType = Left->Type.GetType();
         Binary->RightOperandType = Right->Type.GetType();
         return Binary->CompileTimeValue;
     }
 
-    CTimeValue *TypeChecker::VisitCall(CallNode *Call)
+    ExprResult *TypeChecker::VisitCall(CallNode *Call)
     {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
@@ -356,7 +356,7 @@ namespace Volt
 
             for (auto Arg : Call->Arguments)
             {
-                CTimeValue* ArgValue = VisitNode(Arg);
+                ExprResult* ArgValue = VisitNode(Arg);
                 if (!ArgValue)
                     return nullptr;
 
@@ -376,7 +376,7 @@ namespace Volt
                 for (size_t i = 0; i < ArgsCount; i++)
                     Call->Arguments[i]->ExpectedType = Iter->first.Params[i].GetType();
 
-                return CTimeValue::CreateEmpty(Iter->second->ReturnType, MainArena);
+                return ExprResult::CreateEmpty(Iter->second->ReturnType, MainArena);
             }
 
             if (auto Iter = TryGetOverload(Signature, BuiltinFuncTable.GetMap());
@@ -387,7 +387,7 @@ namespace Volt
                 for (size_t i = 0; i < ArgsCount; i++)
                     Call->Arguments[i]->ExpectedType = Iter->first.Params[i].GetType();
 
-                return CTimeValue::CreateEmpty(Iter->second->ReturnType, MainArena);
+                return ExprResult::CreateEmpty(Iter->second->ReturnType, MainArena);
             }
 
             Array<std::string> ErrorContext = { Name };
@@ -406,17 +406,17 @@ namespace Volt
                 return nullptr;
 
             VisitNode(Call->Arguments[0]);
-            return CTimeValue::CreateEmpty(VisitType(Type), MainArena);
+            return ExprResult::CreateEmpty(VisitType(Type), MainArena);
         }
 
         SendError(TypeErrorKind::InvalidCalleeType, Call->Callee);
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitSubscript(SubscriptNode *Subscript)
+    ExprResult *TypeChecker::VisitSubscript(SubscriptNode *Subscript)
     {
-        CTimeValue* TargetValue = VisitNode(Subscript->Target);
-        CTimeValue* IndexValue = VisitNode(Subscript->Index);
+        ExprResult* TargetValue = VisitNode(Subscript->Target);
+        ExprResult* IndexValue = VisitNode(Subscript->Index);
 
         if (!TargetValue || !IndexValue)
             return nullptr;
@@ -433,22 +433,22 @@ namespace Volt
         if (auto ArrType = Cast<ArrayType>(TargetType))
         {
             Subscript->TargetType = ArrType;
-            return CTimeValue::CreateEmpty(ArrType->BaseType, MainArena);
+            return ExprResult::CreateEmpty(ArrType->BaseType, MainArena);
         }
 
         if (auto PtrType = Cast<PointerType>(TargetType))
         {
             Subscript->TargetType = PtrType;
-            return CTimeValue::CreateEmpty(PtrType->BaseType, MainArena);
+            return ExprResult::CreateEmpty(PtrType->BaseType, MainArena);
         }
 
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitExplicitCast(ExplicitCastNode *ECast)
+    ExprResult *TypeChecker::VisitExplicitCast(ExplicitCastNode *ECast)
     {
         QualType SrcType = VisitType(ECast->Type);
-        CTimeValue* Target = VisitNode(ECast->Target);
+        ExprResult* Target = VisitNode(ECast->Target);
 
         if (!SrcType || !Target)
             return nullptr;
@@ -464,7 +464,7 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitVariable(VariableNode *Variable)
+    ExprResult *TypeChecker::VisitVariable(VariableNode *Variable)
     {
         QualType VarType = VisitType(Variable->Type);
 
@@ -473,7 +473,7 @@ namespace Volt
 
         if (auto RefType = VarType.CastAs<ReferenceType>())
         {
-            CTimeValue* Value = GetLValue(Variable->Value);
+            ExprResult* Value = GetLValue(Variable->Value);
 
             if (!Value || !RefType->CanBind(Value->Type))
             {
@@ -485,7 +485,7 @@ namespace Volt
             return nullptr;
         }
 
-        CTimeValue* Value = VisitNode(Variable->Value);
+        ExprResult* Value = VisitNode(Variable->Value);
 
         if (Value && !Value->Type.ImplicitCast(VarType))
         {
@@ -499,7 +499,7 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitFunction(FunctionNode *Function)
+    ExprResult *TypeChecker::VisitFunction(FunctionNode *Function)
     {
         SmallVec8<QualType> Params;
         Params.reserve(Function->Params.size());
@@ -525,9 +525,9 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitIf(IfNode *If)
+    ExprResult *TypeChecker::VisitIf(IfNode *If)
     {
-        CTimeValue* Cond = VisitNode(If->Condition);
+        ExprResult* Cond = VisitNode(If->Condition);
         if (!Cond)
             return nullptr;
 
@@ -549,9 +549,9 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitWhile(WhileNode *While)
+    ExprResult *TypeChecker::VisitWhile(WhileNode *While)
     {
-        CTimeValue* Cond = VisitNode(While->Condition);
+        ExprResult* Cond = VisitNode(While->Condition);
         if (!Cond)
             return nullptr;
 
@@ -569,11 +569,11 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitFor(ForNode *For)
+    ExprResult *TypeChecker::VisitFor(ForNode *For)
     {
         VisitNode(For->Initialization);
 
-        CTimeValue* Cond = VisitNode(For->Condition);
+        ExprResult* Cond = VisitNode(For->Condition);
         if (!Cond)
             return nullptr;
 
@@ -592,7 +592,7 @@ namespace Volt
         return nullptr;
     }
 
-    CTimeValue *TypeChecker::VisitReturn(ReturnNode *Return)
+    ExprResult *TypeChecker::VisitReturn(ReturnNode *Return)
     {
         if (Return->ReturnValue)
         {
@@ -634,7 +634,7 @@ namespace Volt
         }
         if (auto Array = Cast<ArrayTypeNode>(Type))
         {
-            CTimeValue* Length = VisitNode(Array->Length);
+            ExprResult* Length = VisitNode(Array->Length);
             if (Length && Length->Type->IsIntegerType())
             {
                 Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
@@ -654,9 +654,9 @@ namespace Volt
         return {};
     }
 
-    CTimeValue *TypeChecker::GetLValue(ASTNode *Node, bool IgnoreConstants)
+    ExprResult *TypeChecker::GetLValue(ASTNode *Node, bool IgnoreConstants)
     {
-        CTimeValue* Value = nullptr;
+        ExprResult* Value = nullptr;
 
         if (auto Identifier = Cast<IdentifierNode>(Node))
             Value = VisitIdentifier(Identifier);
@@ -732,7 +732,7 @@ namespace Volt
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
 
-        Variables[Name] = CTimeValue::CreateEmpty(Type,  MainArena);
+        Variables[Name] = ExprResult::CreateEmpty(Type,  MainArena);
         ScopeStack.Back().Add({ Name, nullptr });
     }
 

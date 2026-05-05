@@ -12,21 +12,19 @@
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Compiler/Types/CompilerTypes.h"
-#include "Volt/Compiler/CompileTime/CTimeValue.h"
+#include "Volt/Compiler/CompileTime/ExprResult.h"
 #include "Volt/Core/TypeDefs/FunctionTable.h"
 #include "Volt/Core/TypeDefs/VariableTable.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
-#include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/DenseSet.h>
 
 namespace Volt
 {
     struct CTimeScopeEntry
     {
         std::string Name;
-        CTimeValue* Previous = nullptr;
+        ExprResult* Previous = nullptr;
 
-        CTimeScopeEntry(const std::string& Name, CTimeValue* Prev = nullptr)
+        CTimeScopeEntry(const std::string& Name, ExprResult* Prev = nullptr)
             : Name(Name), Previous(Prev) {}
     };
 
@@ -75,36 +73,36 @@ namespace Volt
             Errors.Emplace(Kind, Node->Line, Node->Column, std::move(Context));
         }
 
-        CTimeValue *VisitNode(ASTNode *Node);
+        ExprResult *VisitNode(ASTNode *Node);
 
         void VisitSequence(SequenceNode* Sequence);
         void VisitBlock(BlockNode* Block);
 
-        CTimeValue *VisitInt(IntegerNode *Int);
-        CTimeValue *VisitFloat(FloatingPointNode *Float);
-        CTimeValue *VisitBool(BoolNode *Bool);
-        CTimeValue *VisitChar(CharNode *Char);
-        CTimeValue *VisitString(StringNode *String);
-        CTimeValue *VisitArray(ArrayNode *Array);
-        CTimeValue *VisitIdentifier(IdentifierNode *Identifier);
-        CTimeValue *VisitRef(RefNode *Ref);
-        CTimeValue *VisitUnref(UnrefNode *Unref);
-        CTimeValue *VisitSuffix(SuffixOpNode *Suffix);
-        CTimeValue *VisitPrefix(PrefixOpNode *Prefix);
-        CTimeValue *VisitUnary(UnaryOpNode *Unary);
-        CTimeValue *VisitBinary(BinaryOpNode *Binary);
-        CTimeValue *VisitCall(CallNode *Call);
-        CTimeValue *VisitSubscript(SubscriptNode *Subscript);
-        CTimeValue *VisitExplicitCast(ExplicitCastNode *ECast);
-        CTimeValue *VisitVariable(VariableNode *Variable);
-        CTimeValue *VisitFunction(FunctionNode *Function);
-        CTimeValue *VisitIf(IfNode *If);
-        CTimeValue *VisitWhile(WhileNode *While);
-        CTimeValue *VisitFor(ForNode *For);
-        CTimeValue *VisitReturn(ReturnNode *Return);
+        ExprResult *VisitInt(IntegerNode *Int);
+        ExprResult *VisitFloat(FloatingPointNode *Float);
+        ExprResult *VisitBool(BoolNode *Bool);
+        ExprResult *VisitChar(CharNode *Char);
+        ExprResult *VisitString(StringNode *String);
+        ExprResult *VisitArray(ArrayNode *Array);
+        ExprResult *VisitIdentifier(IdentifierNode *Identifier);
+        ExprResult *VisitRef(RefNode *Ref);
+        ExprResult *VisitUnref(UnrefNode *Unref);
+        ExprResult *VisitSuffix(SuffixOpNode *Suffix);
+        ExprResult *VisitPrefix(PrefixOpNode *Prefix);
+        ExprResult *VisitUnary(UnaryOpNode *Unary);
+        ExprResult *VisitBinary(BinaryOpNode *Binary);
+        ExprResult *VisitCall(CallNode *Call);
+        ExprResult *VisitSubscript(SubscriptNode *Subscript);
+        ExprResult *VisitExplicitCast(ExplicitCastNode *ECast);
+        ExprResult *VisitVariable(VariableNode *Variable);
+        ExprResult *VisitFunction(FunctionNode *Function);
+        ExprResult *VisitIf(IfNode *If);
+        ExprResult *VisitWhile(WhileNode *While);
+        ExprResult *VisitFor(ForNode *For);
+        ExprResult *VisitReturn(ReturnNode *Return);
 
         QualType VisitType(DataTypeNodeBase *Type);
-        CTimeValue* GetLValue(ASTNode* Node, bool IgnoreConstants = false);
+        ExprResult* GetLValue(ASTNode* Node, bool IgnoreConstants = false);
 
         static QualType GetNotReferenceType(QualType Type);
 

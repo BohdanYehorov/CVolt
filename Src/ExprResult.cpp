@@ -2,54 +2,54 @@
 // Created by bohdan on 28.01.26.
 //
 
-#include "Volt/Compiler/CompileTime/CTimeValue.h"
+#include "Volt/Compiler/CompileTime/ExprResult.h"
 
 namespace Volt
 {
-	CTimeValue *CTimeValue::CreateRaw(CompilationContext &CContext)
+	ExprResult *ExprResult::CreateRaw(CompilationContext &CContext)
 	{
-		return CContext.MainArena.Create<CTimeValue>();
+		return CContext.MainArena.Create<ExprResult>();
 	}
 
-	CTimeValue *CTimeValue::CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena)
+	ExprResult *ExprResult::CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena)
 	{
-		auto Value = MainArena.Create<CTimeValue>();
+		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = IntType;
 		Value->Int = Integer;
 		Value->IsEmpty = false;
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateFloat(QualType FloatType, double Float, Arena& MainArena)
+	ExprResult *ExprResult::CreateFloat(QualType FloatType, double Float, Arena& MainArena)
 	{
-		auto Value = MainArena.Create<CTimeValue>();
+		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = FloatType;
 		Value->Float = Float;
 		Value->IsEmpty = false;
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateBool(QualType BoolType, bool Bool, Arena& MainArena)
+	ExprResult *ExprResult::CreateBool(QualType BoolType, bool Bool, Arena& MainArena)
 	{
-		auto Value = MainArena.Create<CTimeValue>();
+		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = BoolType;
 		Value->Bool = Bool;
 		Value->IsEmpty = false;
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateChar(QualType CharType, char Char, Arena &MainArena)
+	ExprResult *ExprResult::CreateChar(QualType CharType, char Char, Arena &MainArena)
 	{
-		auto Value = MainArena.Create<CTimeValue>();
+		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = CharType;
 		Value->Char = Char;
 		Value->IsEmpty = false;
 		return Value;
 	}
 
-	CTimeValue *CTimeValue::CreateEmpty(QualType Type, Arena& MainArena)
+	ExprResult *ExprResult::CreateEmpty(QualType Type, Arena& MainArena)
 	{
-		auto Value = MainArena.Create<CTimeValue>();
+		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = Type;
 		Value->IsEmpty = true;
 		return Value;
@@ -91,7 +91,7 @@ namespace Volt
 			return nullptr; \
 	}}
 
-	CTimeValue *CTimeValue::ResolveBinary(CTimeValue *&Left, CTimeValue *&Right, OperatorType Op,
+	ExprResult *ExprResult::ResolveBinary(ExprResult *&Left, ExprResult *&Right, OperatorType Op,
 		CompilationContext& CContext)
 	{
 		using enum OperatorType;
@@ -132,7 +132,7 @@ namespace Volt
 		}
 	}
 
-	CTimeValue *CTimeValue::ResolveUnary(CTimeValue *&Operand, OperatorType Op, CompilationContext &CContext)
+	ExprResult *ExprResult::ResolveUnary(ExprResult *&Operand, OperatorType Op, CompilationContext &CContext)
 	{
 		using enum TypeCategory;
 
@@ -158,7 +158,7 @@ namespace Volt
 					case CHAR:
 					case INTEGER:
 					case FLOATING_POINT:
-						return CContext.MainArena.Create<CTimeValue>(*Operand);
+						return CContext.MainArena.Create<ExprResult>(*Operand);
 					default:
 						return nullptr;
 				}
@@ -200,7 +200,7 @@ namespace Volt
 		}
 	}
 
-	bool CTimeValue::CastBooleanTo(TypeCategory To, bool Explicit)
+	bool ExprResult::CastBooleanTo(TypeCategory To, bool Explicit)
 	{
 		if (To == TypeCategory::BOOLEAN)
 			return true;
@@ -230,7 +230,7 @@ namespace Volt
 		}
 	}
 
-	bool CTimeValue::CastCharTo(TypeCategory To, bool Explicit)
+	bool ExprResult::CastCharTo(TypeCategory To, bool Explicit)
 	{
 		switch (To)
 		{
@@ -259,7 +259,7 @@ namespace Volt
 		}
 	}
 
-	bool CTimeValue::CastIntegerTo(TypeCategory To, bool Explicit)
+	bool ExprResult::CastIntegerTo(TypeCategory To, bool Explicit)
 	{
 		switch (To)
 		{
@@ -288,7 +288,7 @@ namespace Volt
 		}
 	}
 
-	bool CTimeValue::CastFloatTo(TypeCategory To, bool Explicit)
+	bool ExprResult::CastFloatTo(TypeCategory To, bool Explicit)
 	{
 		switch (To)
 		{
@@ -317,7 +317,7 @@ namespace Volt
 		}
 	}
 
-	bool CTimeValue::CanCastTo(QualType To, bool Explicit)
+	bool ExprResult::CanCastTo(QualType To, bool Explicit)
 	{
 		if (!Type.CastTo(To, Explicit))
 			return false;

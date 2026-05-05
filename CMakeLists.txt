@@ -25,7 +25,7 @@ set(SOURCES
         Src/ParserFuzzer.cpp
         Src/TypeChecker.cpp
         Src/BuiltinFunctionTable.cpp
-        Src/CTimeValue.cpp
+        Src/ExprResult.cpp
         Src/CompilationContext.cpp
         Src/Token.cpp
         Src/LexError.cpp
@@ -33,7 +33,7 @@ set(SOURCES
         Src/TypeError.cpp
         Src/JITEngine.cpp
         Src/DataType.cpp
-        Src/TypedValue.cpp
+        Src/IRValue.cpp
 )
 
 if (COMPILE_TO_LIB)

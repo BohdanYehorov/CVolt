@@ -5,12 +5,12 @@
 #ifndef CVOLT_VARIABLETABLE_H
 #define CVOLT_VARIABLETABLE_H
 
-#include "../Value/TypedValue.h"
+#include "Volt/Core/Value/IRValue.h"
 
 namespace Volt
 {
-	using CTimeVariableTable = std::unordered_map<std::string, CTimeValue*>;
-	using VariableTable = std::unordered_map<std::string, TypedValue*>;
+	using CTimeVariableTable = std::unordered_map<std::string, ExprResult*>;
+	using VariableTable = std::unordered_map<std::string, IRValue*>;
 }
 
 #endif //CVOLT_VARIABLETABLE_H

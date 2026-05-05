@@ -9,7 +9,7 @@
 #include "Volt/Core/Parser/Operators/Operator.h"
 #include "Volt/Core/Functions/Callee.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
-#include "Volt/Core/Value/TypedValue.h"
+#include "Volt/Core/Value/IRValue.h"
 #include "Volt/ADT/Array.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
@@ -17,14 +17,14 @@
 
 namespace Volt
 {
-    class CTimeValue;
+    class ExprResult;
 
     class ASTNode : public Object
     {
         GENERATED_BODY(ASTNode, Object)
     public:
         DataType* ExpectedType = nullptr;
-        CTimeValue* CompileTimeValue = nullptr;
+        ExprResult* CompileTimeValue = nullptr;
         size_t Pos, Line, Column;
         ASTNode(size_t Pos, size_t Line, size_t Column)
             : Pos(Pos), Line(Line), Column(Column) {}

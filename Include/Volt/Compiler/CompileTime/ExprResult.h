@@ -2,8 +2,8 @@
 // Created by bohdan on 28.01.26.
 //
 
-#ifndef CVOLT_CTIMEVALUE_H
-#define CVOLT_CTIMEVALUE_H
+#ifndef CVOLT_ExprResult_H
+#define CVOLT_ExprResult_H
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/Types/DataType.h"
@@ -12,20 +12,20 @@
 
 namespace Volt
 {
-	class CTimeValue : public Object
+	class ExprResult : public Object
 	{
-		GENERATED_BODY(CTimeValue, Object)
+		GENERATED_BODY(ExprResult, Object)
 	public:
-		static CTimeValue* CreateRaw(CompilationContext& CContext);
-		static CTimeValue* CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena);
-		static CTimeValue* CreateFloat(QualType FloatType, double Float, Arena& MainArena);
-		static CTimeValue* CreateBool(QualType BoolType, bool Bool, Arena& MainArena);
-		static CTimeValue* CreateChar(QualType CharType, char Char, Arena& MainArena);
+		static ExprResult* CreateRaw(CompilationContext& CContext);
+		static ExprResult* CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena);
+		static ExprResult* CreateFloat(QualType FloatType, double Float, Arena& MainArena);
+		static ExprResult* CreateBool(QualType BoolType, bool Bool, Arena& MainArena);
+		static ExprResult* CreateChar(QualType CharType, char Char, Arena& MainArena);
 
-		static CTimeValue* CreateEmpty(QualType Type, Arena& MainArena);
+		static ExprResult* CreateEmpty(QualType Type, Arena& MainArena);
 
 		template <typename T>
-		static CTimeValue* CreateFromType(QualType Type, T Value, Arena& TypesArena);
+		static ExprResult* CreateFromType(QualType Type, T Value, Arena& TypesArena);
 
 	public:
 		QualType Type;
@@ -52,9 +52,9 @@ namespace Volt
 			return false;
 		}
 
-		static CTimeValue* ResolveBinary(CTimeValue*& Left, CTimeValue*& Right, OperatorType Op,
+		static ExprResult* ResolveBinary(ExprResult*& Left, ExprResult*& Right, OperatorType Op,
 			CompilationContext& CContext);
-		static CTimeValue* ResolveUnary(CTimeValue*& Operand, OperatorType Op, CompilationContext& CContext);
+		static ExprResult* ResolveUnary(ExprResult*& Operand, OperatorType Op, CompilationContext& CContext);
 
 	private:
 		bool CastBooleanTo(TypeCategory To, bool Explicit);
@@ -66,7 +66,7 @@ namespace Volt
 	};
 
 	template<typename T>
-	CTimeValue *CTimeValue::CreateFromType(QualType Type, T Value, Arena &TypesArena)
+	ExprResult *ExprResult::CreateFromType(QualType Type, T Value, Arena &TypesArena)
 	{
 		switch (Type->GetCategory())
 		{
@@ -84,4 +84,4 @@ namespace Volt
 	}
 }
 
-#endif //CVOLT_CTIMEVALUE_H
+#endif //CVOLT_ExprResult_H

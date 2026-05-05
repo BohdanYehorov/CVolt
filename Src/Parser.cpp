@@ -3,7 +3,7 @@
 //
 
 #include "Volt/Core/Parser/Parser.h"
-#include "Volt/Compiler/CompileTime/CTimeValue.h"
+#include "Volt/Compiler/CompileTime/ExprResult.h"
 
 #include <charconv>
 #include <complex>
@@ -34,7 +34,7 @@ namespace Volt
         {
             Os << "CompileTimeValue: ";
 
-            CTimeValue* Value = Node->CompileTimeValue;
+            ExprResult* Value = Node->CompileTimeValue;
 
             switch (Value->Type->GetCategory())
             {

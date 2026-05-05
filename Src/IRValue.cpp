@@ -2,13 +2,13 @@
 // Created by bohdan on 08.03.26.
 //
 
-#include "Volt/Core/Value/TypedValue.h"
+#include "Volt/Core/Value/IRValue.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <llvm/Support/ErrorHandling.h>
 
 namespace Volt
 {
-	bool TypedValue::CastTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	bool IRValue::CastTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		switch (Type->GetCategory())
 		{
@@ -29,7 +29,7 @@ namespace Volt
 		}
 	}
 
-	inline bool TypedValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
+	inline bool IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
 	{
 		if (Type == To)
 			return true;
@@ -51,7 +51,7 @@ namespace Volt
 		}
 	}
 
-	bool TypedValue::CastCharTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	bool IRValue::CastCharTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type == To)
 			return true;
@@ -78,7 +78,7 @@ namespace Volt
 		}
 	}
 
-	bool TypedValue::CastIntegerTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	bool IRValue::CastIntegerTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type == To)
 			return true;
@@ -125,7 +125,7 @@ namespace Volt
 		}
 	}
 
-	bool TypedValue::CastFloatTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	bool IRValue::CastFloatTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type == To)
 			return true;
@@ -164,7 +164,7 @@ namespace Volt
 		}
 	}
 
-	bool TypedValue::CastPointerTo(DataType *To, llvm::IRBuilder<> &Builder)
+	bool IRValue::CastPointerTo(DataType *To, llvm::IRBuilder<> &Builder)
 	{
 		switch (To->GetCategory())
 		{
@@ -181,7 +181,7 @@ namespace Volt
 		}
 	}
 
-	bool TypedValue::CastReferenceTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	bool IRValue::CastReferenceTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (auto RefType = Cast<ReferenceType>(Type))
 		{
