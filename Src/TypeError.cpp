@@ -15,6 +15,8 @@ namespace Volt
 				return std::format("Type '{}' is not defined.", Context[0]);
 			case InvalidType:
 				return std::format("Type '{}' is invalid.", Context[0]);
+			case InvalidBind:
+				return "Invalid Bind.";
 			case TypeMissmatch:
 				return std::format("Expected '{}', got '{}'.", Context[0], Context[1]);
 			case IncompatibleTypes:

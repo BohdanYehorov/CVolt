@@ -277,6 +277,9 @@ namespace Volt
 
 	bool ReferenceType::CanBind(QualType Type) const
 	{
+		if (Type.GetType() == this)
+			return true;
+
 		if (!BaseType.HasQualifier(QualType::CONST) &&
 			Type.HasQualifier(QualType::CONST))
 			return false;
