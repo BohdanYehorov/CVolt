@@ -8,6 +8,22 @@
 
 namespace Volt
 {
+	IRValue::IRValue(llvm::Value *InValue, DataType *InType, llvm::IRBuilder<> &Builder) : bIsLValue(true)
+	{
+		if (auto RefType = Cast<ReferenceType>(InType))
+		{
+			Value = InValue;
+			Type = RefType->BaseType.GetType();
+			return;
+		}
+
+		Value = Builder.CreateAlloca(
+			InValue->getType(), nullptr, InValue->getName());
+
+		Builder.CreateStore(InValue, Value);
+		Type = InType;
+	}
+
 	bool IRValue::CastTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		switch (Type->GetCategory())
@@ -31,13 +47,22 @@ namespace Volt
 
 	bool IRValue::ToRValue(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
-		if (!IsLValue)
+		if (!bIsLValue)
 			return false;
 
 		llvm::Type* LLVMType = CContext.GetLLVMType(Type);
 		Value = Builder.CreateLoad(LLVMType, Value);
-		IsLValue = false;
+		bIsLValue = false;
 		return true;
+	}
+
+	IRValue* IRValue::GetRValue(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (!bIsLValue)
+			return this;
+
+		llvm::Type* LLVMType = CContext.GetLLVMType(Type);
+		return CContext.MainArena.Create<IRValue>(Builder.CreateLoad(LLVMType, Value), Type);
 	}
 
 	inline bool IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)

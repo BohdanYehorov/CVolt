@@ -84,6 +84,7 @@ namespace Volt
 		friend BuiltinFunctionTable;
 		friend class JITEngine;
 		friend class ExprResult;
+		friend class IRValue;
 	};
 }
 

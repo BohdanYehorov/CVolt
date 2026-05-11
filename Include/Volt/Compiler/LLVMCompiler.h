@@ -94,8 +94,8 @@ namespace Volt
         void EnterScope();
         void ExitScope();
 
-        IRValue *GetLValue(const ASTNode *Node);
-        IRValue *ResolveReference(IRValue* Value);
+        // IRValue *GetLValue(const ASTNode *Node);
+        // IRValue *ResolveReference(IRValue* Value);
 
         IRValue *ImplicitCast(IRValue *Value, DataType* Target);
         static bool CanImplicitCast(DataType* Src, DataType* Dst);

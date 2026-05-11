@@ -112,14 +112,24 @@ namespace Volt
         {
             for (size_t i = 0; i < FunctionParams.size(); i++)
             {
-                llvm::Argument& Arg = *(CurrentFunction->arg_begin() + i);
-                llvm::Type* ArgType = Arg.getType();
+                llvm::Argument* Arg = CurrentFunction->arg_begin() + i;
+                llvm::Type* ArgType = Arg->getType();
 
-                llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg.getName());
+                auto Type = FunctionParams[i];
+                // if (auto RefType = Cast<ReferenceType>(Type))
+                // {
+                //     DeclareVariable(Arg->getName().str(),
+                //         Create<IRValue>(Arg, RefType->BaseType.GetType(), true));
+                //     continue;
+                // }
+                //
+                // llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg->getName());
+                //
+                // Builder.CreateStore(Arg, Alloca);
+                // DeclareVariable(Arg->getName().str(),
+                //     Create<IRValue>(Alloca, FunctionParams[i], true));
 
-                Builder.CreateStore(&Arg, Alloca);
-                DeclareVariable(Arg.getName().str(),
-                    Create<IRValue>(Alloca, FunctionParams[i]));
+                DeclareVariable(Arg->getName().str(), Create<IRValue>(Arg, Type, Builder));
             }
             CurrentFunction = nullptr;
         }
@@ -193,6 +203,10 @@ namespace Volt
         for (size_t i = 0; i < Array->Elements.size(); i++)
         {
             IRValue* El = CompileNode(Array->Elements[i]);
+            if (!El)
+                return nullptr;
+
+            El = El->GetRValue(Builder, CContext);
 
             Idx[1] = Builder.getInt32(i);
 
@@ -209,9 +223,9 @@ namespace Volt
 
         if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
         {
-            IRValue* Var = Iter->second;
-            return Create<IRValue>(Builder.CreateLoad(CContext.GetLLVMType(Var->GetDataType()),
-                        Var->GetValue(), Value + "_val"), Var->GetDataType());
+            /* IRValue* Var = */ return Iter->second;
+            // return Create<IRValue>(Builder.CreateLoad(CContext.GetLLVMType(Var->GetDataType()),
+            //             Var->GetValue(), Value + "_val"), Var->GetDataType());
         }
 
         ERROR("Cannot resolve symbol: '" + Value + "'")
@@ -219,8 +233,8 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileRef(const RefNode *Ref)
     {
-        IRValue* LValue = GetLValue(Ref->Target);
-        if (!LValue)
+        IRValue* LValue = CompileNode(Ref->Target);// GetLValue(Ref->Target);
+        if (!LValue || !LValue->IsLValue())
             ERROR("Cannot apply operator '$' to r-value")
 
        return Create<IRValue>(LValue->GetValue(), CContext.GetPointerType({LValue->GetDataType(), 0}));
@@ -232,17 +246,18 @@ namespace Volt
         if (!TValue)
             return nullptr;
 
-        llvm::Value* Value = TValue->GetValue();
+        // llvm::Value* Value = TValue->GetValue();
 
-        return Create<IRValue>(Builder.CreateLoad(
-                CContext.GetLLVMType(Unref->CompileTimeValue->Type.GetType()), Value),
-                Unref->CompileTimeValue->Type.GetType());
+        return Create<IRValue>(TValue->GetValue(), Unref->CompileTimeValue->Type.GetType(), true);
+        // return Create<IRValue>(Builder.CreateLoad(
+        //         CContext.GetLLVMType(Unref->CompileTimeValue->Type.GetType()), Value),
+        //         Unref->CompileTimeValue->Type.GetType());
     }
 
     IRValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
     {
-        IRValue* LValue = GetLValue(Prefix->Operand);
-        if (!LValue)
+        IRValue* LValue = CompileNode(Prefix->Operand);
+        if (!LValue || !LValue->IsLValue())
             ERROR("Cannot apply prefix operator to r-value")
 
         llvm::Value* Value = LValue->GetValue();
@@ -266,8 +281,8 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileSuffix(const SuffixOpNode *Suffix)
     {
-        IRValue* LValue = GetLValue(Suffix->Operand);
-        if (!LValue)
+        IRValue* LValue = CompileNode(Suffix->Operand);
+        if (!LValue || !LValue->IsLValue())
             ERROR("Cannot apply suffix operator to r-value")
 
         llvm::Value* Value = LValue->GetValue();
@@ -293,6 +308,8 @@ namespace Volt
     IRValue *LLVMCompiler::CompileUnary(const UnaryOpNode *Unary)
     {
         IRValue* TValue = CompileNode(Unary->Operand);
+        TValue = TValue->GetRValue(Builder, CContext);
+
         llvm::Value* Value = TValue->GetValue();
         DataType* Type = TValue->GetDataType();
 
@@ -316,7 +333,10 @@ namespace Volt
     IRValue *LLVMCompiler::CompileComparison(const ComparisonNode *Comparison)
     {
         IRValue* Left = CompileNode(Comparison->Left);
+        Left = Left->GetRValue(Builder, CContext);
+
         IRValue* Right = CompileNode(Comparison->Right);
+        Right = Right->GetRValue(Builder, CContext);
 
         if (!Left->CastTo(Comparison->LeftOperandType, Builder, CContext))
             return nullptr;
@@ -340,26 +360,32 @@ namespace Volt
         {
             case OperatorType::EQ:  return Create<IRValue>(IsFP ?
                                 Builder.CreateFCmpOEQ(LeftVal, RightVal) :
-                                Builder.CreateICmpEQ(LeftVal, RightVal), Comparison->CompileTimeValue->Type.GetType());
+                                Builder.CreateICmpEQ(LeftVal, RightVal),
+                                Comparison->CompileTimeValue->Type.GetType());
             case OperatorType::NEQ: return Create<IRValue>(IsFP ?
                                 Builder.CreateFCmpONE(LeftVal, RightVal) :
-                                Builder.CreateICmpNE(LeftVal, RightVal), Comparison->CompileTimeValue->Type.GetType());
+                                Builder.CreateICmpNE(LeftVal, RightVal),
+                                Comparison->CompileTimeValue->Type.GetType());
             case OperatorType::LT:  return Create<IRValue>(IsFP ?
                                 Builder.CreateFCmpOLT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLT(LeftVal, RightVal) :
-                                Builder.CreateICmpULT(LeftVal, RightVal), Comparison->CompileTimeValue->Type.GetType());
+                                Builder.CreateICmpULT(LeftVal, RightVal),
+                                Comparison->CompileTimeValue->Type.GetType());
             case OperatorType::LTE: return Create<IRValue>( IsFP ?
                                 Builder.CreateFCmpOLE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSLE(LeftVal, RightVal) :
-                                Builder.CreateICmpULE(LeftVal, RightVal), Comparison->CompileTimeValue->Type.GetType());
+                                Builder.CreateICmpULE(LeftVal, RightVal),
+                                Comparison->CompileTimeValue->Type.GetType());
             case OperatorType::GT:  return Create<IRValue>(IsFP ?
                                 Builder.CreateFCmpOGT(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGT(LeftVal, RightVal) :
-                                Builder.CreateICmpUGT(LeftVal, RightVal), Comparison->CompileTimeValue->Type.GetType());
+                                Builder.CreateICmpUGT(LeftVal, RightVal),
+                                Comparison->CompileTimeValue->Type.GetType());
             case OperatorType::GTE: return Create<IRValue>(IsFP ?
                                 Builder.CreateFCmpOGE(LeftVal, RightVal) : IsSigned ?
                                 Builder.CreateICmpSGE(LeftVal, RightVal) :
-                                Builder.CreateICmpUGE(LeftVal, RightVal), Comparison->CompileTimeValue->Type.GetType());
+                                Builder.CreateICmpUGE(LeftVal, RightVal),
+                                Comparison->CompileTimeValue->Type.GetType());
             default: ERROR("Unknown comparison operator")
         }
     }
@@ -367,7 +393,10 @@ namespace Volt
     IRValue *LLVMCompiler::CompileLogical(const LogicalNode *Logical)
     {
         IRValue* Left = CompileNode(Logical->Left);
+        Left = Left->GetRValue(Builder, CContext);
+
         IRValue* Right = CompileNode(Logical->Right);
+        Right = Right->GetRValue(Builder, CContext);
 
         if (!Left->CastTo(Logical->LeftOperandType, Builder, CContext))
             return nullptr;
@@ -440,9 +469,9 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileAssignment(const AssignmentNode *Assignment)
     {
-        IRValue* LValue = GetLValue(Assignment->Left);
+        IRValue* LValue = CompileNode(Assignment->Left);
 
-        if (!LValue)
+        if (!LValue || !LValue->IsLValue())
             ERROR("Cannot apply assignment operator to r-value")
 
         llvm::Value* Value = LValue->GetValue();
@@ -496,7 +525,9 @@ namespace Volt
     IRValue* LLVMCompiler::CompileBinary(const BinaryOpNode *BinaryOp)
     {
         IRValue* Left = CompileNode(BinaryOp->Left);
+        Left = Left->GetRValue(Builder, CContext);
         IRValue* Right = CompileNode(BinaryOp->Right);
+        Right = Right->GetRValue(Builder, CContext);
 
         if (!Left->CastTo(BinaryOp->LeftOperandType, Builder, CContext))
             return nullptr;
@@ -510,7 +541,7 @@ namespace Volt
         llvm::Value* RightVal = Right->GetValue();
 
         bool IsFP = Cast<FloatingPointType>(Type);
-        auto PtrType = Cast<PointerType>(Type);
+        // auto PtrType = Cast<PointerType>(Type);
         bool IsSigned = false;
         if (auto IntType = Cast<IntegerType>(Type))
             IsSigned = IntType->IsSigned;
@@ -519,31 +550,41 @@ namespace Volt
         {
             case OperatorType::ADD:     return Create<IRValue>(IsFP ?
                                     Builder.CreateFAdd(LeftVal, RightVal) :
-                                    Builder.CreateAdd(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateAdd(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::SUB:     return Create<IRValue>(IsFP ?
                                     Builder.CreateFSub(LeftVal, RightVal) :
-                                    Builder.CreateSub(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateSub(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::MUL:     return Create<IRValue>(IsFP ?
                                     Builder.CreateFMul(LeftVal, RightVal) :
-                                    Builder.CreateMul(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateMul(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::DIV:     return Create<IRValue>(IsFP ?
                                     Builder.CreateFDiv(LeftVal, RightVal) : IsSigned ?
                                     Builder.CreateSDiv(LeftVal, RightVal) :
-                                    Builder.CreateUDiv(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateUDiv(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::MOD:     return Create<IRValue>(IsSigned ?
                                     Builder.CreateSRem(LeftVal, RightVal) :
-                                    Builder.CreateURem(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateURem(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::BIT_AND: return Create<IRValue>(
-                                    Builder.CreateAnd(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateAnd(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::BIT_OR:  return Create<IRValue>(
-                                    Builder.CreateOr(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateOr(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::BIT_XOR: return Create<IRValue>(
-                                    Builder.CreateXor(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateXor(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::LSHIFT:  return  Create<IRValue>(
-                                    Builder.CreateShl(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateShl(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             case OperatorType::RSHIFT:  return Create<IRValue>(IsSigned ?
                                     Builder.CreateAShr(LeftVal, RightVal) :
-                                    Builder.CreateLShr(LeftVal, RightVal), BinaryOp->CompileTimeValue->Type.GetType());
+                                    Builder.CreateLShr(LeftVal, RightVal),
+                                    BinaryOp->CompileTimeValue->Type.GetType());
             default: ERROR("Unknown binary operator")
         }
     }
@@ -560,8 +601,8 @@ namespace Volt
         {
             if (Arg->ExpectedType->IsReferenceType())
             {
-                IRValue* ArgValue = GetLValue(Arg);
-                if (!ArgValue)
+                IRValue* ArgValue = CompileNode(Arg);
+                if (!ArgValue || !ArgValue->IsLValue())
                     return nullptr;
 
                 LLVMArgs.push_back(ArgValue->GetValue());
@@ -572,6 +613,10 @@ namespace Volt
 
                 if (!ArgValue)
                     return nullptr;
+
+                llvm::outs() << ArgValue->GetValue()->getType() << "\n";
+
+                ArgValue = ArgValue->GetRValue(Builder, CContext);
 
                 if (Arg->ExpectedType)
                     if (!ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
@@ -600,32 +645,34 @@ namespace Volt
         if (auto PtrType = Cast<PointerType>(Subscript->TargetType))
         {
             IRValue* Value = CompileNode(Subscript->Target);
-
             if (!Value)
                 return nullptr;
+
+            Value = Value->GetRValue(Builder, CContext);
 
             llvm::Value* LLVMValue = Value->GetValue();
             llvm::Type* ElType = CContext.GetLLVMType(PtrType->BaseType.GetType());
             IRValue* Index = CompileNode(Subscript->Index);
+            Index = Index->GetRValue(Builder, CContext);
             llvm::Value* ElPtr = Builder.CreateGEP(ElType, LLVMValue, Index->GetValue());
-            llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
-            return Create<IRValue>(El, PtrType->BaseType.GetType());
+            // llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
+            return Create<IRValue>(ElPtr, PtrType->BaseType.GetType(), true);
         }
 
         if (auto ArrType = Cast<ArrayType>(Subscript->TargetType))
         {
-            IRValue* Value = GetLValue(Subscript->Target);
+            IRValue* Value = CompileNode(Subscript->Target);
 
-            if (!Value)
+            if (!Value || !Value->IsLValue())
                 return nullptr;
 
             llvm::Value* LLVMValue = Value->GetValue();
-            llvm::Type* ElType = CContext.GetLLVMType(ArrType->BaseType.GetType());
+            // llvm::Type* ElType = CContext.GetLLVMType(ArrType->BaseType.GetType());
             IRValue* Index = CompileNode(Subscript->Index);
             llvm::Value* ElPtr = Builder.CreateGEP(CContext.GetLLVMType(ArrType), LLVMValue,
                 { Builder.getInt32(0), Index->GetValue() });
-            llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
-            return Create<IRValue>(El, ArrType->BaseType.GetType());
+            // llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
+            return Create<IRValue>(ElPtr, ArrType->BaseType.GetType(), true);
         }
 
         return nullptr;
@@ -635,6 +682,7 @@ namespace Volt
     {
         DataType* DstType = ExplicitCast->CompileTimeValue->Type.GetType();
         IRValue* Target = CompileNode(ExplicitCast->Target);
+        Target = Target->GetRValue(Builder, CContext);
 
         if (IRValue* Value = ImplicitCast(Target, DstType))
             return Value;
@@ -653,15 +701,15 @@ namespace Volt
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
 
-        if (auto RefType = Cast<ReferenceType>(VarType))
+        if (VarType->IsReferenceType())
         {
-            IRValue* Value = GetLValue(Var->Value);
-            if (!Value)
+            IRValue* Value = CompileNode(Var->Value);
+            if (!Value || !Value->IsLValue())
                 return nullptr;
 
-            Builder.CreateStore(Value->GetValue(), Alloca);
+            // Builder.CreateStore(Value->GetValue(), Alloca);
             DeclareVariable(Var->Name.str(),
-                Create<IRValue>(Alloca, VarType, true));
+                /* Create<IRValue>(Alloca, VarType, true)*/ Value);
             return nullptr;
         }
 
@@ -678,6 +726,7 @@ namespace Volt
         else if (Var->Value)
         {
             IRValue* Value = CompileNode(Var->Value);
+            Value = Value->GetRValue(Builder, CContext);
             if (!Value->CastTo(VarType, Builder, CContext))
                 return nullptr;
             Builder.CreateStore(Value->GetValue(), Alloca);
@@ -750,6 +799,7 @@ namespace Volt
         if (Return->ReturnValue)
         {
             IRValue* RetVal = CompileNode(Return->ReturnValue);
+            RetVal = RetVal->GetRValue(Builder, CContext);
             Builder.CreateRet(RetVal->GetValue());
             return nullptr;
         }
@@ -761,6 +811,7 @@ namespace Volt
     IRValue *LLVMCompiler::CompileIf(const IfNode *If)
     {
         IRValue* Cond = CompileNode(If->Condition);
+        Cond = Cond->GetRValue(Builder, CContext);
         if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
             return nullptr;
 
@@ -799,6 +850,7 @@ namespace Volt
         Builder.CreateBr(LoopHeader);
         Builder.SetInsertPoint(LoopHeader);
         IRValue* Cond = CompileNode(While->Condition);
+        Cond = Cond->GetRValue(Builder, CContext);
         if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
             return nullptr;
 
@@ -841,6 +893,7 @@ namespace Volt
         Builder.CreateBr(ForHeader);
         Builder.SetInsertPoint(ForHeader);
         IRValue* Cond = CompileNode(For->Condition);
+        Cond = Cond->GetRValue(Builder, CContext);
         if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
             return nullptr;
 
@@ -937,68 +990,68 @@ namespace Volt
         ScopeStack.Pop();
     }
 
-    IRValue *LLVMCompiler::GetLValue(const ASTNode *Node)
-    {
-        if (const auto Identifier = Cast<const IdentifierNode>(Node))
-            return ResolveReference(GetVariable(Identifier->Value.str()));
+    // IRValue *LLVMCompiler::GetLValue(const ASTNode *Node)
+    // {
+    //     if (const auto Identifier = Cast<const IdentifierNode>(Node))
+    //         return ResolveReference(GetVariable(Identifier->Value.str()));
+    //
+    //     if (const auto Subscript = Cast<const SubscriptNode>(Node))
+    //     {
+    //         if (auto PtrType = Cast<PointerType>(Subscript->TargetType))
+    //         {
+    //             IRValue* Value = CompileNode(Subscript->Target);
+    //
+    //             if (!Value)
+    //                 return nullptr;
+    //
+    //             llvm::Value* LLVMValue = Value->GetValue();
+    //             llvm::Type* ElType = CContext.GetLLVMType(PtrType->BaseType.GetType());
+    //             IRValue* Index = CompileNode(Subscript->Index);
+    //             llvm::Value* ElPtr = Builder.CreateGEP(ElType, LLVMValue, Index->GetValue());
+    //             return Create<IRValue>(ElPtr, PtrType->BaseType.GetType());
+    //         }
+    //
+    //         if (auto ArrType = Cast<ArrayType>(Subscript->TargetType))
+    //         {
+    //             IRValue* Value = GetLValue(Subscript->Target);
+    //
+    //             if (!Value)
+    //                 return nullptr;
+    //
+    //             llvm::Value* LLVMValue = Value->GetValue();
+    //             llvm::Type* ElType = CContext.GetLLVMType(ArrType->BaseType.GetType());
+    //             IRValue* Index = CompileNode(Subscript->Index);
+    //             llvm::Value* ElPtr = Builder.CreateGEP(CContext.GetLLVMType(ArrType), LLVMValue,
+    //                 { Builder.getInt32(0), Index->GetValue() });
+    //             return Create<IRValue>(ElPtr, ArrType->BaseType.GetType());
+    //         }
+    //
+    //         return nullptr;
+    //     }
+    //
+    //     if (auto Unref = Cast<const UnrefNode>(Node))
+    //     {
+    //         IRValue *TValue = CompileNode(Unref->Target);
+    //         if (!TValue)
+    //             return nullptr;
+    //
+    //         return Create<IRValue>(TValue->GetValue(), Unref->CompileTimeValue->Type.GetType());
+    //     }
+    //
+    //     return nullptr;
+    // }
 
-        if (const auto Subscript = Cast<const SubscriptNode>(Node))
-        {
-            if (auto PtrType = Cast<PointerType>(Subscript->TargetType))
-            {
-                IRValue* Value = CompileNode(Subscript->Target);
-
-                if (!Value)
-                    return nullptr;
-
-                llvm::Value* LLVMValue = Value->GetValue();
-                llvm::Type* ElType = CContext.GetLLVMType(PtrType->BaseType.GetType());
-                IRValue* Index = CompileNode(Subscript->Index);
-                llvm::Value* ElPtr = Builder.CreateGEP(ElType, LLVMValue, Index->GetValue());
-                return Create<IRValue>(ElPtr, PtrType->BaseType.GetType());
-            }
-
-            if (auto ArrType = Cast<ArrayType>(Subscript->TargetType))
-            {
-                IRValue* Value = GetLValue(Subscript->Target);
-
-                if (!Value)
-                    return nullptr;
-
-                llvm::Value* LLVMValue = Value->GetValue();
-                llvm::Type* ElType = CContext.GetLLVMType(ArrType->BaseType.GetType());
-                IRValue* Index = CompileNode(Subscript->Index);
-                llvm::Value* ElPtr = Builder.CreateGEP(CContext.GetLLVMType(ArrType), LLVMValue,
-                    { Builder.getInt32(0), Index->GetValue() });
-                return Create<IRValue>(ElPtr, ArrType->BaseType.GetType());
-            }
-
-            return nullptr;
-        }
-
-        if (auto Unref = Cast<const UnrefNode>(Node))
-        {
-            IRValue *TValue = CompileNode(Unref->Target);
-            if (!TValue)
-                return nullptr;
-
-            return Create<IRValue>(TValue->GetValue(), Unref->CompileTimeValue->Type.GetType());
-        }
-
-        return nullptr;
-    }
-
-    IRValue *LLVMCompiler::ResolveReference(IRValue *Value)
-    {
-        if (auto RefType = Cast<ReferenceType>(Value->GetDataType()))
-        {
-            llvm::Type* LLVMType = CContext.GetLLVMType(RefType);
-            llvm::Value* LoadValue = Builder.CreateLoad(LLVMType, Value->GetValue());
-            return Create<IRValue>(LoadValue, RefType->BaseType.GetType());
-        }
-
-        return Value;
-    }
+    // IRValue *LLVMCompiler::ResolveReference(IRValue *Value)
+    // {
+    //     if (auto RefType = Cast<ReferenceType>(Value->GetDataType()))
+    //     {
+    //         llvm::Type* LLVMType = CContext.GetLLVMType(RefType);
+    //         llvm::Value* LoadValue = Builder.CreateLoad(LLVMType, Value->GetValue());
+    //         return Create<IRValue>(LoadValue, RefType->BaseType.GetType());
+    //     }
+    //
+    //     return Value;
+    // }
 
     IRValue *LLVMCompiler::ImplicitCast(IRValue *Value, DataType* Target)
     {

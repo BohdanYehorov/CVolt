@@ -19,21 +19,25 @@ namespace Volt
     private:
         llvm::Value* Value = nullptr;
         DataType* Type = nullptr;
-        bool IsLValue = false;
+        bool bIsLValue = false;
 
     public:
         IRValue() = default;
         IRValue(DataType* Type, bool IsLValue = false)
-            : Type(Type), IsLValue(IsLValue) {}
+            : Type(Type), bIsLValue(IsLValue) {}
         IRValue(llvm::Value* Value, DataType* Type, bool IsLValue = false)
-            : Value(Value), Type(Type), IsLValue(IsLValue) {}
+            : Value(Value), Type(Type), bIsLValue(IsLValue) {}
+
+        IRValue(llvm::Value* Value, DataType* Type, llvm::IRBuilder<>& Builder);
 
         [[nodiscard]] llvm::Value* GetValue() const { return Value; }
         [[nodiscard]] DataType* GetDataType() const { return Type; }
+        [[nodiscard]] bool IsLValue() const { return bIsLValue; }
 
         [[nodiscard]] bool CastTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
 
         bool ToRValue(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        IRValue* GetRValue(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
 
     private:
         [[nodiscard]] bool CastBooleanTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
