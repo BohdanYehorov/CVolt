@@ -3,7 +3,7 @@
 //
 
 #include "Volt/Core/Parser/Parser.h"
-#include "Volt/Compiler/CompileTime/ExprResult.h"
+#include "Volt/Core/TypeChecker/ExprResult.h"
 
 #include <charconv>
 #include <complex>

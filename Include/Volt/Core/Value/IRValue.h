@@ -33,6 +33,8 @@ namespace Volt
 
         [[nodiscard]] bool CastTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
 
+        bool ToRValue(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+
     private:
         [[nodiscard]] bool CastBooleanTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
         [[nodiscard]] bool CastCharTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);

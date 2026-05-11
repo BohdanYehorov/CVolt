@@ -29,6 +29,17 @@ namespace Volt
 		}
 	}
 
+	bool IRValue::ToRValue(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (!IsLValue)
+			return false;
+
+		llvm::Type* LLVMType = CContext.GetLLVMType(Type);
+		Value = Builder.CreateLoad(LLVMType, Value);
+		IsLValue = false;
+		return true;
+	}
+
 	inline bool IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
 	{
 		if (Type == To)

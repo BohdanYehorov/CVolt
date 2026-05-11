@@ -2,7 +2,7 @@
 // Created by bohdan on 28.01.26.
 //
 
-#include "Volt/Compiler/CompileTime/ExprResult.h"
+#include "Volt/Core/TypeChecker/ExprResult.h"
 
 namespace Volt
 {
