@@ -24,7 +24,34 @@ namespace Volt
 		Type = InType;
 	}
 
-	bool IRValue::CastTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	IRValue* IRValue::CastTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (To == Type)
+			return this;
+
+		if (llvm::Value* Val = CastLLVM(To, Builder, CContext))
+			return CContext.MainArena.Create<IRValue>(Val, To);
+
+		return nullptr;
+	}
+
+	IRValue* IRValue::CastOrBind(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (!To)
+			llvm_unreachable("Type is null");
+
+		if (To->IsReferenceType())
+		{
+			if (!bIsLValue)
+				llvm_unreachable("Cannot bind r-value to reference");
+
+			return this;
+		}
+
+		return GetRValue(Builder, CContext)->CastTo(To, Builder, CContext);
+	}
+
+	llvm::Value* IRValue::CastLLVM(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		switch (Type->GetCategory())
 		{
@@ -37,23 +64,12 @@ namespace Volt
 			case TypeCategory::FLOATING_POINT:
 				return CastFloatTo(To, Builder, CContext);
 			case TypeCategory::POINTER:
-				return CastPointerTo(To, Builder);
+				return CastPointerTo(To, Builder, CContext);
 			case TypeCategory::REFERENCE:
 				return CastReferenceTo(To, Builder, CContext);
 			default:
-				return false;
+				return nullptr;
 		}
-	}
-
-	bool IRValue::ToRValue(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
-	{
-		if (!bIsLValue)
-			return false;
-
-		llvm::Type* LLVMType = CContext.GetLLVMType(Type);
-		Value = Builder.CreateLoad(LLVMType, Value);
-		bIsLValue = false;
-		return true;
 	}
 
 	IRValue* IRValue::GetRValue(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
@@ -65,72 +81,58 @@ namespace Volt
 		return CContext.MainArena.Create<IRValue>(Builder.CreateLoad(LLVMType, Value), Type);
 	}
 
-	inline bool IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
+	inline llvm::Value* IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
 	{
 		if (Type == To)
-			return true;
+			return Value;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::CHAR:
 			case TypeCategory::INTEGER:
-				Value = Builder.CreateZExt(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
+				return Builder.CreateZExt(Value, CContext.GetLLVMType(To));
 
 			case TypeCategory::FLOATING_POINT:
-				Value = Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
+				return Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool IRValue::CastCharTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	llvm::Value* IRValue::CastCharTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type == To)
-			return true;
+			return Value;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				Value = Builder.CreateICmpNE(Value, Builder.getInt8(0));
-				Type = To;
-				return true;
+				return Builder.CreateICmpNE(Value, Builder.getInt8(0));
 
 			case TypeCategory::INTEGER:
-				Value = Builder.CreateSExt(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
+				return Builder.CreateSExt(Value, CContext.GetLLVMType(To));
 
 			case TypeCategory::FLOATING_POINT:
-				Value = Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
+				return Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
 
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool IRValue::CastIntegerTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	llvm::Value* IRValue::CastIntegerTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type == To)
-			return true;
+			return Value;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				Value = Builder.CreateICmpNE(Value,
-					llvm::ConstantInt::get(CContext.GetLLVMType(To), 0));
-				Type = To;
-				return true;
+				return Builder.CreateICmpNE(Value,
+				llvm::ConstantInt::get(CContext.GetLLVMType(To), 0));
 
 			case TypeCategory::CHAR:
-				Value = Builder.CreateTrunc(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
+				return Builder.CreateTrunc(Value, CContext.GetLLVMType(To));
 
 			case TypeCategory::INTEGER:
 			{
@@ -138,47 +140,35 @@ namespace Volt
 				auto ToIntType = Cast<IntegerType>(To);
 
 				if (!FromIntType || !ToIntType)
-					return false;
+					return nullptr;
 
-				Value = FromIntType->BitWidth < ToIntType->BitWidth ?
+				return FromIntType->BitWidth < ToIntType->BitWidth ?
 					Builder.CreateSExt(Value, CContext.GetLLVMType(To)) :
 					Builder.CreateTrunc(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
 			}
 
 			case TypeCategory::FLOATING_POINT:
-				Value = Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
-
-			case TypeCategory::REFERENCE:
-				Type = To;
-				return true;
+				return Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
 
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool IRValue::CastFloatTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	llvm::Value* IRValue::CastFloatTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type == To)
-			return true;
+			return Value;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				Value = Builder.CreateFCmpONE(Value,
-					llvm::ConstantFP::get(CContext.GetLLVMType(To), 0.0));
-				Type = To;
-				return true;
+				return Builder.CreateFCmpONE(Value,
+				 	llvm::ConstantFP::get(CContext.GetLLVMType(To), 0.0));
 
 			case TypeCategory::CHAR:
 			case TypeCategory::INTEGER:
-				Value = Builder.CreateFPToSI(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
+				return Builder.CreateFPToSI(Value, CContext.GetLLVMType(To));
 
 			case TypeCategory::FLOATING_POINT:
 			{
@@ -186,52 +176,53 @@ namespace Volt
 				auto ToFloatType = Cast<FloatingPointType>(To);
 
 				if (!FromFloatType || !ToFloatType)
-					return false;
+					return nullptr;
 
-				Value = FromFloatType->BitWidth < ToFloatType->BitWidth ?
+				return FromFloatType->BitWidth < ToFloatType->BitWidth ?
 					Builder.CreateFPExt(Value, CContext.GetLLVMType(To)) :
 					Builder.CreateFPTrunc(Value, CContext.GetLLVMType(To));
-				Type = To;
-				return true;
 			}
 
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool IRValue::CastPointerTo(DataType *To, llvm::IRBuilder<> &Builder)
+	llvm::Value* IRValue::CastPointerTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext& CContext)
 	{
+		if (To == Type)
+			return Value;
+
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				Value = Builder.CreateICmpNE(
+				return Builder.CreateICmpNE(
 					Value, llvm::ConstantPointerNull::get(Builder.getPtrTy(0)));
-				Type = To;
-				return true;
 			case TypeCategory::POINTER:
-				Type = To;
-				return true;
+				return Value;
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool IRValue::CastReferenceTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	llvm::Value* IRValue::CastReferenceTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
+		if (Type == To)
+			return Value;
+
+		Arena& MainArena = CContext.MainArena;
+
 		if (auto RefType = Cast<ReferenceType>(Type))
 		{
 			if (!RefType->BaseType->CastTo(To, true))
-				return false;
+				return nullptr;
 
-			Value = Builder.CreateLoad(CContext.GetLLVMType(RefType->BaseType.GetType()), Value);
-			Type = RefType->BaseType.GetType();
-			if (!CastTo(To, Builder, CContext))
-				llvm_unreachable("Cast failed");
+			auto Val = MainArena.Create<IRValue>(Builder.CreateLoad(
+				CContext.GetLLVMType(RefType->BaseType.GetType()), Value), RefType->BaseType.GetType());
 
-			return true;
+			return Val->CastLLVM(To, Builder, CContext);
 		}
 
-		return false;
+		return nullptr;
 	}
 }

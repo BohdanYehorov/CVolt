@@ -1,9 +1,10 @@
 fun:int Main()
 {
-    let:int num = 5;
-    let:int$ ref = num;
-    let:int$ ref1 = ref;
-    ref1 = 10;
-    Out(num);
+    let:int a = 5;
+    let:int b = 6;
+    let:int c = a = b = 10;
+    Out(a);
+    Out(b);
+    Out(c);
     return 0;
 }

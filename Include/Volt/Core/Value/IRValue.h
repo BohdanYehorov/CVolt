@@ -34,18 +34,19 @@ namespace Volt
         [[nodiscard]] DataType* GetDataType() const { return Type; }
         [[nodiscard]] bool IsLValue() const { return bIsLValue; }
 
-        [[nodiscard]] bool CastTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] IRValue* CastTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] IRValue* CastOrBind(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastLLVM(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
 
-        bool ToRValue(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
         IRValue* GetRValue(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
 
     private:
-        [[nodiscard]] bool CastBooleanTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        [[nodiscard]] bool CastCharTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        [[nodiscard]] bool CastIntegerTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        [[nodiscard]] bool CastFloatTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        [[nodiscard]] bool CastPointerTo(DataType* To, llvm::IRBuilder<>& Builder);
-        [[nodiscard]] bool CastReferenceTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastBooleanTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastCharTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastIntegerTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastFloatTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastPointerTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastReferenceTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
     };
 }
 

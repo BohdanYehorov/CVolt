@@ -324,7 +324,8 @@ namespace Volt
                                             Builder.CreateFNeg(Value) :
                                             Builder.CreateNeg(Value), Unary->CompileTimeValue->Type.GetType());
             case OperatorType::LOGICAL_NOT: return Create<IRValue>(Builder.CreateNot(
-                                               ImplicitCast(TValue, BoolType)->GetValue()), Unary->CompileTimeValue->Type.GetType());
+                                               /*ImplicitCast(TValue, BoolType)->GetValue())*/
+                                               TValue->CastLLVM(BoolType, Builder, CContext)), Unary->CompileTimeValue->Type.GetType());
             case OperatorType::BIT_NOT:     return Create<IRValue>(Builder.CreateNot(Value), Unary->CompileTimeValue->Type.GetType());
             default: ERROR("Unknown unary operator")
         }
@@ -338,11 +339,17 @@ namespace Volt
         IRValue* Right = CompileNode(Comparison->Right);
         Right = Right->GetRValue(Builder, CContext);
 
-        if (!Left->CastTo(Comparison->LeftOperandType, Builder, CContext))
+        Left = Left->CastTo(Comparison->LeftOperandType, Builder, CContext);
+        Right = Right->CastTo(Comparison->RightOperandType, Builder, CContext);
+
+        if (!Right || !Left)
             return nullptr;
 
-        if (!Right->CastTo(Comparison->RightOperandType, Builder, CContext))
-            return nullptr;
+        // if (!Left->CastTo(Comparison->LeftOperandType, Builder, CContext))
+        //     return nullptr;
+        //
+        // if (!Right->CastTo(Comparison->RightOperandType, Builder, CContext))
+        //     return nullptr;
 
         DataType* Type = Left->GetDataType();
 
@@ -398,11 +405,17 @@ namespace Volt
         IRValue* Right = CompileNode(Logical->Right);
         Right = Right->GetRValue(Builder, CContext);
 
-        if (!Left->CastTo(Logical->LeftOperandType, Builder, CContext))
+        Left = Left->CastTo(Logical->LeftOperandType, Builder, CContext);
+        Right = Right->CastTo(Logical->RightOperandType, Builder, CContext);
+
+        if (!Right || !Left)
             return nullptr;
 
-        if (!Right->CastTo(Logical->RightOperandType, Builder, CContext))
-            return nullptr;
+        // if (!Left->CastTo(Logical->LeftOperandType, Builder, CContext))
+        //     return nullptr;
+        //
+        // if (!Right->CastTo(Logical->RightOperandType, Builder, CContext))
+        //     return nullptr;
 
         // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -477,7 +490,8 @@ namespace Volt
         llvm::Value* Value = LValue->GetValue();
 
         DataType* Type = LValue->GetDataType();
-        IRValue* Right = ImplicitCast(CompileNode(Assignment->Right), Type);
+        IRValue* Right = CompileNode(Assignment->Right)->GetRValue(
+            Builder, CContext)->CastTo(Type, Builder, CContext); //ImplicitCast(CompileNode(Assignment->Right), Type);
         llvm::Value* RightVal = Right->GetValue();
 
         if (Assignment->Type == OperatorType::ASSIGN)
@@ -529,11 +543,17 @@ namespace Volt
         IRValue* Right = CompileNode(BinaryOp->Right);
         Right = Right->GetRValue(Builder, CContext);
 
-        if (!Left->CastTo(BinaryOp->LeftOperandType, Builder, CContext))
+        Left = Left->CastTo(BinaryOp->LeftOperandType, Builder, CContext);
+        Right = Right->CastTo(BinaryOp->RightOperandType, Builder, CContext);
+
+        if (!Right || !Left)
             return nullptr;
 
-        if (!Right->CastTo(BinaryOp->RightOperandType, Builder, CContext))
-            return nullptr;
+        // if (!Left->CastTo(BinaryOp->LeftOperandType, Builder, CContext))
+        //     return nullptr;
+        //
+        // if (!Right->CastTo(BinaryOp->RightOperandType, Builder, CContext))
+        //     return nullptr;
 
         DataType* Type = Left->GetDataType();
 
@@ -606,24 +626,38 @@ namespace Volt
                     return nullptr;
 
                 LLVMArgs.push_back(ArgValue->GetValue());
+                continue;
             }
-            else
+
+            IRValue* ArgValue = CompileNode(Arg);
+
+            if (!ArgValue)
+                return nullptr;
+
+            ArgValue = ArgValue->GetRValue(Builder, CContext);
+
+            // if (Arg->ExpectedType)
+            //     if (!ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
+            //         return nullptr;
+
+            if (Arg->ExpectedType)
             {
-                IRValue* ArgValue = CompileNode(Arg);
+                if (auto CastedValue = ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
+                {
+                    LLVMArgs.push_back(CastedValue->GetValue());
+                    continue;
+                }
 
-                if (!ArgValue)
-                    return nullptr;
-
-                llvm::outs() << ArgValue->GetValue()->getType() << "\n";
-
-                ArgValue = ArgValue->GetRValue(Builder, CContext);
-
-                if (Arg->ExpectedType)
-                    if (!ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
-                        return nullptr;
-
-                LLVMArgs.push_back(ArgValue->GetValue());
+                return nullptr;
             }
+
+            return nullptr;
+
+            // IRValue* ArgValue = CompileNode(Arg)->CastOrBind(Arg->ExpectedType, Builder, CContext);
+            // if (!ArgValue)
+            //     return nullptr;
+            //
+            // LLVMArgs.push_back(ArgValue->GetValue());
         }
 
         if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
@@ -684,7 +718,7 @@ namespace Volt
         IRValue* Target = CompileNode(ExplicitCast->Target);
         Target = Target->GetRValue(Builder, CContext);
 
-        if (IRValue* Value = ImplicitCast(Target, DstType))
+        if (IRValue* Value = Target->CastTo(DstType, Builder, CContext))//ImplicitCast(Target, DstType))
             return Value;
 
         return Create<IRValue>(
@@ -727,9 +761,10 @@ namespace Volt
         {
             IRValue* Value = CompileNode(Var->Value);
             Value = Value->GetRValue(Builder, CContext);
-            if (!Value->CastTo(VarType, Builder, CContext))
+            if (auto CastedValue = Value->CastTo(VarType, Builder, CContext))
+                Builder.CreateStore(CastedValue->GetValue(), Alloca);
+            else
                 return nullptr;
-            Builder.CreateStore(Value->GetValue(), Alloca);
         }
 
         DeclareVariable(Var->Name.str(),
@@ -812,8 +847,12 @@ namespace Volt
     {
         IRValue* Cond = CompileNode(If->Condition);
         Cond = Cond->GetRValue(Builder, CContext);
-        if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+        Cond = Cond->CastTo(CContext.GetBoolType(), Builder, CContext);
+        if (!Cond)
             return nullptr;
+
+        // if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+        //     return nullptr;
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
@@ -851,8 +890,11 @@ namespace Volt
         Builder.SetInsertPoint(LoopHeader);
         IRValue* Cond = CompileNode(While->Condition);
         Cond = Cond->GetRValue(Builder, CContext);
-        if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+        Cond = Cond->CastTo(CContext.GetBoolType(), Builder, CContext);
+        if (!Cond)
             return nullptr;
+        // if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+        //     return nullptr;
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "loop.body", Func);
         llvm::BasicBlock* EndBB = llvm::BasicBlock::Create(Context, "loop.end");
@@ -894,8 +936,12 @@ namespace Volt
         Builder.SetInsertPoint(ForHeader);
         IRValue* Cond = CompileNode(For->Condition);
         Cond = Cond->GetRValue(Builder, CContext);
-        if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+        Cond = Cond->CastTo(CContext.GetBoolType(), Builder, CContext);
+        if (!Cond)
             return nullptr;
+
+        // if (!Cond->CastTo(CContext.GetBoolType(), Builder, CContext))
+        //     return nullptr;
 
         llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(Context, "for.body", Func);
         llvm::BasicBlock* LatchBB = llvm::BasicBlock::Create(Context, "for.latch", Func);
