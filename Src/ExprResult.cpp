@@ -4,8 +4,6 @@
 
 #include "Volt/Core/TypeChecker/ExprResult.h"
 
-#include <complex.h>
-
 namespace Volt
 {
 	ExprResult *ExprResult::CreateRaw(CompilationContext &CContext)

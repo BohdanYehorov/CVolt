@@ -88,17 +88,21 @@ namespace Volt
         IRValue *CompileBreak();
         IRValue *CompileContinue();
 
+        IRValue *CompileToRValue(const ASTNode* Node)
+        {
+            IRValue* Value = CompileNode(Node);
+            if (!Value) return nullptr;
+            return Value->GetRValue(Builder, CContext);
+        }
+
         void DeclareVariable(const std::string& Name, IRValue *Var);
         IRValue *GetVariable(const std::string &Name);
 
         void EnterScope();
         void ExitScope();
 
-        // IRValue *GetLValue(const ASTNode *Node);
-        // IRValue *ResolveReference(IRValue* Value);
-
-        IRValue *ImplicitCast(IRValue *Value, DataType* Target);
-        static bool CanImplicitCast(DataType* Src, DataType* Dst);
+        // IRValue *ImplicitCast(IRValue *Value, DataType* Target);
+        // static bool CanImplicitCast(DataType* Src, DataType* Dst);
 
         static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);
 
