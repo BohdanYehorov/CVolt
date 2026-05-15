@@ -4,6 +4,8 @@
 
 #include "Volt/Core/TypeChecker/ExprResult.h"
 
+#include <complex.h>
+
 namespace Volt
 {
 	ExprResult *ExprResult::CreateRaw(CompilationContext &CContext)
@@ -55,6 +57,36 @@ namespace Volt
 		return Value;
 	}
 
+	ExprResult *ExprResult::CastTo(QualType To, bool Explicit, CompilationContext &CContext)
+	{
+		if (Type == To)
+			return this;
+
+		if (!Type.CastTo(To, Explicit))
+			return nullptr;
+
+		if (IsEmpty)
+			return CreateEmpty(To, CContext.MainArena);
+
+		switch (Type->GetCategory())
+		{
+			case TypeCategory::BOOLEAN:
+				return CastBooleanTo(To, Explicit, CContext);
+
+			case TypeCategory::CHAR:
+				return CastCharTo(To, Explicit, CContext);
+
+			case TypeCategory::INTEGER:
+				return CastIntegerTo(To, Explicit, CContext);
+
+			case TypeCategory::FLOATING_POINT:
+				return CastFloatTo(To, Explicit, CContext);
+
+			default:
+				return nullptr;
+		}
+	}
+
 #define RESOLVE_OP_FOR_ALL_TYPES(Op) switch (LeftType->GetCategory()) \
 	{ \
 		case TypeCategory::INTEGER: \
@@ -92,7 +124,7 @@ namespace Volt
 	}}
 
 	ExprResult *ExprResult::ResolveBinary(ExprResult *&Left, ExprResult *&Right, OperatorType Op,
-		CompilationContext& CContext)
+	                                      CompilationContext& CContext)
 	{
 		using enum OperatorType;
 
@@ -101,7 +133,13 @@ namespace Volt
 
 		QualType ResultType = Operator::ResolveBinary(LeftType, RightType, Op, CContext);
 
-		if (!Left->ImplicitCast(LeftType) || !Right->ImplicitCast(RightType))
+		// if (!Left->ImplicitCast(LeftType) || !Right->ImplicitCast(RightType))
+		// 	return nullptr;
+
+		Left = Left->ImplicitCast(LeftType, CContext);
+		Right = Right->ImplicitCast(RightType, CContext);
+
+		if (!Left || !Right)
 			return nullptr;
 
 		if (Left->IsEmpty || Right->IsEmpty)
@@ -191,8 +229,9 @@ namespace Volt
 			}
 			case OperatorType::LOGICAL_NOT:
 			{
-				if (Operand->ImplicitCast(QualType(CContext.GetBoolType(), QualType::CONST)))
-					return CreateBool(Operand->Type, !Operand->Bool, CContext.MainArena);
+				if (auto CastedOp = Operand->ImplicitCast(
+					QualType(CContext.GetBoolType(), QualType::CONST), CContext))
+					return CreateBool(CastedOp->Type, !CastedOp->Bool, CContext.MainArena);
 
 				return nullptr;
 			}
@@ -200,150 +239,106 @@ namespace Volt
 		}
 	}
 
-	bool ExprResult::CastBooleanTo(TypeCategory To, bool Explicit)
+	ExprResult* ExprResult::CastBooleanTo(QualType To, bool Explicit, CompilationContext& CContext)
 	{
-		if (To == TypeCategory::BOOLEAN)
-			return true;
+		if (To == Type)
+			return this;
 
 		if (!Explicit)
-			return false;
+			return nullptr;
 
-		switch (To)
+		Arena& MainArena = CContext.MainArena;
+
+		switch (To->GetCategory())
 		{
 			case TypeCategory::CHAR:
-			{
-				Char = static_cast<char>(Bool);
-				return true;
-			}
+				return CreateChar(To, static_cast<char>(Bool), MainArena);
+
 			case TypeCategory::INTEGER:
-			{
-				Int = static_cast<Int64>(Bool);
-				return true;
-			}
+				return CreateInteger(To, static_cast<Int64>(Bool), MainArena);
+
 			case TypeCategory::FLOATING_POINT:
-			{
-				Float = static_cast<double>(Bool);
-				return true;
-			}
+				return CreateFloat(To, static_cast<double>(Bool), MainArena);
+
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool ExprResult::CastCharTo(TypeCategory To, bool Explicit)
+	ExprResult* ExprResult::CastCharTo(QualType To, bool Explicit, CompilationContext& CContext)
 	{
-		switch (To)
+		if (To == Type)
+			return this;
+
+		Arena& MainArena = CContext.MainArena;
+
+		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-			{
-				if (!Explicit)
-					return false;
+				return Explicit ? CreateBool(To, static_cast<bool>(Char), MainArena) : nullptr;
 
-				Bool = static_cast<bool>(Char);
-				return true;
-			}
 			case TypeCategory::CHAR:
-				return true;
+				return CreateChar(To, Char, MainArena);
+
 			case TypeCategory::INTEGER:
-			{
-				Int = static_cast<Int64>(Char);
-				return true;
-			}
+				return CreateInteger(To, static_cast<Int64>(Char), MainArena);
+
 			case TypeCategory::FLOATING_POINT:
-			{
-				Float = static_cast<double>(Char);
-				return true;
-			}
+				return CreateFloat(To, static_cast<double>(Char), MainArena);
+
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool ExprResult::CastIntegerTo(TypeCategory To, bool Explicit)
+	ExprResult* ExprResult::CastIntegerTo(QualType To, bool Explicit, CompilationContext &CContext)
 	{
-		switch (To)
+		if (To == Type)
+			return this;
+
+		Arena& MainArena = CContext.MainArena;
+
+		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-			{
-				if (!Explicit)
-					return false;
+				return Explicit ? CreateBool(To, static_cast<bool>(Int), MainArena) : nullptr;
 
-				Bool = static_cast<bool>(Int);
-				return true;
-			}
 			case TypeCategory::CHAR:
-			{
-				Char = static_cast<char>(Int);
-				return true;
-			}
+				return CreateChar(To, static_cast<char>(Int), MainArena);
+
 			case TypeCategory::INTEGER:
-				return true;
+				return CreateInteger(To, Int, MainArena);
+
 			case TypeCategory::FLOATING_POINT:
-			{
-				Float = static_cast<double>(Int);
-				return true;
-			}
+				return CreateFloat(To, static_cast<double>(Int), MainArena);
+
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 
-	bool ExprResult::CastFloatTo(TypeCategory To, bool Explicit)
+	ExprResult* ExprResult::CastFloatTo(QualType To, bool Explicit, CompilationContext &CContext)
 	{
-		switch (To)
+		if (To == Type)
+			return this;
+
+		Arena& MainArena = CContext.MainArena;
+
+		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-			{
-				if (!Explicit)
-					return false;
-
-				Bool = static_cast<bool>(Float);
-				return true;
-			}
-			case TypeCategory::CHAR:
-			{
-				Char = static_cast<char>(Float);
-				return true;
-			}
-			case TypeCategory::INTEGER:
-			{
-				Int = static_cast<Int64>(Float);
-				return true;
-			}
-			case TypeCategory::FLOATING_POINT:
-				return true;
-			default:
-				return false;
-		}
-	}
-
-	bool ExprResult::CanCastTo(QualType To, bool Explicit)
-	{
-		if (!Type.CastTo(To, Explicit))
-			return false;
-
-		if (IsEmpty)
-			return true;
-
-		TypeCategory OldTypeCategory = Type->GetCategory();
-		TypeCategory NewTypeCategory = To->GetCategory();
-
-		switch (OldTypeCategory)
-		{
-			case TypeCategory::BOOLEAN:
-				return CastBooleanTo(NewTypeCategory, Explicit);
+				return Explicit ? CreateBool(To, static_cast<bool>(Float), MainArena) : nullptr;
 
 			case TypeCategory::CHAR:
-				return CastCharTo(NewTypeCategory, Explicit);
+				return CreateChar(To, static_cast<char>(Float), MainArena);
 
 			case TypeCategory::INTEGER:
-				return CastIntegerTo(NewTypeCategory, Explicit);
+				return CreateInteger(To, static_cast<Int64>(Float), MainArena);
 
 			case TypeCategory::FLOATING_POINT:
-				return CastFloatTo(NewTypeCategory, Explicit);
-
+				return CreateFloat(To, Float, MainArena);
 			default:
-				return false;
+				return nullptr;
 		}
 	}
 }

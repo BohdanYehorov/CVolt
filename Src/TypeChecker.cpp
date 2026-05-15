@@ -453,10 +453,10 @@ namespace Volt
         if (!SrcType || !Target)
             return nullptr;
 
-        if (Target->ExplicitCast(SrcType))
+        if (auto CastedTarget = Target->ExplicitCast(SrcType, CContext))
         {
-            ECast->CompileTimeValue = Target;
-            return Target;
+            ECast->CompileTimeValue = CastedTarget;
+            return CastedTarget;
         }
 
         SendError(TypeErrorKind::IncompatibleTypes, ECast->Line, ECast->Column,

@@ -38,31 +38,27 @@ namespace Volt
 		};
 		bool IsEmpty = true;
 
-		bool ImplicitCast(QualType To) { return CastTo(To, false); }
-		bool ExplicitCast(QualType To) { return CastTo(To, true); }
-
-		bool CastTo(QualType To, bool Explicit)
+		ExprResult* ImplicitCast(QualType To, CompilationContext& CContext)
 		{
-			if (CanCastTo(To, Explicit))
-			{
-				Type = To;
-				return true;
-			}
-
-			return false;
+			return CastTo(To, false, CContext);
 		}
+
+		ExprResult* ExplicitCast(QualType To, CompilationContext& CContext)
+		{
+			return CastTo(To, true, CContext);
+		}
+
+		ExprResult* CastTo(QualType To, bool Explicit, CompilationContext& CContext);
 
 		static ExprResult* ResolveBinary(ExprResult*& Left, ExprResult*& Right, OperatorType Op,
 			CompilationContext& CContext);
 		static ExprResult* ResolveUnary(ExprResult*& Operand, OperatorType Op, CompilationContext& CContext);
 
 	private:
-		bool CastBooleanTo(TypeCategory To, bool Explicit);
-		bool CastCharTo(TypeCategory To, bool Explicit);
-		bool CastIntegerTo(TypeCategory To, bool Explicit);
-		bool CastFloatTo(TypeCategory To, bool Explicit);
-
-		bool CanCastTo(QualType To, bool Explicit);
+		ExprResult* CastBooleanTo(QualType To, bool Explicit, CompilationContext& CContext);
+		ExprResult* CastCharTo(QualType To, bool Explicit, CompilationContext& CContext);
+		ExprResult* CastIntegerTo(QualType To, bool Explicit, CompilationContext& CContext);
+		ExprResult* CastFloatTo(QualType To, bool Explicit, CompilationContext& CContext);
 	};
 
 	template<typename T>

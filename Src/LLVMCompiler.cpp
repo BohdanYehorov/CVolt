@@ -703,6 +703,7 @@ namespace Volt
             llvm::Value* LLVMValue = Value->GetValue();
             // llvm::Type* ElType = CContext.GetLLVMType(ArrType->BaseType.GetType());
             IRValue* Index = CompileNode(Subscript->Index);
+            Index = Index->GetRValue(Builder, CContext);
             llvm::Value* ElPtr = Builder.CreateGEP(CContext.GetLLVMType(ArrType), LLVMValue,
                 { Builder.getInt32(0), Index->GetValue() });
             // llvm::Value* El = Builder.CreateLoad(ElType, ElPtr);
