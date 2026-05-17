@@ -37,7 +37,7 @@ namespace Volt
         if (!SymOrErr)
         {
             llvm::logAllUnhandledErrors(SymOrErr.takeError(), llvm::errs(), "Error: ");
-            return 1;
+            return RetT();
         }
 
 		const auto Func = SymOrErr->toPtr<RetT(*)(ArgsT...)>();

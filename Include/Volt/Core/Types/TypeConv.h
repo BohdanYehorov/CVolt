@@ -78,6 +78,12 @@ namespace Volt::TypeConv
 			return { CContext.GetPointerType(GetDataType<BaseType>(CContext)), 0 };
 		}
 
+		if constexpr (std::is_reference_v<T>)
+		{
+			using BaseType = std::remove_reference_t<T>;
+			return { CContext.GetReferenceType(GetDataType<BaseType>(CContext)), 0 };
+		}
+
 		return { GetBaseType<T>(CContext), 0 };
 	}
 }

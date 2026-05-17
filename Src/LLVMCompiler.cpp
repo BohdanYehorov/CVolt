@@ -226,96 +226,76 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileRef(const RefNode *Ref)
     {
-        IRValue* LValue = CompileNode(Ref->Target);
-        if (!LValue || !LValue->IsLValue())
+        IRValue* Value = CompileNode(Ref->Target);
+        if (!Value || !Value->IsLValue())
             ERROR("Cannot apply operator '$' to r-value")
 
-       return Create<IRValue>(LValue->GetValue(), CContext.GetPointerType({LValue->GetDataType(), 0}));
+       return Create<IRValue>(Value->GetValue(), CContext.GetPointerType({ Value->GetDataType(), 0 }));
     }
 
     IRValue *LLVMCompiler::CompileUnref(const UnrefNode *Unref)
     {
-        IRValue *TValue = CompileNode(Unref->Target);
-        if (!TValue)
+        IRValue *Value = CompileNode(Unref->Target);
+        if (!Value)
             return nullptr;
 
-        return Create<IRValue>(TValue->GetValue(), Unref->CompileTimeValue->Type.GetType(), true);
+        return Create<IRValue>(Value->GetValue(), Unref->CompileTimeValue->Type.GetType(), true);
     }
 
     IRValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
     {
-        IRValue* LValue = CompileNode(Prefix->Operand);
-        if (!LValue || !LValue->IsLValue())
-            ERROR("Cannot apply prefix operator to r-value")
+        IRValue* Operand = CompileNode(Prefix->Operand);
+        DataType* OperandType = Operand->GetDataType();
+        IRValue* Value = Create<IRValue>(
+            llvm::ConstantInt::get(CContext.GetLLVMType(OperandType), 1), OperandType);
 
-        llvm::Value* Value = LValue->GetValue();
-        Value = Builder.CreateLoad(CContext.GetLLVMType(LValue->GetDataType()), Value);
         switch (Prefix->Type)
         {
             case OperatorType::INC:
-                Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
-                break;
+                return Operand->CreateAssignment(Value, OperatorType::ADD_ASSIGN, Builder, CContext);
             case OperatorType::DEC:
-                Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
-                break;
+                return Operand->CreateAssignment(Value, OperatorType::SUB_ASSIGN, Builder, CContext);
             default:
-                ERROR("Unknown prefix operator")
+                llvm_unreachable("Invalid prefix operator");
         }
-
-        Builder.CreateStore(Value, LValue->GetValue());
-
-        return Create<IRValue>(Value, LValue->GetDataType());
     }
 
     IRValue *LLVMCompiler::CompileSuffix(const SuffixOpNode *Suffix)
     {
-        IRValue* LValue = CompileNode(Suffix->Operand);
-        if (!LValue || !LValue->IsLValue())
-            ERROR("Cannot apply suffix operator to r-value")
+        IRValue* Operand = CompileNode(Suffix->Operand);
+        DataType* OperandType = Operand->GetDataType();
+        IRValue* Value = Create<IRValue>(
+            llvm::ConstantInt::get(CContext.GetLLVMType(OperandType), 1), OperandType);
 
-        llvm::Value* Value = LValue->GetValue();
-        Value = Builder.CreateLoad(CContext.GetLLVMType(LValue->GetDataType()), Value);
-        llvm::Value* Temp = Value;
+        IRValue* Temp = Operand->GetRValue(Builder, CContext);
         switch (Suffix->Type)
         {
             case OperatorType::INC:
-                Value = Builder.CreateAdd(Value, llvm::ConstantInt::get(Value->getType(), 1));
-                break;
+                Operand->CreateAssignment(Value, OperatorType::ADD_ASSIGN, Builder, CContext);
+                return Temp;
             case OperatorType::DEC:
-                Value = Builder.CreateSub(Value, llvm::ConstantInt::get(Value->getType(), 1));
-                break;
+                Operand->CreateAssignment(Value, OperatorType::SUB_ASSIGN, Builder, CContext);
+                return Temp;
             default:
-                ERROR("Unknown suffix operator")
+                llvm_unreachable("Invalid prefix operator");
         }
-
-        Builder.CreateStore(Value, LValue->GetValue());
-
-        return Create<IRValue>(Temp, LValue->GetDataType());
     }
 
     IRValue *LLVMCompiler::CompileUnary(const UnaryOpNode *Unary)
     {
-        IRValue* TValue = CompileToRValue(Unary->Operand);
+        using enum OperatorType;
 
-        llvm::Value* Value = TValue->GetValue();
-        DataType* Type = TValue->GetDataType();
-
-        DataType* BoolType = CContext.GetBoolType();
-
-        bool IsFP = Cast<FloatingPointType>(Type);
+        IRValue* Operand = CompileToRValue(Unary->Operand);
+        if (!Operand)
+            llvm_unreachable("Invalid operand");
 
         switch (Unary->Type)
         {
-            case OperatorType::ADD:         return TValue;
-            case OperatorType::SUB:         return Create<IRValue>(IsFP ?
-                                            Builder.CreateFNeg(Value) :
-                                            Builder.CreateNeg(Value), Unary->CompileTimeValue->Type.GetType());
-            case OperatorType::LOGICAL_NOT: return Create<IRValue>(Builder.CreateNot(
-                                               TValue->CastLLVM(BoolType, Builder, CContext)),
-                                               Unary->CompileTimeValue->Type.GetType());
-            case OperatorType::BIT_NOT:     return Create<IRValue>(Builder.CreateNot(Value),
-                                            Unary->CompileTimeValue->Type.GetType());
-            default: ERROR("Unknown unary operator")
+            case ADD:         return Operand;
+            case SUB:         return Operand->CreateNeg(Builder, CContext);
+            case BIT_NOT:     return Operand->CreateNot(Builder, CContext);
+            case LOGICAL_NOT: return Operand->CreateLogicalNot(Builder, CContext);
+            default: llvm_unreachable("Unknown unary operator");
         }
     }
 
@@ -323,261 +303,126 @@ namespace Volt
     {
         IRValue* Left = CompileToRValue(Comparison->Left);
         IRValue* Right = CompileToRValue(Comparison->Right);
+
         if (!Right || !Left)
-            return nullptr;
+            llvm_unreachable("Invalid comparison operand");
 
         Left = Left->CastTo(Comparison->LeftOperandType, Builder, CContext);
         Right = Right->CastTo(Comparison->RightOperandType, Builder, CContext);
+
         if (!Right || !Left)
-            return nullptr;
+            llvm_unreachable("Invalid cast");
 
-        DataType* Type = Left->GetDataType();
-
-        llvm::Value* LeftVal = Left->GetValue();
-        llvm::Value* RightVal = Right->GetValue();
-
-        bool IsFP = Cast<FloatingPointType>(Type);
-
-        bool IsSigned = false;
-        if (!IsFP)
-            if (auto IntType = Cast<IntegerType>(Type))
-                IsSigned = IntType->IsSigned;
-
-        switch (Comparison->Type)
-        {
-            case OperatorType::EQ:  return Create<IRValue>(IsFP ?
-                                Builder.CreateFCmpOEQ(LeftVal, RightVal) :
-                                Builder.CreateICmpEQ(LeftVal, RightVal),
-                                Comparison->CompileTimeValue->Type.GetType());
-            case OperatorType::NEQ: return Create<IRValue>(IsFP ?
-                                Builder.CreateFCmpONE(LeftVal, RightVal) :
-                                Builder.CreateICmpNE(LeftVal, RightVal),
-                                Comparison->CompileTimeValue->Type.GetType());
-            case OperatorType::LT:  return Create<IRValue>(IsFP ?
-                                Builder.CreateFCmpOLT(LeftVal, RightVal) : IsSigned ?
-                                Builder.CreateICmpSLT(LeftVal, RightVal) :
-                                Builder.CreateICmpULT(LeftVal, RightVal),
-                                Comparison->CompileTimeValue->Type.GetType());
-            case OperatorType::LTE: return Create<IRValue>( IsFP ?
-                                Builder.CreateFCmpOLE(LeftVal, RightVal) : IsSigned ?
-                                Builder.CreateICmpSLE(LeftVal, RightVal) :
-                                Builder.CreateICmpULE(LeftVal, RightVal),
-                                Comparison->CompileTimeValue->Type.GetType());
-            case OperatorType::GT:  return Create<IRValue>(IsFP ?
-                                Builder.CreateFCmpOGT(LeftVal, RightVal) : IsSigned ?
-                                Builder.CreateICmpSGT(LeftVal, RightVal) :
-                                Builder.CreateICmpUGT(LeftVal, RightVal),
-                                Comparison->CompileTimeValue->Type.GetType());
-            case OperatorType::GTE: return Create<IRValue>(IsFP ?
-                                Builder.CreateFCmpOGE(LeftVal, RightVal) : IsSigned ?
-                                Builder.CreateICmpSGE(LeftVal, RightVal) :
-                                Builder.CreateICmpUGE(LeftVal, RightVal),
-                                Comparison->CompileTimeValue->Type.GetType());
-            default: ERROR("Unknown comparison operator")
-        }
+        return Left->CreateCmp(Right, Comparison->Type, Builder, CContext);
     }
 
     IRValue *LLVMCompiler::CompileLogical(const LogicalNode *Logical)
     {
         IRValue* Left = CompileToRValue(Logical->Left);
-        IRValue* Right = CompileToRValue(Logical->Right);
-        if (!Right || !Left)
-            return nullptr;
-
         Left = Left->CastTo(Logical->LeftOperandType, Builder, CContext);
-        Right = Right->CastTo(Logical->RightOperandType, Builder, CContext);
-        if (!Right || !Left)
-            return nullptr;
+        if (!Left)
+            llvm_unreachable("Invalid cast");
 
-        // llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+        llvm::BasicBlock* InsertBlock = Builder.GetInsertBlock();
+        llvm::Function* Func = InsertBlock->getParent();
 
         switch (Logical->Type)
         {
             case OperatorType::LOGICAL_OR:
             {
-                // llvm::BasicBlock* OrRhsBB = llvm::BasicBlock::Create(Context, "or.rhs", Func);
-                // llvm::BasicBlock* OrTrueBB = llvm::BasicBlock::Create(Context, "or.true", Func);
-                //
-                // Builder.CreateCondBr(Left->GetValue(), OrTrueBB, OrRhsBB);
-                //
-                // Builder.SetInsertPoint(OrRhsBB);
-                // IRValue* Right = CompileNode(Logical->Right);
-                // Right = ImplicitCast(Right, Logical->OperandsType);
-                //
-                // llvm::BasicBlock* OrEndBB = llvm::BasicBlock::Create(Context, "or.end", Func);
-                // Builder.CreateCondBr(Right->GetValue(), OrTrueBB, OrEndBB);
-                //
-                // Builder.SetInsertPoint(OrTrueBB);
-                // Builder.CreateBr(OrEndBB);
-                //
-                // Builder.SetInsertPoint(OrEndBB);
-                // llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt1Ty(), 2);
-                // Phi->addIncoming(Builder.getTrue(), OrTrueBB);
-                // Phi->addIncoming(Builder.getFalse(), OrRhsBB);
-                //
-                // return Create<IRValue>(Phi, Logical->CompileTimeValue->Type);
+                llvm::AllocaInst* Alloca = Builder.CreateAlloca(Builder.getInt1Ty());
+                llvm::BasicBlock* OrFalseBlock = llvm::BasicBlock::Create(Context, "or.false", Func);
+                llvm::BasicBlock* OrEndBlock = llvm::BasicBlock::Create(Context, "or.end", Func);
 
-                return Create<IRValue>(
-                    Builder.CreateOr(Left->GetValue(), Right->GetValue()), Logical->CompileTimeValue->Type.GetType());
+                Builder.CreateStore(Left->GetValue(), Alloca);
+
+                Builder.CreateCondBr(Left->GetValue(), OrEndBlock, OrFalseBlock);
+
+                Builder.SetInsertPoint(OrFalseBlock);
+                IRValue* Right = CompileToRValue(Logical->Right);
+                Right = Right->CastTo(Logical->RightOperandType, Builder, CContext);
+                if (!Right)
+                    llvm_unreachable("Invalid cast");
+                Builder.CreateStore(Right->GetValue(), Alloca);
+
+                Builder.CreateBr(OrEndBlock);
+                Builder.SetInsertPoint(OrEndBlock);
+
+                return Create<IRValue>(Builder.CreateLoad(
+                    Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->Type.GetType());
             }
             case OperatorType::LOGICAL_AND:
             {
-                // auto* AndRhsBB = llvm::BasicBlock::Create(Context, "and.rhs", Func);
-                // auto* AndFalseBB= llvm::BasicBlock::Create(Context, "and.false", Func);
-                //
-                // Builder.CreateCondBr(Left->GetValue(), AndRhsBB, AndFalseBB);
-                //
-                // Builder.SetInsertPoint(AndRhsBB);
-                // IRValue* Right = CompileNode(Logical->Right);
-                // Right = ImplicitCast(Right, Logical->OperandsType);
-                // auto* AndEndBB  = llvm::BasicBlock::Create(Context, "and.end", Func);
-                // Builder.CreateBr(AndEndBB);
-                //
-                // Builder.SetInsertPoint(AndFalseBB);
-                // Builder.CreateBr(AndEndBB);
-                //
-                // Builder.SetInsertPoint(AndEndBB);
-                // llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt1Ty(), 2);
-                //
-                // Phi->addIncoming(Right->GetValue(), AndRhsBB);
-                // Phi->addIncoming(Builder.getFalse(), AndFalseBB);
-                //
-                // return Create<IRValue>(Phi, Logical->CompileTimeValue->Type);
+                llvm::AllocaInst* Alloca = Builder.CreateAlloca(Builder.getInt1Ty());
+                llvm::BasicBlock* AndTrueBlock = llvm::BasicBlock::Create(Context, "and.true", Func);
+                llvm::BasicBlock* AndEndBlock = llvm::BasicBlock::Create(Context, "and.end", Func);
 
-                return Create<IRValue>(
-                    Builder.CreateAnd(Left->GetValue(), Right->GetValue()), Logical->CompileTimeValue->Type.GetType());
+                Builder.CreateStore(Left->GetValue(), Alloca);
+
+                Builder.CreateCondBr(Left->GetValue(), AndTrueBlock, AndEndBlock);
+
+                Builder.SetInsertPoint(AndTrueBlock);
+                IRValue* Right = CompileToRValue(Logical->Right);
+                Right = Right->CastTo(Logical->RightOperandType, Builder, CContext);
+                if (!Right)
+                    llvm_unreachable("Invalid cast");
+                Builder.CreateStore(Right->GetValue(), Alloca);
+
+                Builder.CreateBr(AndEndBlock);
+                Builder.SetInsertPoint(AndEndBlock);
+
+                return Create<IRValue>(Builder.CreateLoad(
+                    Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->Type.GetType());
             }
             default:
-                ERROR("Unknown logical operator")
+                llvm_unreachable("Unknown logical operator");
         }
     }
 
     IRValue *LLVMCompiler::CompileAssignment(const AssignmentNode *Assignment)
     {
-        IRValue* LValue = CompileNode(Assignment->Left);
-
-        if (!LValue || !LValue->IsLValue())
-            ERROR("Cannot apply assignment operator to r-value")
-
-        llvm::Value* Value = LValue->GetValue();
-
-        DataType* Type = LValue->GetDataType();
-
+        IRValue* Value = CompileNode(Assignment->Left);
         IRValue* Right = CompileToRValue(Assignment->Right);
-        if (!Right) return nullptr;
 
-        Right = Right->CastTo(Type, Builder, CContext);
-        if (!Right) return nullptr;
+        if (!Value || !Right)
+            llvm_unreachable("Invalid assignment values");
 
-        llvm::Value* RightVal = Right->GetValue();
+        Right = Right->CastTo(Value->GetDataType(), Builder, CContext);
+        if (!Right)
+            llvm_unreachable("Invalid cast");
 
-        if (Assignment->Type == OperatorType::ASSIGN)
-            return Create<IRValue>(Builder.CreateStore(RightVal, Value), Right->GetDataType());
-
-        llvm::Value* Left = Builder.CreateLoad(CContext.GetLLVMType(Type), Value);
-
-        bool IsFP = Cast<FloatingPointType>(Type);
-
-        bool IsSigned = false;
-        if (!IsFP)
-            if (auto IntType = Cast<IntegerType>(Type))
-                IsSigned = IntType->IsSigned;
-
-        switch (Assignment->Type)
-        {
-            case OperatorType::ADD_ASSIGN:
-                Left = IsFP ? Builder.CreateFAdd(Left, RightVal) :
-                              Builder.CreateAdd(Left, RightVal);
-                break;
-            case OperatorType::SUB_ASSIGN:
-                Left = IsFP ? Builder.CreateFSub(Left, RightVal) :
-                              Builder.CreateSub(Left, RightVal);
-                break;
-            case OperatorType::MUL_ASSIGN:
-                Left = IsFP ? Builder.CreateFMul(Left, RightVal) :
-                              Builder.CreateMul(Left, RightVal);
-                break;
-            case OperatorType::DIV_ASSIGN:
-                Left = IsFP     ? Builder.CreateFDiv(Left, RightVal) :
-                       IsSigned ? Builder.CreateSDiv(Left, RightVal) :
-                                  Builder.CreateUDiv(Left, RightVal);
-                break;
-            case OperatorType::MOD_ASSIGN:
-                Left = IsSigned ? Builder.CreateSRem(Left, RightVal) :
-                                  Builder.CreateURem(Left, RightVal);
-                break;
-            default:
-                ERROR("Unknown assignment operator")
-        }
-
-        return Create<IRValue>(Builder.CreateStore(Left, Value), Type);
+        return Value->CreateAssignment(Right, Assignment->Type, Builder, CContext);
     }
 
     IRValue* LLVMCompiler::CompileBinary(const BinaryOpNode *BinaryOp)
     {
-        IRValue* Left = CompileNode(BinaryOp->Left);
-        Left = Left->GetRValue(Builder, CContext);
+        using enum OperatorType;
 
-        IRValue* Right = CompileNode(BinaryOp->Right);
-        Right = Right->GetRValue(Builder, CContext);
+        IRValue* Left = CompileToRValue(BinaryOp->Left);
+        IRValue* Right = CompileToRValue(BinaryOp->Right);
+
+        if (!Right || !Left)
+            llvm_unreachable("invalid binary operand");
 
         Left = Left->CastTo(BinaryOp->LeftOperandType, Builder, CContext);
         Right = Right->CastTo(BinaryOp->RightOperandType, Builder, CContext);
 
         if (!Right || !Left)
-            return nullptr;
-
-        DataType* Type = Left->GetDataType();
-
-        llvm::Value* LeftVal = Left->GetValue();
-        llvm::Value* RightVal = Right->GetValue();
-
-        bool IsFP = Cast<FloatingPointType>(Type);
-        // auto PtrType = Cast<PointerType>(Type);
-        bool IsSigned = false;
-        if (auto IntType = Cast<IntegerType>(Type))
-            IsSigned = IntType->IsSigned;
+            llvm_unreachable("invalid cast");
 
         switch (BinaryOp->Type)
         {
-            case OperatorType::ADD:     return Create<IRValue>(IsFP ?
-                                    Builder.CreateFAdd(LeftVal, RightVal) :
-                                    Builder.CreateAdd(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::SUB:     return Create<IRValue>(IsFP ?
-                                    Builder.CreateFSub(LeftVal, RightVal) :
-                                    Builder.CreateSub(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::MUL:     return Create<IRValue>(IsFP ?
-                                    Builder.CreateFMul(LeftVal, RightVal) :
-                                    Builder.CreateMul(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::DIV:     return Create<IRValue>(IsFP ?
-                                    Builder.CreateFDiv(LeftVal, RightVal) : IsSigned ?
-                                    Builder.CreateSDiv(LeftVal, RightVal) :
-                                    Builder.CreateUDiv(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::MOD:     return Create<IRValue>(IsSigned ?
-                                    Builder.CreateSRem(LeftVal, RightVal) :
-                                    Builder.CreateURem(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::BIT_AND: return Create<IRValue>(
-                                    Builder.CreateAnd(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::BIT_OR:  return Create<IRValue>(
-                                    Builder.CreateOr(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::BIT_XOR: return Create<IRValue>(
-                                    Builder.CreateXor(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::LSHIFT:  return  Create<IRValue>(
-                                    Builder.CreateShl(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            case OperatorType::RSHIFT:  return Create<IRValue>(IsSigned ?
-                                    Builder.CreateAShr(LeftVal, RightVal) :
-                                    Builder.CreateLShr(LeftVal, RightVal),
-                                    BinaryOp->CompileTimeValue->Type.GetType());
-            default: ERROR("Unknown binary operator")
+            case ADD:     return Left->CreateAdd(Right, Builder, CContext);
+            case SUB:     return Left->CreateSub(Right, Builder, CContext);
+            case MUL:     return Left->CreateMul(Right, Builder, CContext);
+            case DIV:     return Left->CreateDiv(Right, Builder, CContext);
+            case MOD:     return Left->CreateMod(Right, Builder, CContext);
+            case BIT_AND: return Left->CreateBitAnd(Right, Builder, CContext);
+            case BIT_OR:  return Left->CreateBitOr(Right, Builder, CContext);
+            case BIT_XOR: return Left->CreateBitXor(Right, Builder, CContext);
+            case RSHIFT:  return Left->CreateRShift(Right, Builder, CContext);
+            case LSHIFT:  return Left->CreateLShift(Right, Builder, CContext);
+            default: llvm_unreachable("Unknown binary operator");
         }
     }
 
@@ -683,7 +528,7 @@ namespace Volt
     {
         DataType* DstType = ExplicitCast->CompileTimeValue->Type.GetType();
         IRValue* Target = CompileToRValue(ExplicitCast->Target);
-        if (Target) return nullptr;
+        if (!Target) return nullptr;
 
         if (IRValue* Value = Target->CastTo(DstType, Builder, CContext))
             return Value;

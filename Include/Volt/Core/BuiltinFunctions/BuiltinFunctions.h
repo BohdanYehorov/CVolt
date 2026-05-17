@@ -57,15 +57,15 @@ extern "C"
 		std::cout << Ptr << std::endl;
 	}
 
-	inline void InInt(int* Num)
+	inline void InInt(int& Num)
 	{
-		std::cin >> *Num;
+		std::cin >> Num;
 	}
 
-	inline void InIntWithLabel(char* Label, int* Num)
+	inline void InIntWithLabel(char* Label, int& Num)
 	{
 		std::cout << Label << " ";
-		std::cin >> *Num;
+		std::cin >> Num;
 	}
 
 	inline long Time()

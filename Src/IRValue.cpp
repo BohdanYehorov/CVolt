@@ -81,6 +81,265 @@ namespace Volt
 		return CContext.MainArena.Create<IRValue>(Builder.CreateLoad(LLVMType, Value), Type);
 	}
 
+	IRValue* IRValue::CreateNeg(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		return CContext.MainArena.Create<IRValue>(Type->IsFloatingPointType() ?
+			Builder.CreateFNeg(Value) : Builder.CreateNeg(Value), Type);
+	}
+
+	IRValue* IRValue::CreateNot(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		return CContext.MainArena.Create<IRValue>(Builder.CreateNot(Value), Type);
+	}
+
+	IRValue* IRValue::CreateLogicalNot(llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		DataType* BoolType = CContext.GetBoolType();
+		llvm::Value* BoolValue = CastLLVM(BoolType, Builder, CContext);
+		if (!BoolValue)
+			llvm_unreachable("Invalid cast");
+
+		return CContext.MainArena.Create<IRValue>(Builder.CreateNot(BoolValue), BoolType);
+	}
+
+	IRValue* IRValue::CreateCmp(IRValue *Right, OperatorType Op, llvm::IRBuilder<> &Builder, CompilationContext& CContext)
+	{
+		using enum OperatorType;
+
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot compare values with different types");
+
+		Arena& MainArena = CContext.MainArena;
+
+		BoolType* BoolTy = CContext.GetBoolType();
+
+		if (auto IntType = Cast<IntegerType>(Type))
+		{
+			bool IsSigned = IntType->IsSigned;
+
+			llvm::ICmpInst::Predicate Pred;
+			switch (Op)
+			{
+				case EQ:  Pred = llvm::ICmpInst::ICMP_EQ; break;
+				case NEQ: Pred = llvm::ICmpInst::ICMP_NE; break;
+				case LT:  Pred = IsSigned ? llvm::ICmpInst::ICMP_SLT : llvm::ICmpInst::ICMP_ULT; break;
+				case LTE: Pred = IsSigned ? llvm::ICmpInst::ICMP_SLE : llvm::ICmpInst::ICMP_ULE; break;
+				case GT:  Pred = IsSigned ? llvm::ICmpInst::ICMP_SGT : llvm::ICmpInst::ICMP_UGT; break;
+				case GTE: Pred = IsSigned ? llvm::ICmpInst::ICMP_SGE : llvm::ICmpInst::ICMP_UGE; break;
+				default: return nullptr;
+			}
+
+			return MainArena.Create<IRValue>(
+				Builder.CreateICmp(Pred, Value, Right->Value), BoolTy);
+		}
+
+		if (Type->IsFloatingPointType())
+		{
+			llvm::FCmpInst::Predicate Pred;
+			switch (Op)
+			{
+				case EQ:  Pred = llvm::FCmpInst::FCMP_OEQ; break;
+				case NEQ: Pred = llvm::FCmpInst::FCMP_ONE; break;
+				case LT:  Pred = llvm::FCmpInst::FCMP_OLT; break;
+				case LTE: Pred = llvm::FCmpInst::FCMP_OLE; break;
+				case GT:  Pred = llvm::FCmpInst::FCMP_OGT; break;
+				case GTE: Pred = llvm::FCmpInst::FCMP_OGE; break;
+				default: return nullptr;
+			}
+
+			return MainArena.Create<IRValue>(
+				Builder.CreateFCmp(Pred, Value, Right->GetValue()), BoolTy);
+		}
+
+		return nullptr;
+	}
+
+	IRValue* IRValue::CreateAdd(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		Arena& MainArena = CContext.MainArena;
+
+		DataType* RightType = Right->Type;
+
+		if (Type->IsPointerType() || RightType->IsPointerType())
+		{
+			IRValue* Ptr = Type->IsPointerType() ? this : Right;
+			IRValue* Index = Ptr == this ? Right : this;
+
+			if (!Index->Type->IsIntegerType())
+				llvm_unreachable("Cannot add non-integer type to pointer");
+
+			auto PtrType = Cast<PointerType>(Ptr->Type);
+
+			llvm::Type* PointeeType = CContext.GetLLVMType(PtrType->BaseType.GetType());
+			return MainArena.Create<IRValue>(
+				Builder.CreateGEP(PointeeType, Ptr->Value, Index->Value), PtrType);
+		}
+
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot add values with different types");
+
+		if (Type->IsIntegerType())
+			return MainArena.Create<IRValue>(
+			   Builder.CreateAdd(Value, Right->Value), Type);
+
+		if (Type->IsFloatingPointType())
+			return MainArena.Create<IRValue>(
+				Builder.CreateFAdd(Value, Right->Value), Type);
+
+		llvm_unreachable("Cannot add values with this type");
+	}
+
+	IRValue* IRValue::CreateSub(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot sub values with different types");
+
+		return CContext.MainArena.Create<IRValue>(Type->IsFloatingPointType() ?
+			Builder.CreateFSub(Value, Right->Value) :
+			Builder.CreateSub(Value, Right->Value), Type);
+	}
+
+	IRValue* IRValue::CreateMul(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot multiply values with different types");
+
+		return CContext.MainArena.Create<IRValue>(Type->IsFloatingPointType() ?
+			Builder.CreateFMul(Value, Right->Value) :
+			Builder.CreateMul(Value, Right->Value), Type);
+	}
+
+	IRValue* IRValue::CreateDiv(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot multiply values with different types");
+
+		if (auto IntType = Cast<IntegerType>(Type))
+			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
+				Builder.CreateSDiv(Value, Right->Value) :
+				Builder.CreateUDiv(Value, Right->Value), Type);
+
+		return CContext.MainArena.Create<IRValue>(Builder.CreateFDiv(Value, Right->Value), Type);
+	}
+
+	IRValue* IRValue::CreateMod(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot apply 'mod' to values with different types");
+
+		if (auto IntType = Cast<IntegerType>(Type))
+			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
+				Builder.CreateSRem(Value, Right->Value) :
+				Builder.CreateURem(Value, Right->Value), Type);
+
+		llvm_unreachable("Cannot apply 'mod' to non-integer type");
+	}
+
+	IRValue* IRValue::CreateBitAnd(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot apply 'and' to values with different types");
+
+		if (Type->IsIntegerType())
+			return CContext.MainArena.Create<IRValue>(Builder.CreateAnd(Value, Right->Value), Type);
+
+		llvm_unreachable("Cannot apply 'and' to non-integer type");
+	}
+
+	IRValue* IRValue::CreateBitOr(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot apply 'or' to values with different types");
+
+		if (Type->IsIntegerType())
+			return CContext.MainArena.Create<IRValue>(Builder.CreateOr(Value, Right->Value), Type);
+
+		llvm_unreachable("Cannot apply 'or' to non-integer type");
+	}
+
+	IRValue* IRValue::CreateBitXor(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot apply 'xor' to values with different types");
+
+		if (Type->IsIntegerType())
+			return CContext.MainArena.Create<IRValue>(Builder.CreateXor(Value, Right->Value), Type);
+
+		llvm_unreachable("Cannot apply 'xor' to non-integer type");
+	}
+
+	IRValue* IRValue::CreateRShift(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot apply 'rshift' to values with different types");
+
+		if (auto IntType = Cast<IntegerType>(Type))
+			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
+				Builder.CreateAShr(Value, Right->Value) :
+				Builder.CreateLShr(Value, Right->Value), Type);
+
+		llvm_unreachable("Cannot apply 'rshift' to non-integer type");
+	}
+
+	IRValue* IRValue::CreateLShift(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot apply 'lshift' to values with different types");
+
+		if (Type->IsIntegerType())
+			return CContext.MainArena.Create<IRValue>(Builder.CreateShl(Value, Right->Value), Type);
+
+		llvm_unreachable("Cannot apply 'lshift' to non-integer type");
+	}
+
+	IRValue* IRValue::CreateAssignment(IRValue *Right, OperatorType Op,
+	                                   llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		using enum OperatorType;
+
+		if (!bIsLValue)
+			llvm_unreachable("Cannot apply assignment operator to r-value");
+
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot assign value with another type");
+
+		if (Op == ASSIGN)
+		{
+			Builder.CreateStore(Right->Value, Value);
+			return Right;
+		}
+
+		IRValue* NewValue = GetRValue(Builder, CContext);
+		switch (Op)
+		{
+			case ADD_ASSIGN:
+				NewValue = NewValue->CreateAdd(Right, Builder, CContext);
+				break;
+
+			case SUB_ASSIGN:
+				NewValue = NewValue->CreateSub(Right, Builder, CContext);
+				break;
+
+			case MUL_ASSIGN:
+				NewValue = NewValue->CreateMul(Right, Builder, CContext);
+				break;
+
+			case DIV_ASSIGN:
+				NewValue = NewValue->CreateDiv(Right, Builder, CContext);
+				break;
+
+			case MOD_ASSIGN:
+				NewValue = NewValue->CreateMod(Right, Builder, CContext);
+				break;
+
+			default:
+				llvm_unreachable("Unknown assignment operator");
+		}
+
+		Builder.CreateStore(NewValue->Value, Value);
+		return NewValue;
+	}
+
 	inline llvm::Value* IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
 	{
 		if (Type == To)
