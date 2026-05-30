@@ -8,41 +8,12 @@
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include "Volt/Core/Memory/BufferView.h"
 #include "Volt/ADT/Array.h"
+#include "Volt/Core/Object/Object.h"
 #include <stdexcept>
+#include <iostream>
 
 namespace Volt
 {
-    // class Arena
-    // {
-    // private:
-    //     Array<Object*> Objects;
-    //
-    // public:
-    //     template <typename T, typename ...Args_>
-    //     [[nodiscard]] T* Create(Args_&&... Args);
-    //     [[nodiscard]] size_t Size() const { return Objects.Length(); }
-    //
-    //     Arena() = default;
-    //     Arena(const Arena&) = delete;
-    //     Arena(Arena&&) = delete;
-    //     Arena& operator=(const Arena&) = delete;
-    //     Arena& operator=(Arena&&) = delete;
-    //
-    //     ~Arena()
-    //     {
-    //         for (Object* Obj : Objects)
-    //             delete Obj;
-    //     }
-    // };
-    //
-    // template<typename T, typename ... Args_>
-    // T* Arena::Create(Args_ &&...Args)
-    // {
-    //     T* Obj = new T(std::forward<Args_>(Args)...);
-    //     Objects.Add(Obj);
-    //     return Obj;
-    // }
-
     class ArenaAllocator
     {
     private:
@@ -140,16 +111,40 @@ namespace Volt
 
     class Arena
     {
+        struct DestructorEntry
+        {
+            Object* Obj;
+            void (*Destroy)(void*);
+
+            DestructorEntry(Object* Obj, void (*Destroy)(void*))
+                : Obj(Obj), Destroy(Destroy) {}
+        };
+
     private:
         size_t BlockSize = 64 * 1024;
         Array<ArenaStream> Blocks;
+        Array<DestructorEntry> Objects;
 
     public:
         Arena() = default;
         Arena(size_t BlockSize) : BlockSize(BlockSize) {}
 
+        ~Arena()
+        {
+            for (const auto& Entry : Objects)
+                Entry.Destroy(Entry.Obj);
+        }
+
         template <typename T, typename ...Args_>
-        T* Create(Args_&&... Args);
+        std::enable_if_t<std::is_base_of_v<Object, T>, T*>
+        Create(Args_&&... Args);
+
+    private:
+        template<typename T>
+        static void Destroy(void* Obj)
+        {
+            static_cast<T*>(Obj)->~T();
+        }
     };
 
     template<typename T, typename ... Args_>
@@ -236,14 +231,18 @@ namespace Volt
     }
 
     template<typename T, typename ... Args_>
-    T* Arena::Create(Args_&&... Args)
+    std::enable_if_t<std::is_base_of_v<Object, T>, T*> Arena::Create(Args_ &&...Args)
     {
         assert(sizeof(T) <= BlockSize);
 
         if (Blocks.Empty() || !Blocks.Back().CanWrite<T>())
             Blocks.Emplace(BlockSize);
 
-        return Blocks.Back().Construct<T>(std::forward<Args_>(Args)...);
+        T* Obj = Blocks.Back().Construct<T>(std::forward<Args_>(Args)...);
+        if constexpr (!std::is_trivially_destructible_v<T>)
+            Objects.Emplace(Obj, Destroy<T>);
+
+        return Obj;
     }
 }
 

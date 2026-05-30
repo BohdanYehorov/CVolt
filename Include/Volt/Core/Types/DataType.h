@@ -9,8 +9,8 @@
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
-#include "Volt/Core/Enums/OperatorType.h"
 #include <llvm/IR/Type.h>
+#include <llvm/ADT/FoldingSet.h>
 
 namespace Volt
 {
@@ -38,28 +38,17 @@ namespace Volt
         mutable size_t CachedHash = 0;
         llvm::Type* CachedType = nullptr;
 
-        PointerType** PointerVariants = nullptr;
-        ReferenceType** ReferenceVariants = nullptr;
-        ArrayType** ArrayVariants = nullptr;
-        // std::unordered_map<size_t, ArrayType*> ArrayVariants;
-
     protected:
         TypeCategory Category;
 
     public:
         DataType(TypeCategory Category) : Category(Category) {}
-        ~DataType() override;
-
-        void InitPointerVariants() { PointerVariants = AllocVariants<PointerType>(); }
-        void InitReferenceVariants() { ReferenceVariants = AllocVariants<ReferenceType>(); }
-        void InitArrayVariants() { ArrayVariants = AllocVariants<ArrayType>(); }
 
         virtual bool IsEqual(const DataType* Other) const = 0;
         virtual llvm::Type* ToLLVMType(llvm::LLVMContext& Context) const = 0;
         virtual int GetRank() const = 0;
         virtual size_t GetHash() const = 0;
         virtual std::string ToString() const = 0;
-        // virtual TypeCategory GetCategory() const = 0;
 
         virtual DataType* CastTo(DataType* To, bool Explicit) const = 0;
 
@@ -81,25 +70,11 @@ namespace Volt
         static DataType* GetJointType(DataType* Left, DataType* Right);
 
     private:
-        template <typename T>
-        T** AllocVariants();
-
         friend class DataTypeHash;
         friend class CompilationContext;
         template<typename T>
         friend class Hash;
     };
-
-    template<typename T>
-    T **DataType::AllocVariants()
-    {
-        const size_t Len = alignof(DataType);
-        T** Variants = new T*[Len];
-        for (size_t i = 0; i < Len; i++)
-            Variants[i] = nullptr;
-
-        return Variants;
-    }
 
     class QualType
     {
@@ -205,7 +180,6 @@ namespace Volt
         int GetRank() const override { return 0; }
         size_t GetHash() const override { return 0; }
         std::string ToString() const override { return "void"; }
-        // TypeCategory GetCategory() const override { return TypeCategory::VOID; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override { return nullptr; }
@@ -231,7 +205,6 @@ namespace Volt
         int GetRank() const override { return 1; }
         size_t GetHash() const override { return 1; }
         std::string ToString() const override { return "bool"; }
-        // TypeCategory GetCategory() const override { return TypeCategory::BOOLEAN; }
 
     protected:
         DataType* CastTo(DataType* To, bool Explicit) const override;
@@ -257,7 +230,6 @@ namespace Volt
         int GetRank() const override { return 2; }
         size_t GetHash() const override { return 2; }
         std::string ToString() const override { return "char"; }
-        // TypeCategory GetCategory() const override { return TypeCategory::CHAR; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
@@ -283,7 +255,6 @@ namespace Volt
         int GetRank() const override;
         size_t GetHash() const override;
         std::string ToString() const override;
-        // TypeCategory GetCategory() const override { return TypeCategory::INTEGER; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
@@ -303,13 +274,12 @@ namespace Volt
         int GetRank() const override;
         size_t GetHash() const override;
         std::string ToString() const override;
-        // TypeCategory GetCategory() const override { return TypeCategory::FLOATING_POINT; }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
     };
 
-    class PointerType : public DataType
+    class PointerType : public DataType, public llvm::FoldingSetNode
     {
         GENERATED_BODY(PointerType, DataType)
     public:
@@ -328,13 +298,23 @@ namespace Volt
         int GetRank() const override { return 11; }
         size_t GetHash() const override;
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "*" : "?"; }
-        // TypeCategory GetCategory() const override { return TypeCategory::POINTER; }
+
+        void Profile(llvm::FoldingSetNodeID& ID) const
+        {
+            Profile(ID, BaseType);
+        }
+
+        static void Profile(llvm::FoldingSetNodeID& ID, QualType Pointee)
+        {
+            ID.AddPointer(Pointee.GetType());
+            ID.AddInteger(Pointee.GetQuals());
+        }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
     };
 
-    class ReferenceType : public DataType
+    class ReferenceType : public DataType, public llvm::FoldingSetNode
     {
         GENERATED_BODY(ReferenceType, DataType)
     public:
@@ -353,15 +333,25 @@ namespace Volt
         int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
         size_t GetHash() const override;
         std::string ToString() const override { return BaseType ? BaseType->ToString() + "$" : "?"; }
-        // TypeCategory GetCategory() const override { return TypeCategory::REFERENCE; }
 
         bool CanBind(QualType Type) const;
+
+        void Profile(llvm::FoldingSetNodeID& ID) const
+        {
+            Profile(ID, BaseType);
+        }
+
+        static void Profile(llvm::FoldingSetNodeID& ID, QualType BaseType)
+        {
+            ID.AddPointer(BaseType.GetType());
+            ID.AddInteger(BaseType.GetQuals());
+        }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;
     };
 
-    class ArrayType : public DataType
+    class ArrayType : public DataType, public llvm::FoldingSetNode
     {
         GENERATED_BODY(ArrayType, DataType)
     public:
@@ -386,7 +376,19 @@ namespace Volt
         int GetRank() const override { return 12; }
         size_t GetHash() const override;
         std::string ToString() const override;
-        // TypeCategory GetCategory() const override { return TypeCategory::ARRAY; }
+
+        void Profile(llvm::FoldingSetNodeID& ID) const
+        {
+            Profile(ID, BaseType, Length, LengthInit);
+        }
+
+        static void Profile(llvm::FoldingSetNodeID& ID, QualType BaseType, size_t Length, bool LengthInit)
+        {
+            ID.AddPointer(BaseType.GetType());
+            ID.AddInteger(BaseType.GetQuals());
+            ID.AddInteger(Length);
+            ID.AddBoolean(LengthInit);
+        }
 
     protected:
         DataType* CastTo(DataType *To, bool Explicit) const override;

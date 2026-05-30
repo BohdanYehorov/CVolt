@@ -4,6 +4,7 @@
 
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <cmath>
+#include <complex.h>
 
 namespace Volt
 {
@@ -72,41 +73,74 @@ namespace Volt
 
 	PointerType *CompilationContext::GetPointerType(QualType BaseType)
 	{
-		if (!BaseType->PointerVariants)
-			BaseType->InitPointerVariants();
+		// if (!BaseType->PointerVariants)
+		// 	BaseType->InitPointerVariants();
+		//
+		// size_t Index = BaseType.GetQuals();
+		//
+		// if (!BaseType->PointerVariants[Index])
+		// 	BaseType->PointerVariants[Index] = MainArena.Create<PointerType>(BaseType);
+		//
+		// return BaseType->PointerVariants[Index];
 
-		size_t Index = BaseType.GetQuals();
+		llvm::FoldingSetNodeID ID;
+		PointerType::Profile(ID, BaseType);
 
-		if (!BaseType->PointerVariants[Index])
-			BaseType->PointerVariants[Index] = MainArena.Create<PointerType>(BaseType);
+		void* InsertPos = nullptr;
+		if (PointerType* Type = PointerTypes.FindNodeOrInsertPos(ID, InsertPos))
+			return Type;
 
-		return BaseType->PointerVariants[Index];
+		auto Type = MainArena.Create<PointerType>(BaseType);
+		PointerTypes.InsertNode(Type, InsertPos);
+		return Type;
 	}
 
 	ReferenceType *CompilationContext::GetReferenceType(QualType BaseType)
 	{
-		if (!BaseType->ReferenceVariants)
-			BaseType->InitReferenceVariants();
+		// if (!BaseType->ReferenceVariants)
+		// 	BaseType->InitReferenceVariants();
+		//
+		// size_t Index = BaseType.GetQuals();
+		//
+		// if (!BaseType->ReferenceVariants[Index])
+		// 	BaseType->ReferenceVariants[Index] = MainArena.Create<ReferenceType>(BaseType);
+		//
+		// return BaseType->ReferenceVariants[Index];
 
-		size_t Index = BaseType.GetQuals();
+		llvm::FoldingSetNodeID ID;
+		ReferenceType::Profile(ID, BaseType);
 
-		if (!BaseType->ReferenceVariants[Index])
-			BaseType->ReferenceVariants[Index] = MainArena.Create<ReferenceType>(BaseType);
+		void* InsertPos = nullptr;
+		if (ReferenceType* Type = ReferenceTypes.FindNodeOrInsertPos(ID, InsertPos))
+			return Type;
 
-		return BaseType->ReferenceVariants[Index];
+		auto Type = MainArena.Create<ReferenceType>(BaseType);
+		ReferenceTypes.InsertNode(Type, InsertPos);
+		return Type;
 	}
 
 	ArrayType *CompilationContext::GetArrayType(QualType BaseType, size_t Length)
 	{
-		if (!BaseType->ArrayVariants)
-			BaseType->InitArrayVariants();
+		// if (!BaseType->ArrayVariants)
+		// 	BaseType->InitArrayVariants();
+		//
+		// size_t Index = BaseType.GetQuals();
+		//
+		// if (!BaseType->ArrayVariants[Index])
+		// 	BaseType->ArrayVariants[Index] = MainArena.Create<ArrayType>(BaseType, Length);
+		//
+		// return BaseType->ArrayVariants[Index];
 
-		size_t Index = BaseType.GetQuals();
+		llvm::FoldingSetNodeID ID;
+		ArrayType::Profile(ID, BaseType, Length, true);
 
-		if (!BaseType->ArrayVariants[Index])
-			BaseType->ArrayVariants[Index] = MainArena.Create<ArrayType>(BaseType, Length);
+		void* InsertPos = nullptr;
+		if (ArrayType* Type = ArrayTypes.FindNodeOrInsertPos(ID, InsertPos))
+			return Type;
 
-		return BaseType->ArrayVariants[Index];
+		auto Type = MainArena.Create<ArrayType>(BaseType);
+		ArrayTypes.InsertNode(Type, InsertPos);
+		return Type;
 	}
 
 	llvm::Type *CompilationContext::GetLLVMType(DataType *Type)

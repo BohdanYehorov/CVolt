@@ -7,13 +7,6 @@
 
 namespace Volt
 {
-	DataType::~DataType()
-	{
-		delete[] PointerVariants;
-		delete[] ReferenceVariants;
-		delete[] ArrayVariants;
-	}
-
 	DataType *DataType::GetJointType(DataType *Left, DataType *Right)
 	{
 		if (Left == Right)

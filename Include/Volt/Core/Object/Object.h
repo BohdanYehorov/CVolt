@@ -14,7 +14,7 @@ namespace Volt
         static size_t GenerateType() { static size_t Id = 0; return ++Id; }
 
     public:
-        virtual ~Object() = default;
+        // virtual ~Object() = default;
 
         static size_t Object_StaticType() { static size_t Id = GenerateType(); return Id; }
         [[nodiscard]] virtual size_t Object_GetType() const { return  Object_StaticType(); };

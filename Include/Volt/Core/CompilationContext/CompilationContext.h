@@ -43,6 +43,10 @@ namespace Volt
 		IntegerType* CachedIntegerTypes[4]  = { nullptr, nullptr, nullptr, nullptr };
 		FloatingPointType* CachedFPTypes[4] = { nullptr, nullptr, nullptr, nullptr };
 
+		llvm::FoldingSet<PointerType> PointerTypes;
+		llvm::FoldingSet<ReferenceType> ReferenceTypes;
+		llvm::FoldingSet<ArrayType> ArrayTypes;
+
 	private:
 		String Code;
 		Arena MainArena;
