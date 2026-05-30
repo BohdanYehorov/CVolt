@@ -64,14 +64,20 @@ int main(int Argc, char* Argv[])
 
     Volt::Lexer MyLexer(CContext);
     MyLexer.Lex();
+
+#ifdef _DEBUG
     MyLexer.PrintTokens();
+#endif
 
     if (MyLexer.PrintErrors())
         return -1;
 
     Volt::Parser MyParser(CContext);
     MyParser.Parse();
+
+#ifdef _DEBUG
     MyParser.PrintASTTree();
+#endif
 
     if (MyParser.PrintErrors())
         return -1;
@@ -82,18 +88,27 @@ int main(int Argc, char* Argv[])
     if (MyTypeChecker.PrintErrors())
         return -1;
 
+#ifdef _DEBUG
     MyParser.PrintASTTree();
+#endif
 
     Volt::LLVMCompiler MyCompiler(CContext, FuncTable);
     MyCompiler.Compile();
-    MyCompiler.Print();
 
+#ifdef _DEBUG
+    MyCompiler.Print();
+#endif
+
+#ifdef _DEBUG
     std::cout << "=======================Output=======================\n\n";
+#endif
 
     Volt::JITEngine Engine(CContext, FuncTable);
     int Res = Engine.CallFunction<int>("Main");
 
+#ifdef _DEBUG
     std::cout << "\n====================================================\n";
+#endif
 
     return Res;
 }

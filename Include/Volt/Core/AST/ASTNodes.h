@@ -17,14 +17,14 @@
 
 namespace Volt
 {
-    class ExprResult;
+    class SemaResult;
 
     class ASTNode : public Object
     {
         GENERATED_BODY(ASTNode, Object)
     public:
         DataType* ExpectedType = nullptr;
-        ExprResult* CompileTimeValue = nullptr;
+        SemaResult* CompileTimeValue = nullptr;
         size_t Pos, Line, Column;
         ASTNode(size_t Pos, size_t Line, size_t Column)
             : Pos(Pos), Line(Line), Column(Column) {}

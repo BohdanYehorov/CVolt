@@ -31,6 +31,7 @@ set(SOURCES
         Src/JITEngine.cpp
         Src/DataType.cpp
         Src/IRValue.cpp
+        Src/ExprAddress.cpp
 )
 
 if (COMPILE_TO_LIB)

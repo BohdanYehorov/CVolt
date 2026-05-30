@@ -58,6 +58,8 @@ namespace Volt
         std::unique_ptr<llvm::Module>& GetModule() const { return Module; }
 
     private:
+        IRValue* GetCompileTimeValue(const ASTNode* Node);
+
         IRValue *CompileNode(const ASTNode *Node);
         IRValue *CompileBlock(const BlockNode *Block);
         IRValue *CompileInt(const IntegerNode *Int);

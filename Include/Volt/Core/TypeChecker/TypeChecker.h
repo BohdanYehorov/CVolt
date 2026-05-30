@@ -16,15 +16,16 @@
 #include "Volt/Core/TypeDefs/VariableTable.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "ExprResult.h"
+#include "ExprAddress.h"
 
 namespace Volt
 {
     struct CTimeScopeEntry
     {
         std::string Name;
-        ExprResult* Previous = nullptr;
+        ExprAddress* Previous = nullptr;
 
-        CTimeScopeEntry(const std::string& Name, ExprResult* Prev = nullptr)
+        CTimeScopeEntry(const std::string& Name, ExprAddress* Prev = nullptr)
             : Name(Name), Previous(Prev) {}
     };
 
@@ -73,36 +74,44 @@ namespace Volt
             Errors.Emplace(Kind, Node->Line, Node->Column, std::move(Context));
         }
 
-        ExprResult *VisitNode(ASTNode *Node);
+        SemaResult *VisitNode(ASTNode *Node);
 
         void VisitSequence(SequenceNode* Sequence);
         void VisitBlock(BlockNode* Block);
 
-        ExprResult *VisitInt(IntegerNode *Int);
-        ExprResult *VisitFloat(FloatingPointNode *Float);
-        ExprResult *VisitBool(BoolNode *Bool);
-        ExprResult *VisitChar(CharNode *Char);
-        ExprResult *VisitString(StringNode *String);
-        ExprResult *VisitArray(ArrayNode *Array);
-        ExprResult *VisitIdentifier(IdentifierNode *Identifier);
-        ExprResult *VisitRef(RefNode *Ref);
-        ExprResult *VisitUnref(UnrefNode *Unref);
-        ExprResult *VisitSuffix(SuffixOpNode *Suffix);
-        ExprResult *VisitPrefix(PrefixOpNode *Prefix);
-        ExprResult *VisitUnary(UnaryOpNode *Unary);
-        ExprResult *VisitBinary(BinaryOpNode *Binary);
-        ExprResult *VisitCall(CallNode *Call);
-        ExprResult *VisitSubscript(SubscriptNode *Subscript);
-        ExprResult *VisitExplicitCast(ExplicitCastNode *ECast);
-        ExprResult *VisitVariable(VariableNode *Variable);
-        ExprResult *VisitFunction(FunctionNode *Function);
-        ExprResult *VisitIf(IfNode *If);
-        ExprResult *VisitWhile(WhileNode *While);
-        ExprResult *VisitFor(ForNode *For);
-        ExprResult *VisitReturn(ReturnNode *Return);
+        SemaResult *VisitInt(IntegerNode *Int);
+        SemaResult *VisitFloat(FloatingPointNode *Float);
+        SemaResult *VisitBool(BoolNode *Bool);
+        SemaResult *VisitChar(CharNode *Char);
+        SemaResult *VisitString(StringNode *String);
+        SemaResult *VisitArray(ArrayNode *Array);
+        SemaResult *VisitIdentifier(IdentifierNode *Identifier);
+        SemaResult *VisitRef(RefNode *Ref);
+        SemaResult *VisitUnref(UnrefNode *Unref);
+        SemaResult *VisitSuffix(SuffixOpNode *Suffix);
+        SemaResult *VisitPrefix(PrefixOpNode *Prefix);
+        SemaResult *VisitUnary(UnaryOpNode *Unary);
+        SemaResult *VisitAssignment(AssignmentNode* Assignment);
+        SemaResult *VisitBinary(BinaryOpNode *Binary);
+        SemaResult *VisitCall(CallNode *Call);
+        SemaResult *VisitSubscript(SubscriptNode *Subscript);
+        SemaResult *VisitExplicitCast(ExplicitCastNode *ECast);
+        SemaResult *VisitVariable(VariableNode *Variable);
+        SemaResult *VisitFunction(FunctionNode *Function);
+        SemaResult *VisitIf(IfNode *If);
+        SemaResult *VisitWhile(WhileNode *While);
+        SemaResult *VisitFor(ForNode *For);
+        SemaResult *VisitReturn(ReturnNode *Return);
 
         QualType VisitType(DataTypeNodeBase *Type);
-        ExprResult* GetLValue(ASTNode* Node, bool IgnoreConstants = false);
+
+        static ExprResult* GetRValue(SemaResult* Value);
+        ExprResult* VisitToRValue(ASTNode* Node)
+        {
+            SemaResult* Result = VisitNode(Node);
+            if (!Result) return nullptr;
+            return GetRValue(Result);
+        }
 
         static QualType GetNotReferenceType(QualType Type);
 
@@ -116,7 +125,7 @@ namespace Volt
         void ExitScope();
 
         void DeclareVariable(const std::string& Name, QualType Type);
-        QualType GetVariable(const std::string& Name);
+        ExprAddress* GetVariable(const std::string& Name);
 
         friend class LLVMCompiler;
     };

@@ -4,6 +4,8 @@
 
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 
+#include "Volt/Core/TypeChecker/ExprAddress.h"
+
 namespace Volt
 {
     void TypeChecker::WriteErrors(std::ostream& Os) const
@@ -13,7 +15,7 @@ namespace Volt
                 " At position: [" << Error.Line << ":" << Error.Column << "]\n";
     }
 
-    ExprResult *TypeChecker::VisitNode(ASTNode *Node)
+    SemaResult* TypeChecker::VisitNode(ASTNode *Node)
     {
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
@@ -51,6 +53,8 @@ namespace Volt
             return VisitPrefix(Prefix);
         if (auto Unary = Cast<UnaryOpNode>(Node))
             return VisitUnary(Unary);
+        if (auto Assignment = Cast<AssignmentNode>(Node))
+            return VisitAssignment(Assignment);
         if (auto Binary = Cast<BinaryOpNode>(Node))
             return VisitBinary(Binary);
         if (auto Call = Cast<CallNode>(Node))
@@ -100,7 +104,7 @@ namespace Volt
         ExitScope();
     }
 
-    ExprResult *TypeChecker::VisitInt(IntegerNode *Int)
+    SemaResult *TypeChecker::VisitInt(IntegerNode *Int)
     {
         int BitWidth = 0;
         switch (Int->Type)
@@ -123,7 +127,7 @@ namespace Volt
         return Int->CompileTimeValue;
     }
 
-    ExprResult *TypeChecker::VisitFloat(FloatingPointNode *Float)
+    SemaResult *TypeChecker::VisitFloat(FloatingPointNode *Float)
     {
         int BitWidth = 0;
         switch (Float->Type)
@@ -143,21 +147,21 @@ namespace Volt
         return Float->CompileTimeValue;
     }
 
-    ExprResult *TypeChecker::VisitBool(BoolNode *Bool)
+    SemaResult *TypeChecker::VisitBool(BoolNode *Bool)
     {
         Bool->CompileTimeValue = ExprResult::CreateBool(
             QualType(CContext.GetBoolType(), QualType::CONST), Bool->Value, MainArena);
         return Bool->CompileTimeValue;
     }
 
-    ExprResult *TypeChecker::VisitChar(CharNode *Char)
+    SemaResult *TypeChecker::VisitChar(CharNode *Char)
     {
         Char->CompileTimeValue = ExprResult::CreateChar(
             QualType(CContext.GetCharType(), QualType::CONST), Char->Value, MainArena);
         return Char->CompileTimeValue;
     }
 
-    ExprResult *TypeChecker::VisitString(StringNode *String)
+    SemaResult *TypeChecker::VisitString(StringNode *String)
     {
         String->CompileTimeValue = ExprResult::CreateEmpty(
             QualType(CContext.GetPointerType(QualType(CContext.GetCharType(),
@@ -165,7 +169,7 @@ namespace Volt
         return String->CompileTimeValue;
     }
 
-    ExprResult *TypeChecker::VisitArray(ArrayNode *Array)
+    SemaResult *TypeChecker::VisitArray(ArrayNode *Array)
     {
         llvm::ArrayRef<ASTNode*> Elements = Array->Elements;
 
@@ -176,11 +180,11 @@ namespace Volt
         bool HasErrors = false;
         for (auto El : Elements)
         {
-            ExprResult* ElValue = VisitNode(El);
+            ExprResult* ElValue = VisitToRValue(El);
             if (!ElValue)
                 return nullptr;
 
-            QualType ElType = ElValue->Type;
+            QualType ElType = ElValue->GetType();
             if (!ElType)
                 return nullptr;
 
@@ -202,150 +206,256 @@ namespace Volt
         return Array->CompileTimeValue;
     }
 
-    ExprResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
+    SemaResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        QualType VarType = GetVariable(Identifier->Value.str());
-        if (!VarType)
+        ExprAddress* VarAddr = GetVariable(Identifier->Value.str());
+        if (!VarAddr)
         {
             SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
             return nullptr;
         }
 
-        Identifier->CompileTimeValue = ExprResult::CreateEmpty(VarType, MainArena);
-        return Identifier->CompileTimeValue;
+        Identifier->CompileTimeValue = ExprResult::CreateEmpty(VarAddr->GetType(), MainArena);
+        return VarAddr;
     }
 
-    ExprResult *TypeChecker::VisitRef(RefNode *Ref)
+    SemaResult *TypeChecker::VisitRef(RefNode *Ref)
     {
-        ExprResult* RefValue = GetLValue(Ref->Target, true);
-        if (!RefValue)
-            return nullptr;
+        // ExprResult* RefValue = GetLValue(Ref->Target, true);
+        // if (!RefValue)
+        //     return nullptr;
+        //
+        // QualType RefType = RefValue->GetType();
+        // if (!RefType)
+        //     return nullptr;
+        //
+        // Ref->CompileTimeValue = ExprResult::CreateEmpty(
+        //     QualType(CContext.GetPointerType(RefType), 0), MainArena);
+        // return Ref->CompileTimeValue;
 
-        QualType RefType = RefValue->Type;
-        if (!RefType)
-            return nullptr;
+        SemaResult* RefValue = VisitNode(Ref->Target);
+        if (!RefValue) return nullptr;
 
-        Ref->CompileTimeValue = ExprResult::CreateEmpty(
-            QualType(CContext.GetPointerType(RefType), 0), MainArena); // <-
+        auto RefAddr = Cast<ExprAddress>(RefValue);
+        if (!RefAddr)
+        {
+            // SendError
+            return nullptr;
+        }
+
+        if (RefAddr->IsEmpty())
+            Ref->CompileTimeValue = ExprResult::CreateEmpty(
+                CContext.GetPointerType(RefAddr->GetType()), MainArena);
+        else
+            Ref->CompileTimeValue = ExprResult::CreatePointer(
+                CContext.GetPointerType(RefAddr->GetType()), RefAddr, MainArena);
+
         return Ref->CompileTimeValue;
     }
 
-    ExprResult *TypeChecker::VisitUnref(UnrefNode *Unref)
+    SemaResult *TypeChecker::VisitUnref(UnrefNode *Unref)
     {
-        ExprResult* UnrefValue = VisitNode(Unref->Target);
+        ExprResult* UnrefValue = VisitToRValue(Unref->Target);
         if (!UnrefValue)
             return nullptr;
 
-        QualType Type = UnrefValue->Type;
+        QualType Type = UnrefValue->GetType();
         if (!Type)
             return nullptr;
 
         if (auto PtrType = Cast<PointerType>(Type.GetType()))
         {
-            Unref->CompileTimeValue = ExprResult::CreateEmpty(PtrType->BaseType, MainArena);
+            if (UnrefValue->IsEmpty())
+                Unref->CompileTimeValue = MainArena.Create<ExprAddress>(
+                    ExprResult::CreateEmpty(PtrType->BaseType, MainArena));
+            else
+                Unref->CompileTimeValue = UnrefValue->GetPointer();
+
             return Unref->CompileTimeValue;
         }
 
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
+    SemaResult *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
-        ExprResult* SuffixValue = VisitNode(Suffix->Operand);
-        if (!SuffixValue)
-            return nullptr;
+        // ExprResult* SuffixValue = VisitNode(Suffix->Operand);
+        // if (!SuffixValue)
+        //     return nullptr;
+        //
+        // QualType SuffixType = SuffixValue->Type;
+        // if (!SuffixType)
+        //     return nullptr;
+        //
+        // switch (Suffix->Type)
+        // {
+        //     case OperatorType::INC:
+        //     case OperatorType::DEC:
+        //     {
+        //         if (SuffixType->IsIntegerType())
+        //         {
+        //             Suffix->CompileTimeValue = ExprResult::CreateEmpty(SuffixType, MainArena);
+        //             return Suffix->CompileTimeValue;
+        //         }
+        //
+        //         SendError(TypeErrorKind::InvalidUnaryOperator, Suffix,
+        //             { Operator::ToString(Suffix->Type), SuffixType->ToString() });
+        //         return nullptr;
+        //     }
+        //     default:
+        //         return nullptr;
+        // }
 
-        QualType SuffixType = SuffixValue->Type;
-        if (!SuffixType)
-            return nullptr;
-
-        switch (Suffix->Type)
-        {
-            case OperatorType::INC:
-            case OperatorType::DEC:
-            {
-                if (SuffixType->IsIntegerType())
-                {
-                    Suffix->CompileTimeValue = ExprResult::CreateEmpty(SuffixType, MainArena);
-                    return Suffix->CompileTimeValue;
-                }
-
-                SendError(TypeErrorKind::InvalidUnaryOperator, Suffix,
-                    { Operator::ToString(Suffix->Type), SuffixType->ToString() });
-                return nullptr;
-            }
-            default:
-                return nullptr;
-        }
+        llvm_unreachable("Unsupported operation suffix");
     }
 
-    ExprResult *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
+    SemaResult *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
-        ExprResult* PrefixValue = GetLValue(Prefix->Operand);
-        if (!PrefixValue)
-            return nullptr;
+        // ExprResult* PrefixValue = GetLValue(Prefix->Operand);
+        // if (!PrefixValue)
+        //     return nullptr;
+        //
+        // QualType PrefixType = PrefixValue->Type;
+        // if (!PrefixType)
+        //     return nullptr;
+        //
+        // TypeCategory Category = PrefixType->GetCategory();
+        //
+        // switch (Prefix->Type)
+        // {
+        //     case OperatorType::INC:
+        //     case OperatorType::DEC:
+        //     {
+        //         if (Category == TypeCategory::INTEGER || Category == TypeCategory::CHAR || Category == TypeCategory::FLOATING_POINT)
+        //         {
+        //             Prefix->CompileTimeValue = ExprResult::CreateEmpty(PrefixType,  MainArena);
+        //             return Prefix->CompileTimeValue;
+        //         }
+        //         SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
+        //             { Operator::ToString(Prefix->Type), PrefixType->ToString() });
+        //
+        //         return nullptr;
+        //     }
+        //     default:
+        //         return nullptr;
+        // }
 
-        QualType PrefixType = PrefixValue->Type;
-        if (!PrefixType)
-            return nullptr;
-
-        TypeCategory Category = PrefixType->GetCategory();
-
-        switch (Prefix->Type)
-        {
-            case OperatorType::INC:
-            case OperatorType::DEC:
-            {
-                if (Category == TypeCategory::INTEGER || Category == TypeCategory::CHAR || Category == TypeCategory::FLOATING_POINT)
-                {
-                    Prefix->CompileTimeValue = ExprResult::CreateEmpty(PrefixType,  MainArena);
-                    return Prefix->CompileTimeValue;
-                }
-                SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
-                    { Operator::ToString(Prefix->Type), PrefixType->ToString() });
-
-                return nullptr;
-            }
-            default:
-                return nullptr;
-        }
+        llvm_unreachable("Unsupported operation prefix");
     }
 
-    ExprResult *TypeChecker::VisitUnary(UnaryOpNode *Unary)
+    SemaResult *TypeChecker::VisitUnary(UnaryOpNode *Unary)
     {
-        ExprResult* Operand = VisitNode(Unary->Operand);
+        using enum OperatorType;
+
+        ExprResult* Operand = VisitToRValue(Unary->Operand);
         if (!Operand)
             return nullptr;
 
-        if (auto Value = ExprResult::ResolveUnary(Operand, Unary->Type, CContext))
+        if (Operand->IsEmpty())
         {
-            Unary->CompileTimeValue = Value;
-            return Value;
+            QualType OperandType = Operand->GetType();
+            if (auto Type = Operator::ResolveUnary(OperandType, Unary->Type))
+            {
+                Unary->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);;
+                return Unary->CompileTimeValue;
+            }
+
+            return nullptr;
         }
 
-        return nullptr;
+        switch (Unary->Type)
+        {
+            case ADD: break;
+            case SUB: Operand = Operand->CreateNeg(CContext); break;
+            case BIT_NOT: Operand = Operand->CreateBitNot(CContext); break;
+            case LOGICAL_NOT: Operand = Operand->CreateNot(CContext); break;
+            default: llvm_unreachable("Unknown unary operator");
+        }
+
+        Unary->CompileTimeValue = Operand;
+        return Operand;
     }
 
-    ExprResult *TypeChecker::VisitBinary(BinaryOpNode *Binary)
+    SemaResult *TypeChecker::VisitAssignment(AssignmentNode *Assignment)
     {
-        ExprResult* Left = nullptr;
-        if (Cast<AssignmentNode>(Binary))
-            Left = GetLValue(Binary->Left);
-        else
-            Left = VisitNode(Binary->Left);
+        SemaResult* Left = VisitNode(Assignment->Left);
+        if (!Left) return nullptr;
 
-        ExprResult* Right = VisitNode(Binary->Right);
+        auto LeftAddr = Cast<ExprAddress>(Left);
+        if (!LeftAddr)
+        {
+            SendError(TypeErrorKind::AssignNonLValue, Assignment->Left);
+            return nullptr;
+        }
 
+        ExprResult* Right = VisitToRValue(Assignment->Right);
+        if (!Right) return nullptr;
+
+        Right = Right->ImplicitCast(Left->GetType(), CContext);
+        if (!Right)
+        {
+            //SendError(TypeErrorKind::AssignmentTypeMismatch, Assignment->Right);
+            return nullptr;
+        }
+
+        Assignment->CompileTimeValue = LeftAddr->CreateAssignment(Right, Assignment->Type, CContext);
+        Assignment->LeftOperandType = Left->GetType().GetType();
+        Assignment->RightOperandType = Right->GetType().GetType();
+        return Assignment->CompileTimeValue;
+    }
+
+    SemaResult *TypeChecker::VisitBinary(BinaryOpNode *Binary)
+    {
+        using enum OperatorType;
+
+        ExprResult* Left = VisitToRValue(Binary->Left);
+        ExprResult* Right = VisitToRValue(Binary->Right);
         if (!Left || !Right)
             return nullptr;
 
-        Binary->CompileTimeValue = ExprResult::ResolveBinary(Left, Right, Binary->Type, CContext);
-        Binary->LeftOperandType = Left->Type.GetType();
-        Binary->RightOperandType = Right->Type.GetType();
-        return Binary->CompileTimeValue;
+        QualType LeftType = Left->GetType();
+        QualType RightType = Right->GetType();
+        QualType Type = Operator::ResolveBinary(LeftType, RightType, Binary->Type, CContext);
+
+        Left = Left->ImplicitCast(LeftType, CContext);
+        Right = Right->ImplicitCast(RightType, CContext);
+
+        if (!Left || !Right)
+        {
+            return nullptr;
+        }
+
+        Binary->LeftOperandType = Left->GetType().GetType();
+        Binary->RightOperandType = Right->GetType().GetType();
+
+        if (Left->IsEmpty() || Right->IsEmpty())
+        {
+            Binary->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);
+            return Binary->CompileTimeValue;
+        }
+
+        ExprResult* Result;
+
+        switch (Binary->Type)
+        {
+            case ADD: Result = Left->CreateAdd(Right, CContext); break;
+            case SUB: Result = Left->CreateSub(Right, CContext); break;
+            case MUL: Result = Left->CreateMul(Right, CContext); break;
+            case DIV: Result = Left->CreateDiv(Right, CContext); break;
+            case MOD: Result = Left->CreateMod(Right, CContext); break;
+            case BIT_AND: Result = Left->CreateBitAnd(Right, CContext); break;
+            case BIT_OR:  Result = Left->CreateBitOr(Right, CContext); break;
+            case BIT_XOR: Result = Left->CreateBitXor(Right, CContext); break;
+            case RSHIFT:  Result = Left->CreateBitRShift(Right, CContext); break;
+            case LSHIFT:  Result = Left->CreateBitLShift(Right, CContext); break;
+            default: llvm_unreachable("Unknown binary operator");
+        }
+
+        Binary->CompileTimeValue = Result;
+        return Result;
     }
 
-    ExprResult *TypeChecker::VisitCall(CallNode *Call)
+    SemaResult *TypeChecker::VisitCall(CallNode *Call)
     {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
@@ -356,11 +466,11 @@ namespace Volt
 
             for (auto Arg : Call->Arguments)
             {
-                ExprResult* ArgValue = VisitNode(Arg);
+                ExprResult* ArgValue = VisitToRValue(Arg);
                 if (!ArgValue)
                     return nullptr;
 
-                QualType ArgType = ArgValue->Type;
+                QualType ArgType = ArgValue->GetType();
                 if (!ArgType)
                     return nullptr;
 
@@ -400,29 +510,20 @@ namespace Volt
             return nullptr;
         }
 
-        if (auto Type = Cast<DataTypeNodeBase>(Call->Callee))
-        {
-            if (Call->Arguments.size() != 1)
-                return nullptr;
-
-            VisitNode(Call->Arguments[0]);
-            return ExprResult::CreateEmpty(VisitType(Type), MainArena);
-        }
-
         SendError(TypeErrorKind::InvalidCalleeType, Call->Callee);
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitSubscript(SubscriptNode *Subscript)
+    SemaResult *TypeChecker::VisitSubscript(SubscriptNode *Subscript)
     {
-        ExprResult* TargetValue = VisitNode(Subscript->Target);
-        ExprResult* IndexValue = VisitNode(Subscript->Index);
+        ExprResult* TargetValue = VisitToRValue(Subscript->Target);
+        ExprResult* IndexValue = VisitToRValue(Subscript->Index);
 
         if (!TargetValue || !IndexValue)
             return nullptr;
 
-        DataType* TargetType = TargetValue->Type.GetType();
-        DataType* IndexType = IndexValue->Type.GetType();
+        DataType* TargetType = TargetValue->GetType().GetType();
+        DataType* IndexType = IndexValue->GetType().GetType();
 
         DataType* Int32Type = CContext.GetIntegerType(32);
 
@@ -445,10 +546,10 @@ namespace Volt
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitExplicitCast(ExplicitCastNode *ECast)
+    SemaResult *TypeChecker::VisitExplicitCast(ExplicitCastNode *ECast)
     {
         QualType SrcType = VisitType(ECast->Type);
-        ExprResult* Target = VisitNode(ECast->Target);
+        ExprResult* Target = VisitToRValue(ECast->Target);
 
         if (!SrcType || !Target)
             return nullptr;
@@ -460,11 +561,11 @@ namespace Volt
         }
 
         SendError(TypeErrorKind::IncompatibleTypes, ECast->Line, ECast->Column,
-            { SrcType->ToString(), Target->Type->ToString() });
+            { SrcType->ToString(), Target->GetType()->ToString() });
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitVariable(VariableNode *Variable)
+    SemaResult *TypeChecker::VisitVariable(VariableNode *Variable)
     {
         QualType VarType = VisitType(Variable->Type);
 
@@ -473,11 +574,26 @@ namespace Volt
 
         if (auto RefType = VarType.CastAs<ReferenceType>())
         {
-            ExprResult* Value = GetLValue(Variable->Value);
+            // ExprResult* Value = GetLValue(Variable->Value);
+            //
+            // if (!Value || !RefType->CanBind(Value->GetType()))
+            // {
+            //     SendError(TypeErrorKind::InvalidBind, Variable);
+            //     return nullptr;
+            // }
+            //
+            // DeclareVariable(Variable->Name.str(), VarType);
+            // return nullptr;
 
-            if (!Value || !RefType->CanBind(Value->Type))
+            // llvm_unreachable("Unsupported reference binding");
+
+            SemaResult* Value = VisitNode(Variable->Value);
+            if (!Value) return nullptr;
+
+            auto ValueAddr = Cast<ExprAddress>(Value);
+            if (!ValueAddr)
             {
-                SendError(TypeErrorKind::InvalidBind, Variable);
+                // SendError
                 return nullptr;
             }
 
@@ -485,13 +601,13 @@ namespace Volt
             return nullptr;
         }
 
-        ExprResult* Value = VisitNode(Variable->Value);
+        ExprResult* Value = VisitToRValue(Variable->Value);
 
-        if (Value && !Value->Type.ImplicitCast(VarType))
+        if (Value && !Value->GetType().ImplicitCast(VarType))
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
                 Variable,{ Variable->Name.str(),
-                VarType->ToString(), Value->Type->ToString() });
+                VarType->ToString(), Value->GetType()->ToString() });
             return nullptr;
         }
 
@@ -499,7 +615,7 @@ namespace Volt
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitFunction(FunctionNode *Function)
+    SemaResult *TypeChecker::VisitFunction(FunctionNode *Function)
     {
         SmallVec8<QualType> Params;
         Params.reserve(Function->Params.size());
@@ -507,7 +623,7 @@ namespace Volt
         for (const auto& Param : Function->Params)
         {
             QualType ParamType = VisitType(Param->Type);
-            Params.push_back(ParamType); // <-
+            Params.push_back(ParamType);
             FunctionParams.emplace_back(Param->Name.str(), ParamType);
         }
 
@@ -525,13 +641,13 @@ namespace Volt
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitIf(IfNode *If)
+    SemaResult *TypeChecker::VisitIf(IfNode *If)
     {
-        ExprResult* Cond = VisitNode(If->Condition);
+        ExprResult* Cond = VisitToRValue(If->Condition);
         if (!Cond)
             return nullptr;
 
-        DataType* CondType = Cond->Type.GetType();
+        DataType* CondType = Cond->GetType().GetType();
         if (!CondType)
             return nullptr;
 
@@ -549,13 +665,13 @@ namespace Volt
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitWhile(WhileNode *While)
+    SemaResult *TypeChecker::VisitWhile(WhileNode *While)
     {
-        ExprResult* Cond = VisitNode(While->Condition);
+        ExprResult* Cond = VisitToRValue(While->Condition);
         if (!Cond)
             return nullptr;
 
-        DataType* CondType = Cond->Type.GetType();
+        DataType* CondType = Cond->GetType().GetType();
         if (!CondType)
             return nullptr;
 
@@ -569,15 +685,15 @@ namespace Volt
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitFor(ForNode *For)
+    SemaResult *TypeChecker::VisitFor(ForNode *For)
     {
         VisitNode(For->Initialization);
 
-        ExprResult* Cond = VisitNode(For->Condition);
+        ExprResult* Cond = VisitToRValue(For->Condition);
         if (!Cond)
             return nullptr;
 
-        DataType* CondType = Cond->Type.GetType();
+        DataType* CondType = Cond->GetType().GetType();
         if (!CondType)
             return nullptr;
 
@@ -592,7 +708,7 @@ namespace Volt
         return nullptr;
     }
 
-    ExprResult *TypeChecker::VisitReturn(ReturnNode *Return)
+    SemaResult *TypeChecker::VisitReturn(ReturnNode *Return)
     {
         if (Return->ReturnValue)
         {
@@ -602,7 +718,7 @@ namespace Volt
                 return nullptr;
             }
 
-            QualType ReturnType = VisitNode(Return->ReturnValue)->Type;
+            QualType ReturnType = VisitNode(Return->ReturnValue)->GetType();
             if (!ReturnType.ImplicitCast(FunctionReturnType))
                 SendError(TypeErrorKind::ReturnTypeMismatch, Return->ReturnValue);
 
@@ -634,10 +750,10 @@ namespace Volt
         }
         if (auto Array = Cast<ArrayTypeNode>(Type))
         {
-            ExprResult* Length = VisitNode(Array->Length);
-            if (Length && Length->Type->IsIntegerType())
+            ExprResult* Length = VisitToRValue(Array->Length);
+            if (Length && Length->GetType()->IsIntegerType())
             {
-                Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->Int);
+                Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->GetInt());
                 return { Array->ResolvedType, 0 };
             }
 
@@ -654,36 +770,15 @@ namespace Volt
         return {};
     }
 
-    ExprResult *TypeChecker::GetLValue(ASTNode *Node, bool IgnoreConstants)
+    ExprResult* TypeChecker::GetRValue(SemaResult *Value)
     {
-        ExprResult* Value = nullptr;
+        if (auto Res = Cast<ExprResult>(Value))
+            return Res;
 
-        if (auto Identifier = Cast<IdentifierNode>(Node))
-            Value = VisitIdentifier(Identifier);
-        else if (auto Subscript = Cast<SubscriptNode>(Node))
-            Value = VisitSubscript(Subscript);
-        else if (auto Unref = Cast<UnrefNode>(Node))
-            Value = VisitUnref(Unref);
-        else
-        {
-            SendError(TypeErrorKind::AssignNonLValue, Node->Line, Node->Column);
-            return nullptr;
-        }
+        if (auto Addr = Cast<ExprAddress>(Value))
+            return Addr->GetValue();
 
-        if (!Value)
-            return nullptr;
-
-        if (!IgnoreConstants)
-        {
-            QualType Type = GetNotReferenceType(Value->Type);
-            if (Type.HasQualifier(QualType::CONST))
-            {
-                SendError(TypeErrorKind::AssignReadOnlyType, Node->Line, Node->Column);
-                return nullptr;
-            }
-        }
-
-        return Value;
+        llvm_unreachable("Invalid SemaResult");
     }
 
     QualType TypeChecker::GetNotReferenceType(QualType Type)
@@ -732,15 +827,16 @@ namespace Volt
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
 
-        Variables[Name] = ExprResult::CreateEmpty(Type,  MainArena);
+        // Variables[Name] = ExprResult::CreateEmpty(Type,  MainArena);
+        Variables[Name] = MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(Type, MainArena));
         ScopeStack.Back().Add({ Name, nullptr });
     }
 
-    QualType TypeChecker::GetVariable(const std::string &Name)
+    ExprAddress* TypeChecker::GetVariable(const std::string &Name)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            return Iter->second->Type;
+            return Iter->second;
 
-        return { };
+        return nullptr;
     }
 }

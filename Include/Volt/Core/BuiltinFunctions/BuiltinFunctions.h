@@ -37,7 +37,7 @@ extern "C"
 		std::cout << Num << std::endl;
 	}
 
-	inline void OutStr(char* Str)
+	inline void OutStr(const char* Str)
 	{
 		std::cout << Str << std::endl;
 	}

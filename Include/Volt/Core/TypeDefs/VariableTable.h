@@ -6,10 +6,11 @@
 #define CVOLT_VARIABLETABLE_H
 
 #include "Volt/Core/Value/IRValue.h"
+#include "Volt/Core/TypeChecker/ExprAddress.h"
 
 namespace Volt
 {
-	using CTimeVariableTable = std::unordered_map<std::string, ExprResult*>;
+	using CTimeVariableTable = std::unordered_map<std::string, ExprAddress*>;
 	using VariableTable = std::unordered_map<std::string, IRValue*>;
 }
 

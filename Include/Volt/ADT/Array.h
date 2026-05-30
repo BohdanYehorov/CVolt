@@ -153,7 +153,7 @@ namespace Volt
 		if (this != &Other)
 		{
 			if (Data)
-				Deallocate(Data);
+				Deallocate();
 
 			Data = Other.Data;
 			Cap = Other.Cap;

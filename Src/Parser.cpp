@@ -30,30 +30,30 @@ namespace Volt
         Os << Node->GetName() <<
             " [" << Node->Pos << ":" << Node->Line << ":" << Node->Column << "] ";
 
-        if (Node->CompileTimeValue && !Node->CompileTimeValue->IsEmpty)
-        {
-            Os << "CompileTimeValue: ";
-
-            ExprResult* Value = Node->CompileTimeValue;
-
-            switch (Value->Type->GetCategory())
-            {
-                case TypeCategory::INTEGER:
-                    Os << Value->Int;
-                    break;
-                case TypeCategory::FLOATING_POINT:
-                    Os << Value->Float;
-                    break;
-                case TypeCategory::BOOLEAN:
-                    Os << Value->Bool;
-                    break;
-                default:
-                    Os << "Null";
-                    break;
-            }
-
-            Os << " ";
-        }
+        // if (Node->CompileTimeValue && !Node->CompileTimeValue->IsEmpty())
+        // {
+        //     Os << "CompileTimeValue: ";
+        //
+        //     ExprResult* Value = Node->CompileTimeValue;
+        //
+        //     switch (Value->GetType()->GetCategory())
+        //     {
+        //         case TypeCategory::INTEGER:
+        //             Os << Value->GetInt();
+        //             break;
+        //         case TypeCategory::FLOATING_POINT:
+        //             Os << Value->GetFloat();
+        //             break;
+        //         case TypeCategory::BOOLEAN:
+        //             Os << Value->GetBool();
+        //             break;
+        //         default:
+        //             Os << "Null";
+        //             break;
+        //     }
+        //
+        //     Os << " ";
+        // }
         if (auto Sequence = Cast<SequenceNode>(Node))
         {
             Os << std::endl;

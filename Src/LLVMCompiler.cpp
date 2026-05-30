@@ -14,28 +14,39 @@ namespace Volt
         CompileNode(ASTTree);
     }
 
-    IRValue *LLVMCompiler::CompileNode(const ASTNode *Node)
+    IRValue *LLVMCompiler::GetCompileTimeValue(const ASTNode *Node)
     {
-        if (Node->CompileTimeValue && !Node->CompileTimeValue->IsEmpty)
+        if (!Node) return nullptr;
+
+        if (auto Value = Cast<ExprResult>(Node->CompileTimeValue))
         {
-            ExprResult* Value = Node->CompileTimeValue;
-            DataType* Type = Value->Type.GetType();
+            if (Value->IsEmpty()) return nullptr;
+
+            DataType* Type = Value->GetType().GetType();
 
             switch (Type->GetCategory())
             {
                 case TypeCategory::INTEGER:
                     return Create<IRValue>(llvm::ConstantInt::get(
-                    CContext.GetLLVMType(Value->Type.GetType()), Value->Int), Value->Type.GetType());
+                    CContext.GetLLVMType(Value->GetType().GetType()), Value->GetInt()), Value->GetType().GetType());
                 case TypeCategory::FLOATING_POINT:
                     return Create<IRValue>(llvm::ConstantFP::get(
-                        CContext.GetLLVMType(Value->Type.GetType()), Value->Float), Value->Type.GetType());
+                        CContext.GetLLVMType(Value->GetType().GetType()), Value->GetFloat()), Value->GetType().GetType());
                 case TypeCategory::BOOLEAN:
                     return Create<IRValue>(llvm::ConstantInt::get(
-                        llvm::Type::getInt1Ty(Context), Value->Bool), Value->Type.GetType());
+                        llvm::Type::getInt1Ty(Context), Value->GetBool()), Value->GetType().GetType());
                 default:
-                    ERROR(std::format("Invalid compile time value type: {}", Value->Type->ToString()));
+                    return nullptr;
             }
         }
+
+        return nullptr;
+    }
+
+    IRValue *LLVMCompiler::CompileNode(const ASTNode *Node)
+    {
+        if (IRValue* CompileTimeValue = GetCompileTimeValue(Node))
+            return CompileTimeValue;
 
         if (auto Sequence = Cast<const SequenceNode>(Node))
         {
@@ -152,15 +163,15 @@ namespace Volt
     IRValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
         return Create<IRValue>(llvm::ConstantInt::get(
-            CContext.GetLLVMType(Int->CompileTimeValue->Type.GetType()), Int->Value),
-            Int->CompileTimeValue->Type.GetType());
+            CContext.GetLLVMType(Int->CompileTimeValue->GetType().GetType()), Int->Value),
+            Int->CompileTimeValue->GetType().GetType());
     }
 
     IRValue *LLVMCompiler::CompileFloat(const FloatingPointNode *Float)
     {
         return Create<IRValue>(llvm::ConstantFP::get(
-            CContext.GetLLVMType(Float->CompileTimeValue->Type.GetType()), Float->Value),
-            Float->CompileTimeValue->Type.GetType());
+            CContext.GetLLVMType(Float->CompileTimeValue->GetType().GetType()), Float->Value),
+            Float->CompileTimeValue->GetType().GetType());
     }
 
     IRValue *LLVMCompiler::CompileBool(const BoolNode *Bool)
@@ -189,7 +200,7 @@ namespace Volt
 
         llvm::Type* ArrType = nullptr;
 
-        if (auto Type = Cast<ArrayType>(Array->CompileTimeValue->Type.GetType()))
+        if (auto Type = Cast<ArrayType>(Array->CompileTimeValue->GetType().GetType()))
             ArrType = llvm::ArrayType::get(
                 CContext.GetLLVMType(Type->BaseType.GetType()), Array->Elements.size());
 
@@ -211,7 +222,7 @@ namespace Volt
             Builder.CreateStore(El->GetValue(), ElPtr);
         }
 
-        return Create<IRValue>(Arr, Array->CompileTimeValue->Type.GetType());
+        return Create<IRValue>(Arr, Array->CompileTimeValue->GetType().GetType());
     }
 
     IRValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
@@ -236,10 +247,10 @@ namespace Volt
     IRValue *LLVMCompiler::CompileUnref(const UnrefNode *Unref)
     {
         IRValue *Value = CompileNode(Unref->Target);
-        if (!Value)
-            return nullptr;
+        if (!Value) return nullptr;
 
-        return Create<IRValue>(Value->GetValue(), Unref->CompileTimeValue->Type.GetType(), true);
+        llvm::Value* LoadValue = Builder.CreateLoad(Value->GetValue()->getType(), Value->GetValue());
+        return Create<IRValue>(LoadValue, Unref->CompileTimeValue->GetType().GetType(), true);
     }
 
     IRValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
@@ -349,7 +360,7 @@ namespace Volt
                 Builder.SetInsertPoint(OrEndBlock);
 
                 return Create<IRValue>(Builder.CreateLoad(
-                    Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->Type.GetType());
+                    Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->GetType().GetType());
             }
             case OperatorType::LOGICAL_AND:
             {
@@ -372,7 +383,7 @@ namespace Volt
                 Builder.SetInsertPoint(AndEndBlock);
 
                 return Create<IRValue>(Builder.CreateLoad(
-                    Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->Type.GetType());
+                    Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->GetType().GetType());
             }
             default:
                 llvm_unreachable("Unknown logical operator");
@@ -526,7 +537,7 @@ namespace Volt
 
     IRValue* LLVMCompiler::CompileExplicitCast(const ExplicitCastNode *ExplicitCast)
     {
-        DataType* DstType = ExplicitCast->CompileTimeValue->Type.GetType();
+        DataType* DstType = ExplicitCast->CompileTimeValue->GetType().GetType();
         IRValue* Target = CompileToRValue(ExplicitCast->Target);
         if (!Target) return nullptr;
 

@@ -69,7 +69,7 @@ namespace Volt::TypeConv
 		if constexpr (std::is_const_v<T>)
 		{
 			using BaseType = std::remove_const_t<T>;
-			return { GetDataType<BaseType>(CContext), QualType::CONST };
+			return { GetDataType<BaseType>(CContext).GetType(), QualType::CONST };
 		}
 
 		if constexpr (std::is_pointer_v<T>)
