@@ -5,47 +5,43 @@
 #ifndef CVOLT_ARENA_H
 #define CVOLT_ARENA_H
 
-#include "Volt/Core/Object/Object.h"
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include "Volt/Core/Memory/BufferView.h"
 #include "Volt/ADT/Array.h"
-#include <vector>
 #include <stdexcept>
-#include <iostream>
-#include <memory>
 
 namespace Volt
 {
-    class Arena
-    {
-    private:
-        Array<Object*> Objects;
-
-    public:
-        template <typename T, typename ...Args_>
-        [[nodiscard]] T* Create(Args_&&... Args);
-        [[nodiscard]] size_t Size() const { return Objects.Length(); }
-
-        Arena() = default;
-        Arena(const Arena&) = delete;
-        Arena(Arena&&) = delete;
-        Arena& operator=(const Arena&) = delete;
-        Arena& operator=(Arena&&) = delete;
-
-        ~Arena()
-        {
-            for (Object* Obj : Objects)
-                delete Obj;
-        }
-    };
-
-    template<typename T, typename ... Args_>
-    T* Arena::Create(Args_ &&...Args)
-    {
-        T* Obj = new T(std::forward<Args_>(Args)...);
-        Objects.Add(Obj);
-        return Obj;
-    }
+    // class Arena
+    // {
+    // private:
+    //     Array<Object*> Objects;
+    //
+    // public:
+    //     template <typename T, typename ...Args_>
+    //     [[nodiscard]] T* Create(Args_&&... Args);
+    //     [[nodiscard]] size_t Size() const { return Objects.Length(); }
+    //
+    //     Arena() = default;
+    //     Arena(const Arena&) = delete;
+    //     Arena(Arena&&) = delete;
+    //     Arena& operator=(const Arena&) = delete;
+    //     Arena& operator=(Arena&&) = delete;
+    //
+    //     ~Arena()
+    //     {
+    //         for (Object* Obj : Objects)
+    //             delete Obj;
+    //     }
+    // };
+    //
+    // template<typename T, typename ... Args_>
+    // T* Arena::Create(Args_ &&...Args)
+    // {
+    //     T* Obj = new T(std::forward<Args_>(Args)...);
+    //     Objects.Add(Obj);
+    //     return Obj;
+    // }
 
     class ArenaAllocator
     {
@@ -55,9 +51,6 @@ namespace Volt
         std::byte* Data = nullptr;
 
     public:
-        bool AutoReallocate = false;
-
-    public:
         [[nodiscard]] size_t GetSize() const { return Size; }
         [[nodiscard]] size_t GetUsedSize() const { return UsedSize; }
         [[nodiscard]] void* GetData() const { return Data; }
@@ -65,11 +58,10 @@ namespace Volt
         ~ArenaAllocator() { Deallocate(); }
 
         void Allocate(size_t InSize);
-        void Reallocate(size_t NewSize);
         void Deallocate();
 
         template <typename T, typename ...Args_>
-        T* Construct(PtrT Ptr, Args_... Args);
+        T* Construct(PtrT Ptr, Args_&&... Args);
 
         void* Write(PtrT Ptr, const void* InData, size_t InSize, size_t Align = 1);
 
@@ -93,7 +85,6 @@ namespace Volt
     private:
         static size_t CalculatePadding(size_t Align, size_t Pos);
         static size_t CalculateCapacity(size_t InSize) { return static_cast<size_t>(static_cast<float>(InSize) * 1.5f); }
-        void ReallocateOrThrow(size_t NewSize);
 
         friend class ArenaStream;
     };
@@ -106,6 +97,9 @@ namespace Volt
         mutable PtrT ReadPtr = 0;
 
     public:
+        ArenaStream() = default;
+        ArenaStream(size_t Size) { Alloc.Allocate(Size); }
+
         [[nodiscard]] size_t GetSize() const { return Alloc.GetSize(); }
         [[nodiscard]] size_t GetUsedSize() const { return Alloc.GetUsedSize(); }
         [[nodiscard]] void* GetData() const { return Alloc.GetData(); }
@@ -114,18 +108,19 @@ namespace Volt
         [[nodiscard]] ArenaAllocator& GetArenaAllocator() { return Alloc; }
         [[nodiscard]] const ArenaAllocator& GetArenaAllocator() const { return Alloc; }
 
+        template <typename T>
+        [[nodiscard]] bool CanWrite() const;
+
         ~ArenaStream() { Deallocate(); }
 
         void Allocate(size_t InSize) { Alloc.Allocate(InSize); }
-        void Reallocate(size_t NewSize);
         void Deallocate();
 
-        void SetAutoReallocate(bool AutoReallocate) { Alloc.AutoReallocate = AutoReallocate; }
         void SetWritePtr(PtrT NewWritePtr) { WritePtr = NewWritePtr; }
         void SetReadPtr(PtrT NewReadPtr) const { ReadPtr = NewReadPtr; }
 
         template <typename T, typename ...Args_>
-        T* Construct(Args_... Args);
+        T* Construct(Args_&&... Args);
 
         void* Write(const void* InData, size_t InSize, size_t Align = 1);
 
@@ -143,15 +138,27 @@ namespace Volt
         [[nodiscard]] BufferStringView Read(StringRef Ref) const { return Alloc.Read(Ref.Ptr, Ref.Length); }
     };
 
+    class Arena
+    {
+    private:
+        size_t BlockSize = 64 * 1024;
+        Array<ArenaStream> Blocks;
+
+    public:
+        Arena() = default;
+        Arena(size_t BlockSize) : BlockSize(BlockSize) {}
+
+        template <typename T, typename ...Args_>
+        T* Create(Args_&&... Args);
+    };
+
     template<typename T, typename ... Args_>
-    T* ArenaAllocator::Construct(PtrT Ptr, Args_... Args)
+    T* ArenaAllocator::Construct(PtrT Ptr, Args_&&... Args)
     {
         size_t Padding = CalculatePadding(alignof(T), Ptr);
 
         if (Padding != 0)
             throw std::runtime_error("Ref Is Not Aligned");
-
-        ReallocateOrThrow(Ptr + sizeof(T));
 
         UsedSize = std::max(UsedSize, Ptr + sizeof(T));
         return new (Data + Ptr) T(std::forward<Args_>(Args)...);
@@ -186,11 +193,17 @@ namespace Volt
         return BufferArrayView<T>(Data + Ptr, Count);
     }
 
+    template<typename T>
+    bool ArenaStream::CanWrite() const
+    {
+        return sizeof(T) + WritePtr + ArenaAllocator::CalculatePadding(alignof(T), WritePtr) <= GetSize();
+    }
+
     template<typename T, typename ... Args_>
-    T* ArenaStream::Construct(Args_... Args)
+    T* ArenaStream::Construct(Args_&&... Args)
     {
         WritePtr += ArenaAllocator::CalculatePadding(alignof(T), WritePtr);
-        T* Ptr = Alloc.Construct<T, Args_...>(WritePtr, Args...);
+        T* Ptr = Alloc.Construct<T, Args_...>(WritePtr, std::forward<Args_>(Args)...);
         WritePtr += sizeof(T);
         return Ptr;
     }
@@ -220,6 +233,17 @@ namespace Volt
         BufferArrayView<T> Ptr = Alloc.Read<T>(ReadPtr, Count);
         ReadPtr += sizeof(T) * Count;
         return Ptr;
+    }
+
+    template<typename T, typename ... Args_>
+    T* Arena::Create(Args_&&... Args)
+    {
+        assert(sizeof(T) <= BlockSize);
+
+        if (Blocks.Empty() || !Blocks.Back().CanWrite<T>())
+            Blocks.Emplace(BlockSize);
+
+        return Blocks.Back().Construct<T>(std::forward<Args_>(Args)...);
     }
 }
 

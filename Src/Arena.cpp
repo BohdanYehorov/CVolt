@@ -14,21 +14,6 @@ namespace Volt
         Data = static_cast<std::byte*>(::operator new(InSize));
     }
 
-    void ArenaAllocator::Reallocate(size_t NewSize)
-    {
-        size_t MinSize = std::min(UsedSize, NewSize);
-        auto NewData = static_cast<std::byte*>(::operator new(NewSize));
-        if (Size > 0)
-        {
-            std::memcpy(NewData, Data, MinSize);
-            ::operator delete(Data);
-        }
-
-        Data = NewData;
-        Size = NewSize;
-        UsedSize = MinSize;
-    }
-
     void ArenaAllocator::Deallocate()
     {
         if (!Data) return;
@@ -43,8 +28,6 @@ namespace Volt
         if (Padding != 0)
             throw std::runtime_error("Ref is not aligned");
 
-        ReallocateOrThrow(Ptr + InSize);
-
         std::memcpy(Data + Ptr, InData, InSize);
 
         UsedSize = std::max(UsedSize, Ptr + InSize);
@@ -54,26 +37,6 @@ namespace Volt
     size_t ArenaAllocator::CalculatePadding(size_t Align, size_t Pos)
     {
         return (Align - (Pos % Align)) % Align;
-    }
-
-    void ArenaAllocator::ReallocateOrThrow(size_t NewSize)
-    {
-        if (NewSize > Size)
-        {
-            if (!AutoReallocate)
-                throw std::runtime_error("Cannot Write Data");
-
-            Reallocate(CalculateCapacity(NewSize));
-        }
-    }
-
-    void ArenaStream::Reallocate(size_t NewSize)
-    {
-        Alloc.Reallocate(NewSize);
-        if (WritePtr > NewSize)
-            WritePtr = NewSize;
-        if (ReadPtr > NewSize)
-            ReadPtr = NewSize;
     }
 
     void ArenaStream::Deallocate()
