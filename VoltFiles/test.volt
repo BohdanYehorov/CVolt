@@ -1,19 +1,11 @@
 fun:int Main()
 {
-    let:int a = 5;
-    a = 8;
-    Out(a);
-    a += 10;
-    Out(a);
-    a -= 2;
-    Out(a);
-    a *= 10;
-    Out(a);
-    a /= 5;
-    Out(a);
-    a |= 2;
-    Out(a);
-    a &= 1 << 1;
-    Out(a);
+    let:int[1 + 2] Arr = [1, 2, 3];
+    Arr[2] = 5;
+
+    Out(Arr[0]);
+    Out(Arr[1]);
+    Out(Arr[2]);
+
     return 0;
 }

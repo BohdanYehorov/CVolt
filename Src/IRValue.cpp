@@ -332,6 +332,26 @@ namespace Volt
 				NewValue = NewValue->CreateMod(Right, Builder, CContext);
 				break;
 
+			case AND_ASSIGN:
+				NewValue = NewValue->CreateBitAnd(Right, Builder, CContext);
+				break;
+
+			case OR_ASSIGN:
+				NewValue = NewValue->CreateBitOr(Right, Builder, CContext);
+				break;
+
+			case XOR_ASSIGN:
+				NewValue = NewValue->CreateBitXor(Right, Builder, CContext);
+				break;
+
+			case RSHIFT_ASSIGN:
+				NewValue = NewValue->CreateRShift(Right, Builder, CContext);
+				break;
+
+			case LSHIFT_ASSIGN:
+				NewValue = NewValue->CreateLShift(Right, Builder, CContext);
+				break;
+
 			default:
 				llvm_unreachable("Unknown assignment operator");
 		}
@@ -340,7 +360,7 @@ namespace Volt
 		return NewValue;
 	}
 
-	inline llvm::Value* IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
+	llvm::Value* IRValue::CastBooleanTo(DataType *To, llvm::IRBuilder<>& Builder, CompilationContext& CContext)
 	{
 		if (Type == To)
 			return Value;

@@ -316,8 +316,9 @@ namespace Volt
 
 	DataType *ArrayType::CastTo(DataType *To, bool Explicit) const
 	{
-		if (this == To)
-			return To;
+		if (auto ArrType = Cast<ArrayType>(To))
+			if (ArrType->BaseType.GetType() == BaseType.GetType())
+				return To;
 
 		return nullptr;
 	}

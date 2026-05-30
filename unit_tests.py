@@ -39,6 +39,12 @@ def compare(res, exp):
 
 	return diffs
 
+def print_output(res):
+	if res.stdout:
+		print(res.stdout)
+	if res.stderr:
+		print(res.stderr)
+
 tests_path = Path("Tests")
 
 for test in tests_path.rglob("*.volt"):
@@ -50,9 +56,11 @@ for test in tests_path.rglob("*.volt"):
 	        timeout=5)
 	except subprocess.TimeoutExpired:
 		print("[TIME_OUT]", test)
+		print(res.stderr)
 
 	if res.returncode != 0:
 		print("[CRASH]", res.returncode)
+		print_output(res)
 		continue
 
 	exp = test.with_suffix(".exp")
@@ -66,8 +74,10 @@ for test in tests_path.rglob("*.volt"):
 
 	if len(res_toks) != len(exp_toks):
 		print("[FAIL]", test)
-		print("Expected:", exp_toks)
-		print("\nGot:", res_toks)
+		print("Expected:\t", exp_toks)
+		print("Got:\t\t", res_toks)
+
+		print_output(res)
 		continue
 
 	diffs = compare(res_toks, exp_toks)
@@ -82,3 +92,5 @@ for test in tests_path.rglob("*.volt"):
 			continue
 
 		print(i + 1, res_toks[i], exp_toks[i])
+
+	print(res.stderr)

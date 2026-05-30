@@ -41,6 +41,7 @@ namespace Volt
         PointerType** PointerVariants = nullptr;
         ReferenceType** ReferenceVariants = nullptr;
         ArrayType** ArrayVariants = nullptr;
+        // std::unordered_map<size_t, ArrayType*> ArrayVariants;
 
     protected:
         TypeCategory Category;
