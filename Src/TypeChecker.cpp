@@ -221,18 +221,6 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitRef(RefNode *Ref)
     {
-        // ExprResult* RefValue = GetLValue(Ref->Target, true);
-        // if (!RefValue)
-        //     return nullptr;
-        //
-        // QualType RefType = RefValue->GetType();
-        // if (!RefType)
-        //     return nullptr;
-        //
-        // Ref->CompileTimeValue = ExprResult::CreateEmpty(
-        //     QualType(CContext.GetPointerType(RefType), 0), MainArena);
-        // return Ref->CompileTimeValue;
-
         SemaResult* RefValue = VisitNode(Ref->Target);
         if (!RefValue) return nullptr;
 
@@ -279,34 +267,30 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
-        // ExprResult* SuffixValue = VisitNode(Suffix->Operand);
-        // if (!SuffixValue)
-        //     return nullptr;
-        //
-        // QualType SuffixType = SuffixValue->Type;
-        // if (!SuffixType)
-        //     return nullptr;
-        //
-        // switch (Suffix->Type)
-        // {
-        //     case OperatorType::INC:
-        //     case OperatorType::DEC:
-        //     {
-        //         if (SuffixType->IsIntegerType())
-        //         {
-        //             Suffix->CompileTimeValue = ExprResult::CreateEmpty(SuffixType, MainArena);
-        //             return Suffix->CompileTimeValue;
-        //         }
-        //
-        //         SendError(TypeErrorKind::InvalidUnaryOperator, Suffix,
-        //             { Operator::ToString(Suffix->Type), SuffixType->ToString() });
-        //         return nullptr;
-        //     }
-        //     default:
-        //         return nullptr;
-        // }
+        SemaResult* Operand = VisitNode(Suffix->Operand);
+        if (!Operand) return nullptr;
 
-        llvm_unreachable("Unsupported operation suffix");
+        auto OperandAddr = Cast<ExprAddress>(Operand);
+        if (!OperandAddr)
+        {
+            // Send Error
+            return nullptr;
+        }
+
+        ExprResult* Temp = OperandAddr->GetValue();
+
+        OperatorType AssignmentType;
+        switch (Suffix->Type)
+        {
+            case OperatorType::INC: AssignmentType = OperatorType::ADD_ASSIGN; break;
+            case OperatorType::DEC: AssignmentType = OperatorType::SUB_ASSIGN; break;
+            default: llvm_unreachable("Unknown suffix operator");
+        }
+
+        OperandAddr->CreateAssignment(ExprResult::CreateFromType(
+                Operand->GetType(), 1, MainArena), AssignmentType, CContext);
+
+        return Temp;
     }
 
     SemaResult *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
@@ -340,7 +324,28 @@ namespace Volt
         //         return nullptr;
         // }
 
-        llvm_unreachable("Unsupported operation prefix");
+        SemaResult* Operand = VisitNode(Prefix->Operand);
+        if (!Operand) return nullptr;
+
+        auto OperandAddr = Cast<ExprAddress>(Operand);
+        if (!OperandAddr)
+        {
+            // Send Error
+            return nullptr;
+        }
+
+        OperatorType AssignmentType;
+        switch (Prefix->Type)
+        {
+            case OperatorType::INC: AssignmentType = OperatorType::ADD_ASSIGN; break;
+            case OperatorType::DEC: AssignmentType = OperatorType::SUB_ASSIGN; break;
+            default: llvm_unreachable("Unknown suffix operator");
+        }
+
+        OperandAddr->CreateAssignment(ExprResult::CreateFromType(
+                Operand->GetType(), 1, MainArena), AssignmentType, CContext);
+
+        return OperandAddr;
     }
 
     SemaResult *TypeChecker::VisitUnary(UnaryOpNode *Unary)
@@ -574,19 +579,6 @@ namespace Volt
 
         if (auto RefType = VarType.CastAs<ReferenceType>())
         {
-            // ExprResult* Value = GetLValue(Variable->Value);
-            //
-            // if (!Value || !RefType->CanBind(Value->GetType()))
-            // {
-            //     SendError(TypeErrorKind::InvalidBind, Variable);
-            //     return nullptr;
-            // }
-            //
-            // DeclareVariable(Variable->Name.str(), VarType);
-            // return nullptr;
-
-            // llvm_unreachable("Unsupported reference binding");
-
             SemaResult* Value = VisitNode(Variable->Value);
             if (!Value) return nullptr;
 
@@ -827,7 +819,6 @@ namespace Volt
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
 
-        // Variables[Name] = ExprResult::CreateEmpty(Type,  MainArena);
         Variables[Name] = MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(Type, MainArena));
         ScopeStack.Back().Add({ Name, nullptr });
     }

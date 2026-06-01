@@ -33,15 +33,6 @@ namespace Volt
 		static ExprResult* CreateFromType(QualType Type, T Value, Arena& TypesArena);
 
 	private:
-		// union
-		// {
-		// 	Int64 Int;
-		// 	double Float;
-		// 	bool Bool;
-		// 	char Char;
-		// 	ExprAddress* Pointer;
-		// };
-
 		AlignedStorage<Int64, double, ExprAddress*> Storage;
 		bool bIsEmpty = true;
 
@@ -109,10 +100,6 @@ namespace Volt
 		ExprResult* CreateNeg(CompilationContext& CContext) const;
 		ExprResult* CreateBitNot(CompilationContext& CContext) const;
 		ExprResult* CreateNot(CompilationContext& CContext);
-
-		// static ExprResult* ResolveBinary(ExprResult*& Left, ExprResult*& Right, OperatorType Op,
-		// 	CompilationContext& CContext);
-		// static ExprResult* ResolveUnary(ExprResult*& Operand, OperatorType Op, CompilationContext& CContext);
 
 	private:
 		ExprResult* CastBooleanTo(QualType To, bool Explicit, CompilationContext& CContext);
