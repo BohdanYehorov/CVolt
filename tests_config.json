@@ -1,0 +1,4 @@
+{
+	"tests_path": "./Tests",
+	"path_to_binary": "./cmake-build-release/CVolt"
+}
