@@ -5,13 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(LLVM REQUIRED CONFIG)
 
-include_directories(
-        ${LLVM_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/Include
-)
-
-add_definitions(${LLVM_DEFINITIONS})
-
 set(SOURCES
         Src/Lexer.cpp
         Src/Arena.cpp
@@ -39,6 +32,13 @@ if (COMPILE_TO_LIB)
 else ()
     add_executable(CVolt Src/main.cpp ${SOURCES})
 endif ()
+
+target_include_directories(CVolt PRIVATE
+        ${LLVM_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/Include
+)
+
+target_compile_definitions(CVolt PRIVATE ${LLVM_DEFINITIONS})
 
 target_precompile_headers(CVolt PRIVATE
         <llvm/IR/IRBuilder.h>
