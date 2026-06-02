@@ -138,7 +138,7 @@ namespace Volt
 		if (ArrayType* Type = ArrayTypes.FindNodeOrInsertPos(ID, InsertPos))
 			return Type;
 
-		auto Type = MainArena.Create<ArrayType>(BaseType);
+		auto Type = MainArena.Create<ArrayType>(BaseType, Length);
 		ArrayTypes.InsertNode(Type, InsertPos);
 		return Type;
 	}

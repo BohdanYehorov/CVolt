@@ -252,7 +252,7 @@ namespace Volt
 	{
 		if (NewLen == Len) return;
 
-		if (NewLen > Cap)
+		if (NewLen >= Cap)
 			Reserve(CalculateCapacity(NewLen + 1));
 
 		Len = NewLen;

@@ -103,9 +103,6 @@ namespace Volt
         void EnterScope();
         void ExitScope();
 
-        // IRValue *ImplicitCast(IRValue *Value, DataType* Target);
-        // static bool CanImplicitCast(DataType* Src, DataType* Dst);
-
         static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);
 
         void FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca);

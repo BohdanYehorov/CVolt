@@ -295,35 +295,6 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
-        // ExprResult* PrefixValue = GetLValue(Prefix->Operand);
-        // if (!PrefixValue)
-        //     return nullptr;
-        //
-        // QualType PrefixType = PrefixValue->Type;
-        // if (!PrefixType)
-        //     return nullptr;
-        //
-        // TypeCategory Category = PrefixType->GetCategory();
-        //
-        // switch (Prefix->Type)
-        // {
-        //     case OperatorType::INC:
-        //     case OperatorType::DEC:
-        //     {
-        //         if (Category == TypeCategory::INTEGER || Category == TypeCategory::CHAR || Category == TypeCategory::FLOATING_POINT)
-        //         {
-        //             Prefix->CompileTimeValue = ExprResult::CreateEmpty(PrefixType,  MainArena);
-        //             return Prefix->CompileTimeValue;
-        //         }
-        //         SendError(TypeErrorKind::InvalidUnaryOperator, Prefix,
-        //             { Operator::ToString(Prefix->Type), PrefixType->ToString() });
-        //
-        //         return nullptr;
-        //     }
-        //     default:
-        //         return nullptr;
-        // }
-
         SemaResult* Operand = VisitNode(Prefix->Operand);
         if (!Operand) return nullptr;
 
@@ -339,7 +310,7 @@ namespace Volt
         {
             case OperatorType::INC: AssignmentType = OperatorType::ADD_ASSIGN; break;
             case OperatorType::DEC: AssignmentType = OperatorType::SUB_ASSIGN; break;
-            default: llvm_unreachable("Unknown suffix operator");
+            default: llvm_unreachable("Unknown prefix operator");
         }
 
         OperandAddr->CreateAssignment(ExprResult::CreateFromType(
@@ -539,13 +510,13 @@ namespace Volt
         if (auto ArrType = Cast<ArrayType>(TargetType))
         {
             Subscript->TargetType = ArrType;
-            return ExprResult::CreateEmpty(ArrType->BaseType, MainArena);
+            return MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(ArrType->BaseType, MainArena));
         }
 
         if (auto PtrType = Cast<PointerType>(TargetType))
         {
             Subscript->TargetType = PtrType;
-            return ExprResult::CreateEmpty(PtrType->BaseType, MainArena);
+            return MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(PtrType->BaseType, MainArena));
         }
 
         return nullptr;
