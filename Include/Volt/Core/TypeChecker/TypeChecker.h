@@ -113,6 +113,9 @@ namespace Volt
             return GetRValue(Result);
         }
 
+        ExprAddress* VisitToLValue(ASTNode* Node);
+        ExprAddress* VisitToLValueAndCheckConst(ASTNode* Node);
+
         static QualType GetNotReferenceType(QualType Type);
 
         template <typename MapT>

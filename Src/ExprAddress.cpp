@@ -10,6 +10,9 @@ namespace Volt
     {
         using enum OperatorType;
 
+        if (Type.HasQualifier(QualType::CONST))
+            llvm_unreachable("Cannot assign to read only value");
+
         if (!Value || Value->IsEmpty() || Right->IsEmpty())
         {
             Value = ExprResult::CreateEmpty(Value->GetType(), CContext.MainArena);

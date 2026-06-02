@@ -267,15 +267,8 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitSuffix(SuffixOpNode *Suffix)
     {
-        SemaResult* Operand = VisitNode(Suffix->Operand);
-        if (!Operand) return nullptr;
-
-        auto OperandAddr = Cast<ExprAddress>(Operand);
-        if (!OperandAddr)
-        {
-            // Send Error
-            return nullptr;
-        }
+        ExprAddress* OperandAddr = VisitToLValueAndCheckConst(Suffix->Operand);
+        if (!OperandAddr) return nullptr;
 
         ExprResult* Temp = OperandAddr->GetValue();
 
@@ -288,22 +281,15 @@ namespace Volt
         }
 
         OperandAddr->CreateAssignment(ExprResult::CreateFromType(
-                Operand->GetType(), 1, MainArena), AssignmentType, CContext);
+                OperandAddr->GetType(), 1, MainArena), AssignmentType, CContext);
 
         return Temp;
     }
 
     SemaResult *TypeChecker::VisitPrefix(PrefixOpNode *Prefix)
     {
-        SemaResult* Operand = VisitNode(Prefix->Operand);
-        if (!Operand) return nullptr;
-
-        auto OperandAddr = Cast<ExprAddress>(Operand);
-        if (!OperandAddr)
-        {
-            // Send Error
-            return nullptr;
-        }
+        ExprAddress* OperandAddr = VisitToLValueAndCheckConst(Prefix->Operand);
+        if (!OperandAddr) return nullptr;
 
         OperatorType AssignmentType;
         switch (Prefix->Type)
@@ -314,7 +300,7 @@ namespace Volt
         }
 
         OperandAddr->CreateAssignment(ExprResult::CreateFromType(
-                Operand->GetType(), 1, MainArena), AssignmentType, CContext);
+                OperandAddr->GetType(), 1, MainArena), AssignmentType, CContext);
 
         return OperandAddr;
     }
@@ -354,20 +340,12 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitAssignment(AssignmentNode *Assignment)
     {
-        SemaResult* Left = VisitNode(Assignment->Left);
-        if (!Left) return nullptr;
-
-        auto LeftAddr = Cast<ExprAddress>(Left);
-        if (!LeftAddr)
-        {
-            SendError(TypeErrorKind::AssignNonLValue, Assignment->Left);
-            return nullptr;
-        }
-
+        ExprAddress* LeftAddr = VisitToLValueAndCheckConst(Assignment->Left);
         ExprResult* Right = VisitToRValue(Assignment->Right);
-        if (!Right) return nullptr;
 
-        Right = Right->ImplicitCast(Left->GetType(), CContext);
+        if (!Right || !LeftAddr) return nullptr;
+
+        Right = Right->ImplicitCast(LeftAddr->GetType(), CContext);
         if (!Right)
         {
             //SendError(TypeErrorKind::AssignmentTypeMismatch, Assignment->Right);
@@ -375,7 +353,7 @@ namespace Volt
         }
 
         Assignment->CompileTimeValue = LeftAddr->CreateAssignment(Right, Assignment->Type, CContext);
-        Assignment->LeftOperandType = Left->GetType().GetType();
+        Assignment->LeftOperandType = LeftAddr->GetType().GetType();
         Assignment->RightOperandType = Right->GetType().GetType();
         return Assignment->CompileTimeValue;
     }
@@ -398,6 +376,7 @@ namespace Volt
 
         if (!Left || !Right)
         {
+            // SendError
             return nullptr;
         }
 
@@ -742,6 +721,33 @@ namespace Volt
             return Addr->GetValue();
 
         llvm_unreachable("Invalid SemaResult");
+    }
+
+    ExprAddress * TypeChecker::VisitToLValue(ASTNode *Node)
+    {
+        SemaResult* Result = VisitNode(Node);
+        if (!Result) return nullptr;
+        auto Addr = Cast<ExprAddress>(Result);
+        if (!Addr)
+        {
+            // SendError
+            return nullptr;
+        }
+        return Addr;
+    }
+
+    ExprAddress * TypeChecker::VisitToLValueAndCheckConst(ASTNode *Node)
+    {
+        ExprAddress* Addr = VisitToLValue(Node);
+        if (!Addr) return nullptr;
+
+        if (Addr->GetType().HasQualifier(QualType::CONST))
+        {
+            SendError(TypeErrorKind::AssignReadOnlyType, Node);
+            return nullptr;
+        }
+
+        return Addr;
     }
 
     QualType TypeChecker::GetNotReferenceType(QualType Type)
