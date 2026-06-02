@@ -1,8 +1,10 @@
 fun:int Main()
 {
 	let:int* ptr = int*(MemAlloc(32));
-	*ptr = 4;
-    *(ptr + 1) = 10;
+	
+	*(ptr + 1) = 10;
+	Out(ptr[1]);
+
 	MemFree(ptr);
 	return 0;
 }

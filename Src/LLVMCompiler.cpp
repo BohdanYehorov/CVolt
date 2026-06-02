@@ -246,11 +246,10 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileUnref(const UnrefNode *Unref)
     {
-        IRValue *Value = CompileNode(Unref->Target);
+        IRValue *Value = CompileToRValue(Unref->Target);
         if (!Value) return nullptr;
 
-        llvm::Value* LoadValue = Builder.CreateLoad(Value->GetValue()->getType(), Value->GetValue());
-        return Create<IRValue>(LoadValue, Unref->CompileTimeValue->GetType().GetType(), true);
+        return Create<IRValue>(Value->GetValue(), Unref->CompileTimeValue->GetType().GetType(), true);
     }
 
     IRValue *LLVMCompiler::CompilePrefix(const PrefixOpNode *Prefix)
