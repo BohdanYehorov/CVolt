@@ -25,6 +25,7 @@ set(SOURCES
         Src/DataType.cpp
         Src/IRValue.cpp
         Src/ExprAddress.cpp
+        Src/DebugOutput.cpp
 )
 
 if (COMPILE_TO_LIB)

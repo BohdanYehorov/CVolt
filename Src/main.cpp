@@ -6,6 +6,7 @@
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Runtime/JITEngine/JITEngine.h"
 #include "Volt/ADT/String.h"
+#include "Volt/Debug/DebugOutput/DebugOutput.h"
 #include <fstream>
 #include <sstream>
 
@@ -39,6 +40,8 @@ int main(int Argc, char* Argv[])
 #endif
 
     Volt::CompilationContext CContext(SStr.str().c_str(), "test.volt");
+    Volt::DebugOutput DebugOutput(llvm::outs(), CContext);
+
     Volt::BuiltinFunctionTable FuncTable(CContext);
     FuncTable.AddFunction("Out", "OutBool", &OutBool);
     FuncTable.AddFunction("Out", "OutChar", &OutChar);
@@ -66,7 +69,7 @@ int main(int Argc, char* Argv[])
     MyLexer.Lex();
 
 #ifdef _DEBUG
-    MyLexer.PrintTokens();
+    DebugOutput.WriteTokens();
 #endif
 
     if (MyLexer.PrintErrors())
@@ -74,10 +77,6 @@ int main(int Argc, char* Argv[])
 
     Volt::Parser MyParser(CContext);
     MyParser.Parse();
-
-#ifdef _DEBUG
-    MyParser.PrintASTTree();
-#endif
 
     if (MyParser.PrintErrors())
         return -1;
@@ -89,14 +88,14 @@ int main(int Argc, char* Argv[])
         return -1;
 
 #ifdef _DEBUG
-    MyParser.PrintASTTree();
+    DebugOutput.WriteAST();
 #endif
 
     Volt::LLVMCompiler MyCompiler(CContext, FuncTable);
     MyCompiler.Compile();
 
 #ifdef _DEBUG
-    MyCompiler.Print();
+    DebugOutput.WriteIR();
 #endif
 
 #ifdef _DEBUG

@@ -48,9 +48,6 @@ namespace Volt
 
         size_t Depth = 0;
 
-    private:
-        static void WriteASTTree(std::ostream& Os, ASTNode* Node, int Tabs = 0);
-
     public:
         Parser(CompilationContext& CContext)
             : CContext(CContext), NodesArena(CContext.MainArena),
@@ -67,9 +64,6 @@ namespace Volt
         }
 
         void WriteErrors(std::ostream& Os) const;
-
-        void WriteASTTree(std::ostream& Os) const { WriteASTTree(Os, Root); }
-        void PrintASTTree() const { WriteASTTree(std::cout); };
 
     private:
         [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.Length(); }

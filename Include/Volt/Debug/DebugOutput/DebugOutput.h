@@ -5,17 +5,28 @@
 #ifndef CVOLT_DEBUGOUTPUT_H
 #define CVOLT_DEBUGOUTPUT_H
 
-#include <ostream>
-#include <llvm/ADT/APFloat.h>
+#include "Volt/Core/CompilationContext/CompilationContext.h"
 
 namespace Volt
 {
 	class DebugOutput
 	{
-		std::ostream& Os;
-		llvm::raw_ostream& LLVMOs;
+	private:
+		llvm::raw_ostream&Os;
+		CompilationContext& CContext;
 
-		DebugOutput(std::ostream& Os, llvm::raw_ostream& LLVMOs) : Os(Os), LLVMOs(LLVMOs) {}
+	public:
+		DebugOutput(llvm::raw_ostream& Os, CompilationContext& CContext)
+			: Os(Os), CContext(CContext) {}
+
+		void WriteTokens() const;
+		void WriteAST() const { WriteAST(CContext.ASTTree, 0); }
+		void WriteIR() const { CContext.Module->print(Os, nullptr); }
+
+	private:
+		void WriteAST(ASTNode* Node, size_t Indent) const;
+		void WriteIndent(size_t Indent) const;
+		void WriteCompileTimeValue(SemaResult* Value) const;
 	};
 }
 

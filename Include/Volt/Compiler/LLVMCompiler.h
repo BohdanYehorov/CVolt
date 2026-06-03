@@ -13,7 +13,6 @@
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Support/raw_ostream.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <unordered_map>
 #include <stack>
@@ -52,10 +51,6 @@ namespace Volt
         }
 
         void Compile();
-        void Write(llvm::raw_ostream& Os) const { Module->print(Os, nullptr); }
-        void Print() const { Module->print(llvm::outs(), nullptr); }
-
-        std::unique_ptr<llvm::Module>& GetModule() const { return Module; }
 
     private:
         IRValue* GetCompileTimeValue(const ASTNode* Node);

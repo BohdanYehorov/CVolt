@@ -90,6 +90,7 @@ namespace Volt
 		friend class ExprResult;
 		friend class ExprAddress;
 		friend class IRValue;
+		friend class DebugOutput;
 	};
 }
 

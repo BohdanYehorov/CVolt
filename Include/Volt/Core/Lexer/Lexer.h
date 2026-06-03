@@ -57,7 +57,6 @@ namespace Volt
         Lexer& operator=(Lexer&&) noexcept = delete;
 
         void Lex();
-        void PrintTokens() const { WriteTokens(std::cout); }
 
         [[nodiscard]] const ArenaStream& GetTokensArena() const { return TokensArena; }
         Array<LexError> GetErrors() { return Errors; }
@@ -68,7 +67,6 @@ namespace Volt
             return HasErrors();
         }
         void WriteErrors(std::ostream& Os) const;
-        void WriteTokens(std::ostream& Os) const;
 
     private:
         [[nodiscard]] char CurrentChar() const { return Code[Pos]; }

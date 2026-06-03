@@ -151,12 +151,6 @@ namespace Volt
 				" At position: [" << Error.Line << ":" << Error.Column << "]\n";
 	}
 
-	void Lexer::WriteTokens(std::ostream &Os) const
-	{
-		for (const Token& Tok : Tokens)
-			Os << Tok.ToString(Context) << std::endl;
-	}
-
 	void Lexer::MovePos()
 	{
 		if (CurrentChar() == '\n')
