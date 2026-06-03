@@ -86,6 +86,8 @@ namespace Volt
 
 		ExprResult* CastTo(QualType To, bool Explicit, CompilationContext& CContext);
 
+		ExprResult* CreateCmp(ExprResult* Right, OperatorType Op, CompilationContext& CContext) const;
+
 		ExprResult* CreateAdd(ExprResult* Right, CompilationContext& CContext) const;
 		ExprResult* CreateSub(ExprResult* Right, CompilationContext& CContext) const;
 		ExprResult* CreateMul(ExprResult* Right, CompilationContext& CContext) const;

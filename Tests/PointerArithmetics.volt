@@ -6,6 +6,6 @@ fun:int Main()
     Out(Ptr[0]);
     Out(Ptr[1]);
     MemFree(Ptr);
-   
+
     return 0;
 }

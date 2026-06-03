@@ -95,6 +95,75 @@ namespace Volt
 		}
 	}
 
+	ExprResult *ExprResult::CreateCmp(ExprResult *Right, OperatorType Op, CompilationContext &CContext) const
+	{
+		using enum OperatorType;
+
+		if (bIsEmpty || Right->bIsEmpty)
+			llvm_unreachable("Cannot compare empty values");
+
+		if (Type != Right->Type)
+			llvm_unreachable("Cannot compare values with different types");
+
+		if (Type->IsIntegerType())
+		{
+			Int64 LeftVal  = GetInt();
+			Int64 RightVal = Right->GetInt();
+			bool Result;
+
+			switch (Op)
+			{
+				case EQ:  Result = LeftVal == RightVal; break;
+				case NEQ: Result = LeftVal != RightVal; break;
+				case LT:  Result = LeftVal < RightVal;  break;
+				case LTE: Result = LeftVal <= RightVal; break;
+				case GT:  Result = LeftVal > RightVal;  break;
+				case GTE: Result = LeftVal >= RightVal; break;
+				default: llvm_unreachable("Unknown comparison operator");
+			}
+
+			return CreateBool(CContext.GetBoolType(), Result, CContext.MainArena);
+		}
+
+		if (Type->IsFloatingPointType())
+		{
+			double LeftVal  = GetFloat();
+			double RightVal = Right->GetFloat();
+			bool Result;
+
+			switch (Op)
+			{
+				case EQ:  Result = LeftVal == RightVal; break;
+				case NEQ: Result = LeftVal != RightVal; break;
+				case LT:  Result = LeftVal < RightVal;  break;
+				case LTE: Result = LeftVal <= RightVal; break;
+				case GT:  Result = LeftVal > RightVal;  break;
+				case GTE: Result = LeftVal >= RightVal; break;
+				default: llvm_unreachable("Unknown comparison operator");
+			}
+
+			return CreateBool(CContext.GetBoolType(), Result, CContext.MainArena);
+		}
+
+		if (Type->IsCharType() || Type->IsBoolType())
+		{
+			auto LeftVal  = static_cast<Int32>(Type->IsCharType() ? GetChar() : GetBool());
+			auto RightVal = static_cast<Int32>(Type->IsCharType() ? Right->GetChar() : Right->GetBool());
+			bool Result;
+
+			switch (Op)
+			{
+				case EQ:  Result = LeftVal == RightVal; break;
+				case NEQ: Result = LeftVal != RightVal; break;
+				default:  llvm_unreachable("Invalid comparison operator for this type");
+			}
+
+			return CreateBool(CContext.GetBoolType(), Result, CContext.MainArena);
+		}
+
+		llvm_unreachable("Cannot compare this type");
+	}
+
 	ExprResult *ExprResult::CreateAdd(ExprResult *Right, CompilationContext &CContext) const
 	{
 		return CreateBinaryForIntFloat(Right,

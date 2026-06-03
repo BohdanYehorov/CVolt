@@ -92,6 +92,7 @@ namespace Volt
         SemaResult *VisitPrefix(PrefixOpNode *Prefix);
         SemaResult *VisitUnary(UnaryOpNode *Unary);
         SemaResult *VisitAssignment(AssignmentNode* Assignment);
+        SemaResult *VisitComparison(ComparisonNode* Comparison);
         SemaResult *VisitBinary(BinaryOpNode *Binary);
         SemaResult *VisitCall(CallNode *Call);
         SemaResult *VisitSubscript(SubscriptNode *Subscript);

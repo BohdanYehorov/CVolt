@@ -55,6 +55,8 @@ namespace Volt
             return VisitUnary(Unary);
         if (auto Assignment = Cast<AssignmentNode>(Node))
             return VisitAssignment(Assignment);
+        if (auto Comparison = Cast<ComparisonNode>(Node))
+            return VisitComparison(Comparison);
         if (auto Binary = Cast<BinaryOpNode>(Node))
             return VisitBinary(Binary);
         if (auto Call = Cast<CallNode>(Node))
@@ -358,6 +360,39 @@ namespace Volt
         return Assignment->CompileTimeValue;
     }
 
+    SemaResult *TypeChecker::VisitComparison(ComparisonNode *Comparison)
+    {
+        ExprResult* Left = VisitToRValue(Comparison->Left);
+        ExprResult* Right = VisitToRValue(Comparison->Right);
+        if (!Left || !Right)
+            return nullptr;
+
+        QualType LeftType = Left->GetType();
+        QualType RightType = Right->GetType();
+        QualType Type = Operator::ResolveBinary(LeftType, RightType, Comparison->Type, CContext);
+
+        Left = Left->ImplicitCast(LeftType, CContext);
+        Right = Right->ImplicitCast(RightType, CContext);
+
+        if (!Left || !Right)
+        {
+            // SendError
+            return nullptr;
+        }
+
+        Comparison->LeftOperandType = Left->GetType().GetType();
+        Comparison->RightOperandType = Right->GetType().GetType();
+
+        if (Left->IsEmpty() || Right->IsEmpty())
+        {
+            Comparison->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);
+            return Comparison->CompileTimeValue;
+        }
+
+        Comparison->CompileTimeValue = Left->CreateCmp(Right, Comparison->Type, CContext);
+        return Comparison->CompileTimeValue;
+    }
+
     SemaResult *TypeChecker::VisitBinary(BinaryOpNode *Binary)
     {
         using enum OperatorType;
@@ -390,14 +425,13 @@ namespace Volt
         }
 
         ExprResult* Result;
-
         switch (Binary->Type)
         {
-            case ADD: Result = Left->CreateAdd(Right, CContext); break;
-            case SUB: Result = Left->CreateSub(Right, CContext); break;
-            case MUL: Result = Left->CreateMul(Right, CContext); break;
-            case DIV: Result = Left->CreateDiv(Right, CContext); break;
-            case MOD: Result = Left->CreateMod(Right, CContext); break;
+            case ADD:     Result = Left->CreateAdd(Right, CContext); break;
+            case SUB:     Result = Left->CreateSub(Right, CContext); break;
+            case MUL:     Result = Left->CreateMul(Right, CContext); break;
+            case DIV:     Result = Left->CreateDiv(Right, CContext); break;
+            case MOD:     Result = Left->CreateMod(Right, CContext); break;
             case BIT_AND: Result = Left->CreateBitAnd(Right, CContext); break;
             case BIT_OR:  Result = Left->CreateBitOr(Right, CContext); break;
             case BIT_XOR: Result = Left->CreateBitXor(Right, CContext); break;
