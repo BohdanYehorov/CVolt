@@ -5,9 +5,9 @@
 #ifndef CVOLT_FUNCTIONSIGNATURE_H
 #define CVOLT_FUNCTIONSIGNATURE_H
 
-#include <llvm/ADT/SmallVector.h>
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
+#include <llvm/ADT/SmallVector.h>
 #include <string>
 
 namespace Volt

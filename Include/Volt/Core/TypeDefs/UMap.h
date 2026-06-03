@@ -6,9 +6,9 @@
 #define CVOLT_UMAP_H
 
 #include <unordered_map>
-#include "Volt/Compiler/Functions/FunctionSignature.h"
+#include "Volt/Core/Functions/FunctionSignature.h"
 #include "Volt/Core/Hash/Hash.h"
-#include "Volt/Core/Value/IRValue.h"
+#include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/Functions/FunctionCallee.h"
 
 namespace Volt

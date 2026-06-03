@@ -7,7 +7,7 @@
 
 #include "Volt/Core/Parser/Parser.h"
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Compiler/Functions/FunctionSignature.h"
+#include "Volt/Core/Functions/FunctionSignature.h"
 #include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"

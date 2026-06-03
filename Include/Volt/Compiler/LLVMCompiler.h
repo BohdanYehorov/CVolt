@@ -8,7 +8,7 @@
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Types/CompilerTypes.h"
 #include "Volt/Core/Memory/Arena.h"
-#include "Volt/Core/Value/IRValue.h"
+#include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 #include <llvm/IR/IRBuilder.h>

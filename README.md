@@ -42,7 +42,7 @@ Volt
 |  |- BuiltinsFunctions: contains BuiltinFunctionTable to add user defined functions
 |  |- CompilationContext: used for centralized memory management
 |  |- Errors: lex, parse, type errors
-|  |- Functions: contains callee for function tables in TypeChecker and LLVMCompiler
+|  |- Functions: contains callee for function tables in TypeChecker and LLVMCompiler, FunctionSignature class
 |  |- Hash: hash for DataType, QualType, FunctionSignature
 |  |- Memory: contains Arena
 |  |- Object: base class for all polymorphic classes
@@ -54,7 +54,7 @@ Volt
 |  |- Enums
 |- Compiler (IR gen)
 |  |- Types: contains CompilerTypes
-|  |- Functions: contains FunctionSignature
+|  |- Value: contains IRValue
 |  |- LLVMCompiler
 |- Debug (for debug output)
 |- Runtime (JITEngine for executing code in runtime)

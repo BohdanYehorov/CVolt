@@ -5,7 +5,7 @@
 #ifndef CVOLT_BUILTINFUNCTIONTABLE_H
 #define CVOLT_BUILTINFUNCTIONTABLE_H
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Compiler/Functions/FunctionSignature.h"
+#include "Volt/Core/Functions/FunctionSignature.h"
 #include "Volt/Core/Hash/Hash.h"
 #include "Volt/Core/Types/TypeConv.h"
 #include "Volt/Core/Functions/BuiltinFuncCallee.h"

@@ -2,7 +2,7 @@
 // Created by bohdan on 08.03.26.
 //
 
-#include "Volt/Core/Value/IRValue.h"
+#include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <llvm/Support/ErrorHandling.h>
 

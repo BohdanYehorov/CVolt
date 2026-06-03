@@ -9,7 +9,6 @@
 #include "Volt/Core/Parser/Operators/Operator.h"
 #include "Volt/Core/Functions/Callee.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
-#include "Volt/Core/Value/IRValue.h"
 #include "Volt/ADT/Array.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>

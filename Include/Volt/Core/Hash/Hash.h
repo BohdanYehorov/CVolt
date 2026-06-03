@@ -7,7 +7,7 @@
 
 #include <cstddef>
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Compiler/Functions/FunctionSignature.h"
+#include "Volt/Core/Functions/FunctionSignature.h"
 
 namespace Volt
 {

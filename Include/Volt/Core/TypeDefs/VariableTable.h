@@ -5,7 +5,7 @@
 #ifndef CVOLT_VARIABLETABLE_H
 #define CVOLT_VARIABLETABLE_H
 
-#include "Volt/Core/Value/IRValue.h"
+#include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/TypeChecker/ExprAddress.h"
 
 namespace Volt

@@ -6,7 +6,7 @@
 #define CVOLT_INSTRUCTION_H
 
 #include <string>
-#include "Volt/Core/Value/IRValue.h"
+#include "Volt/Compiler/Value/IRValue.h"
 
 namespace Volt
 {
