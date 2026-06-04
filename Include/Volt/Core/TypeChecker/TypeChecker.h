@@ -39,7 +39,7 @@ namespace Volt
 
         BuiltinFunctionTable& BuiltinFuncTable;
 
-        Array<TypeError> Errors;
+        Array<TypeError>& Errors;
 
         FunctionTable Functions;
         CTimeVariableTable Variables;
@@ -52,15 +52,13 @@ namespace Volt
     public:
         TypeChecker(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
             : CContext(CContext), ASTTree(CContext.ASTTree),
-            MainArena(CContext.MainArena), BuiltinFuncTable(BuiltinFuncTable) {}
+            MainArena(CContext.MainArena), BuiltinFuncTable(BuiltinFuncTable),
+            Errors(CContext.TypeErrors) {}
 
-        void Check() { VisitNode(ASTTree); }
-        [[nodiscard]] bool HasErrors() const { return !Errors.Empty(); }
-        void WriteErrors(std::ostream& Os) const;
-        bool PrintErrors() const
+        void Check()
         {
-            WriteErrors(std::cout);
-            return HasErrors();
+            if (CContext.HasErrors()) return;
+            VisitNode(ASTTree);
         }
 
     private:

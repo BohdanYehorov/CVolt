@@ -68,6 +68,7 @@ Volt
 Volt::JITEngine::Init();
 
 Volt::CompilationContext CContext(Code /*Source Code*/, "test.volt" /*File Name*/);
+Volt::DebugOutput DebugOutput(llvm::outs(), CContext);
 
 Volt::BuiltinFunctionTable FuncTable(CContext);
 FuncTable.AddFunction("Out", "OutInt", &OutInt);
@@ -77,22 +78,21 @@ FuncTable.AddFunction("Out", "OutFloat", &OutFloat); // Builtin function overloa
 Volt::Lexer MyLexer(CContext);
 MyLexer.Lex();
 
-if (MyLexer.PrintErrors())
-    return -1;
-
 // Parsing
 Volt::Parser MyParser(CContext);
 MyParser.Parse();
-
-if (MyParser.PrintErrors())
-    return -1;
 
 // Type Checking
 Volt::TypeChecker MyTypeChecker(CContext, FuncTable);
 MyTypeChecker.Check();
 
-if (MyTypeChecker.PrintErrors())
+if (CContext.HasErrors())
+{
+    DebugOutput.WriteLexErrors();
+    DebugOutput.WriteParseErrors();
+    DebugOutput.WriteTypeErrors();
     return -1;
+}
 
 // Compiling
 Volt::LLVMCompiler MyCompiler(CContext, FuncTable);

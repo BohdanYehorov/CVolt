@@ -13,16 +13,8 @@ namespace Volt
 {
     void Parser::Parse()
     {
+        if (CContext.HasErrors()) return;
         Root = ParseSequence();
-    }
-
-    void Parser::WriteErrors(std::ostream &Os) const
-    {
-        for (const auto& Err : Errors)
-        {
-            Os << "ParseError: " << Err.ToString() <<
-                " At position: [" << Err.Line << ":" << Err.Column << "]\n";
-        }
     }
 
     bool Parser::Consume()
@@ -215,28 +207,6 @@ namespace Volt
 
         const Token& Tok = Tokens.Back();
         SendError(Type, Tok.Line, Tok.Column, std::move(Context));
-    }
-
-    bool Parser::CanBeDataType() const
-    {
-        if (!IsValidIndex())
-            return false;
-
-        const Token& Tok = CurrentToken();
-        switch (Tok.Type)
-        {
-            case TokenType::TYPE_VOID:
-            case TokenType::TYPE_BOOL:
-            case TokenType::TYPE_CHAR:
-            case TokenType::TYPE_BYTE:
-            case TokenType::TYPE_INT:
-            case TokenType::TYPE_LONG:
-            case TokenType::TYPE_FLOAT:
-            case TokenType::TYPE_DOUBLE:
-                return true;
-            default:
-                return false;
-        }
     }
 
     ASTNode* Parser::ParseSequence()

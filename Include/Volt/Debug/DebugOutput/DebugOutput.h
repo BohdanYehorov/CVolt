@@ -23,6 +23,10 @@ namespace Volt
 		void WriteAST() const { WriteAST(CContext.ASTTree, 0); }
 		void WriteIR() const { CContext.Module->print(Os, nullptr); }
 
+		void WriteLexErrors() const;
+		void WriteParseErrors() const;
+		void WriteTypeErrors() const;
+
 	private:
 		void WriteAST(ASTNode* Node, size_t Indent) const;
 		void WriteIndent(size_t Indent) const;

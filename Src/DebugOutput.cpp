@@ -13,6 +13,27 @@ namespace Volt
             Os << Tok.ToString(CContext) << '\n';
     }
 
+    void DebugOutput::WriteLexErrors() const
+    {
+        for (const LexError& Error : CContext.LexErrors)
+            Os << "LexError: " << Error.ToString() <<
+                " At position: [" << Error.Line << ":" << Error.Column << "]\n";
+    }
+
+    void DebugOutput::WriteParseErrors() const
+    {
+        for (const auto& Err : CContext.ParseErrors)
+            Os << "ParseError: " << Err.ToString() <<
+                " At position: [" << Err.Line << ":" << Err.Column << "]\n";
+    }
+
+    void DebugOutput::WriteTypeErrors() const
+    {
+        for (const TypeError& Error : CContext.TypeErrors)
+            Os << "TypeError: " << Error.ToString() <<
+                " At position: [" << Error.Line << ":" << Error.Column << "]\n";
+    }
+
     void DebugOutput::WriteAST(ASTNode* Node, size_t Indent) const
     {
         WriteIndent(Indent);
@@ -111,11 +132,11 @@ namespace Volt
             Os << "Type:\n";
             WriteAST(QualTy->Type, Indent + 1);
             WriteIndent(Indent);
-            Os << "Quals: " << QualTy->Quals;
+            Os << "Quals: " << QualTy->Quals << '\n';
         }
         else if (auto PrimitiveType = Cast<PrimitiveTypeNode>(Node))
         {
-            Os << "Type: " << PrimitiveType->Type->ToString();
+            Os << "Type: " << PrimitiveType->Type->ToString() << '\n';
         }
         else if (auto ArrType = Cast<ArrayTypeNode>(Node))
         {

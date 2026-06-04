@@ -36,10 +36,11 @@ namespace Volt
         Arena& NodesArena;
 
         const Array<Token>& Tokens;
-        Array<ParseError> Errors;
 
         size_t Index = 0;
         ASTNode*& Root;
+
+        Array<ParseError>& Errors;
 
         bool LastNodeIsBlock = false;
         bool InBlock = false;
@@ -51,19 +52,9 @@ namespace Volt
     public:
         Parser(CompilationContext& CContext)
             : CContext(CContext), NodesArena(CContext.MainArena),
-            Tokens(CContext.Tokens), Root(CContext.ASTTree) {}
+            Tokens(CContext.Tokens), Root(CContext.ASTTree), Errors(CContext.ParseErrors) {}
 
         void Parse();
-        [[nodiscard]] ASTNode* GetASTTree() const { return Root; }
-        [[nodiscard]] const Array<ParseError>& GetErrorList() const { return Errors; }
-        [[nodiscard]] bool HasErrors() const { return !Errors.Empty(); }
-        bool PrintErrors() const
-        {
-            WriteErrors(std::cout);
-            return HasErrors();
-        }
-
-        void WriteErrors(std::ostream& Os) const;
 
     private:
         [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.Length(); }
@@ -88,8 +79,6 @@ namespace Volt
 
         void SendError(ParseErrorType Type, size_t Line, size_t Column, Array<std::string>&& Context = {});
         void SendError(ParseErrorType Type, Array<std::string>&& Context = {});
-
-        [[nodiscard]] bool CanBeDataType() const;
 
     private:
         ASTNode* ParseSequence();

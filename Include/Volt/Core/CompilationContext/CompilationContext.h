@@ -11,32 +11,18 @@
 #include "Volt/Core/Lexer/Token.h"
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/ADT/String.h"
+#include "Volt/Core/Errors/LexError.h"
+#include "Volt/Core/Errors/ParseError.h"
+#include "Volt/Core/Errors/TypeError.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <unordered_set>
 
 namespace Volt
 {
-	class BuiltinFunctionTable;
-
 	class CompilationContext
 	{
 	private:
-		struct DataTypeWrap
-		{
-			DataType* Type;
-
-			DataTypeWrap(DataType* Type) : Type(Type) {}
-			operator DataType*() const { return Type; }
-
-			bool operator==(const DataTypeWrap& Other) const
-			{
-				return Type->IsEqual(Other.Type);
-			}
-		};
-
-	private:
-		std::unordered_set<DataTypeWrap, Hash<DataType>> CachedTypes;
 		VoidType* CachedVoidType = nullptr;
 		BoolType* CachedBoolType = nullptr;
 		CharType* CachedCharType = nullptr;
@@ -55,6 +41,10 @@ namespace Volt
 
 		Array<Token> Tokens;
 		ASTNode* ASTTree = nullptr;
+
+		Array<LexError> LexErrors;
+		Array<ParseError> ParseErrors;
+		Array<TypeError> TypeErrors;
 
 	public:
 		CompilationContext(String&& Code, const std::string& FileName)
@@ -80,12 +70,15 @@ namespace Volt
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);
 
+		[[nodiscard]] bool HasErrors() const { return !LexErrors.Empty() ||
+			!ParseErrors.Empty() || !TypeErrors.Empty(); }
+
 		friend struct Token;
 		friend class Lexer;
 		friend class Parser;
 		friend class TypeChecker;
 		friend class LLVMCompiler;
-		friend BuiltinFunctionTable;
+		friend class BuiltinFunctionTable;
 		friend class JITEngine;
 		friend class ExprResult;
 		friend class ExprAddress;

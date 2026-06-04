@@ -4,7 +4,6 @@
 
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include <cmath>
-#include <complex.h>
 
 namespace Volt
 {

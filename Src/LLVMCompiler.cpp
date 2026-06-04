@@ -11,6 +11,7 @@ namespace Volt
 {
     void LLVMCompiler::Compile()
     {
+        if (CContext.HasErrors()) return;
         CompileNode(ASTTree);
     }
 

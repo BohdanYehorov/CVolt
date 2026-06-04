@@ -72,24 +72,23 @@ int main(int Argc, char* Argv[])
     DebugOutput.WriteTokens();
 #endif
 
-    if (MyLexer.PrintErrors())
-        return -1;
-
     Volt::Parser MyParser(CContext);
     MyParser.Parse();
-
-    if (MyParser.PrintErrors())
-        return -1;
 
     Volt::TypeChecker MyTypeChecker(CContext, FuncTable);
     MyTypeChecker.Check();
 
-    if (MyTypeChecker.PrintErrors())
-        return -1;
-
 #ifdef _DEBUG
     DebugOutput.WriteAST();
 #endif
+
+    if (CContext.HasErrors())
+    {
+        DebugOutput.WriteLexErrors();
+        DebugOutput.WriteParseErrors();
+        DebugOutput.WriteTypeErrors();
+        return -1;
+    }
 
     Volt::LLVMCompiler MyCompiler(CContext, FuncTable);
     MyCompiler.Compile();

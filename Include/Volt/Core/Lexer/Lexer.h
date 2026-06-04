@@ -33,7 +33,6 @@ namespace Volt
 
     private:
         size_t Pos = 0, Line = 1, Column = 1;
-        Array<LexError> Errors;
 
         ArenaStream TokensArena;
         StringRef ExprRef;
@@ -45,10 +44,12 @@ namespace Volt
         size_t CodeSize;
 
         Array<Token>& Tokens;
+        Array<LexError>& Errors;
 
     public:
         Lexer(CompilationContext& Context)
-            : Context(Context), Code(Context.Code), CodeSize(Code.Length()), Tokens(Context.Tokens) {}
+            : Context(Context), Code(Context.Code), CodeSize(Code.Length()),
+            Tokens(Context.Tokens), Errors(Context.LexErrors) {}
 
         Lexer(const Lexer&) = delete;
         Lexer& operator=(const Lexer&) = delete;
@@ -59,14 +60,6 @@ namespace Volt
         void Lex();
 
         [[nodiscard]] const ArenaStream& GetTokensArena() const { return TokensArena; }
-        Array<LexError> GetErrors() { return Errors; }
-        [[nodiscard]] bool HasErrors() const { return !Errors.Empty(); }
-        bool PrintErrors() const
-        {
-            WriteErrors(std::cout);
-            return HasErrors();
-        }
-        void WriteErrors(std::ostream& Os) const;
 
     private:
         [[nodiscard]] char CurrentChar() const { return Code[Pos]; }

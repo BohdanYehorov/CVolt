@@ -8,13 +8,6 @@
 
 namespace Volt
 {
-    void TypeChecker::WriteErrors(std::ostream& Os) const
-    {
-        for (const TypeError& Error : Errors)
-            Os << "TypeError: " << Error.ToString() <<
-                " At position: [" << Error.Line << ":" << Error.Column << "]\n";
-    }
-
     SemaResult* TypeChecker::VisitNode(ASTNode *Node)
     {
         if (auto Sequence = Cast<SequenceNode>(Node))

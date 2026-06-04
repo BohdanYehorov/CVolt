@@ -144,13 +144,6 @@ namespace Volt
 		}
 	}
 
-	void Lexer::WriteErrors(std::ostream &Os) const
-	{
-		for (const LexError& Error : Errors)
-			Os << "LexError: " << Error.ToString() <<
-				" At position: [" << Error.Line << ":" << Error.Column << "]\n";
-	}
-
 	void Lexer::MovePos()
 	{
 		if (CurrentChar() == '\n')
