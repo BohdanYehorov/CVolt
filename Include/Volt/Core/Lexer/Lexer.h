@@ -35,8 +35,6 @@ namespace Volt
         size_t Pos = 0, Line = 1, Column = 1;
 
         ArenaStream TokensArena;
-        StringRef ExprRef;
-        PtrT StringStoragePtr = 0;
 
         CompilationContext& Context;
         String& Code;

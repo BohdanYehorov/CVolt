@@ -10,71 +10,71 @@
 namespace Volt
 {
 	llvm::StringMap<TokenType> Lexer::Operators = {
-		{ "+", TokenType::OP_ADD },
-		{ "-", TokenType::OP_SUB },
-		{ "*", TokenType::OP_MUL },
-		{ "/", TokenType::OP_DIV },
-		{ "%", TokenType::OP_MOD },
-		{ "++", TokenType::OP_INC },
-		{ "--", TokenType::OP_DEC },
+		{ "+",   TokenType::OP_ADD },
+		{ "-",   TokenType::OP_SUB },
+		{ "*",   TokenType::OP_MUL },
+		{ "/",   TokenType::OP_DIV },
+		{ "%",   TokenType::OP_MOD },
+		{ "++",  TokenType::OP_INC },
+		{ "--",  TokenType::OP_DEC },
 
-		{ "=", TokenType::OP_ASSIGN },
-		{ "+=", TokenType::OP_ADD_ASSIGN },
-		{ "-=", TokenType::OP_SUB_ASSIGN },
-		{ "*=", TokenType::OP_MUL_ASSIGN },
-		{ "/=", TokenType::OP_DIV_ASSIGN },
-		{ "%=", TokenType::OP_MOD_ASSIGN },
-		{ "&=", TokenType::OP_AND_ASSIGN },
-		{ "|=", TokenType::OP_OR_ASSIGN },
-		{ "^=", TokenType::OP_XOR_ASSIGN },
+		{ "=",   TokenType::OP_ASSIGN },
+		{ "+=",  TokenType::OP_ADD_ASSIGN },
+		{ "-=",  TokenType::OP_SUB_ASSIGN },
+		{ "*=",  TokenType::OP_MUL_ASSIGN },
+		{ "/=",  TokenType::OP_DIV_ASSIGN },
+		{ "%=",  TokenType::OP_MOD_ASSIGN },
+		{ "&=",  TokenType::OP_AND_ASSIGN },
+		{ "|=",  TokenType::OP_OR_ASSIGN },
+		{ "^=",  TokenType::OP_XOR_ASSIGN },
 		{ "<<=", TokenType::OP_LSHIFT_ASSIGN },
 		{ ">>=", TokenType::OP_RSHIFT_ASSIGN },
 
-		{ "==", TokenType::OP_EQ },
-		{ "!=", TokenType::OP_NEQ },
-		{ ">", TokenType::OP_GT },
-		{ ">=", TokenType::OP_GTE },
-		{ "<", TokenType::OP_LT} ,
-		{ "<=", TokenType::OP_LTE },
+		{ "==",  TokenType::OP_EQ },
+		{ "!=",  TokenType::OP_NEQ },
+		{ ">",   TokenType::OP_GT },
+		{ ">=",  TokenType::OP_GTE },
+		{ "<",   TokenType::OP_LT} ,
+		{ "<=",  TokenType::OP_LTE },
 
-		{ "&&", TokenType::OP_LOGICAL_AND },
-		{ "||", TokenType::OP_LOGICAL_OR },
-		{ "!", TokenType::OP_LOGICAL_NOT },
+		{ "&&",  TokenType::OP_LOGICAL_AND },
+		{ "||",  TokenType::OP_LOGICAL_OR },
+		{ "!",   TokenType::OP_LOGICAL_NOT },
 
-		{ "&", TokenType::OP_BIT_AND },
-		{ "|", TokenType::OP_BIT_OR },
-		{ "^", TokenType::OP_BIT_XOR },
-		{ "~", TokenType::OP_BIT_NOT },
-		{ "<<", TokenType::OP_LSHIFT },
-		{ ">>", TokenType::OP_RSHIFT },
+		{ "&",   TokenType::OP_BIT_AND },
+		{ "|",   TokenType::OP_BIT_OR },
+		{ "^",   TokenType::OP_BIT_XOR },
+		{ "~",   TokenType::OP_BIT_NOT },
+		{ "<<",  TokenType::OP_LSHIFT },
+		{ ">>",  TokenType::OP_RSHIFT },
 
-		{ ".", TokenType::OP_DOT },
-		{ "->", TokenType::OP_ARROW },
-		{ "::", TokenType::OP_SCOPE },
-		{ "?", TokenType::OP_QUESTION },
-		{ ":", TokenType::OP_COLON },
-		{ ",", TokenType::OP_COMMA },
-		{ ";", TokenType::OP_SEMICOLON },
+		{ ".",   TokenType::OP_DOT },
+		{ "->",  TokenType::OP_ARROW },
+		{ "::",  TokenType::OP_SCOPE },
+		{ "?",   TokenType::OP_QUESTION },
+		{ ":",   TokenType::OP_COLON },
+		{ ",",   TokenType::OP_COMMA },
+		{ ";",   TokenType::OP_SEMICOLON },
 
-		{ "(", TokenType::OP_LPAREN },
-		{ ")", TokenType::OP_RPAREN },
-		{"[", TokenType::OP_LBRACKET },
-		{ "]", TokenType::OP_RBRACKET },
-		{ "{", TokenType::OP_LBRACE },
-		{ "}", TokenType::OP_RBRACE },
+		{ "(",   TokenType::OP_LPAREN },
+		{ ")",   TokenType::OP_RPAREN },
+		{"[",    TokenType::OP_LBRACKET },
+		{ "]",   TokenType::OP_RBRACKET },
+		{ "{",   TokenType::OP_LBRACE },
+		{ "}",   TokenType::OP_RBRACE },
 
-		{ "$", TokenType::OP_REFERENCE }
+		{ "$",   TokenType::OP_REFERENCE }
 	};
 
 	llvm::StringMap<TokenType> Lexer::Keywords {
-		{ "if", TokenType::KW_IF },
-		{ "else", TokenType::KW_ELSE },
-		{ "while", TokenType::KW_WHILE },
-		{ "for", TokenType::KW_FOR },
-		{ "fun", TokenType::KW_FUN },
-		{ "let", TokenType::KW_LET },
-		{ "return", TokenType::KW_RETURN },
-		{ "break", TokenType::KW_BREAK },
+		{ "if",       TokenType::KW_IF },
+		{ "else",     TokenType::KW_ELSE },
+		{ "while",    TokenType::KW_WHILE },
+		{ "for",      TokenType::KW_FOR },
+		{ "fun",      TokenType::KW_FUN },
+		{ "let",      TokenType::KW_LET },
+		{ "return",   TokenType::KW_RETURN },
+		{ "break",    TokenType::KW_BREAK },
 		{ "continue", TokenType::KW_CONTINUE }
 	};
 
@@ -85,33 +85,38 @@ namespace Volt
 		{ "bool", TokenType::TYPE_BOOL },
 		{ "char", TokenType::TYPE_CHAR },
 
-		{ "i8", TokenType::TYPE_I8 },
+		{ "i8",  TokenType::TYPE_I8 },
 		{ "i16", TokenType::TYPE_I16 },
 		{ "i32", TokenType::TYPE_I32 },
 		{ "i64", TokenType::TYPE_I64 },
 
-		{ "u8", TokenType::TYPE_U8 },
+		{ "u8",  TokenType::TYPE_U8 },
 		{ "u16", TokenType::TYPE_U16 },
 		{ "u32", TokenType::TYPE_U32 },
 		{ "u64", TokenType::TYPE_U64 },
 
-		{ "f16", TokenType::TYPE_F16 },
-		{ "f32", TokenType::TYPE_F32 },
-		{ "f64", TokenType::TYPE_F64 },
+		{ "f16",  TokenType::TYPE_F16 },
+		{ "f32",  TokenType::TYPE_F32 },
+		{ "f64",  TokenType::TYPE_F64 },
 		{ "f128", TokenType::TYPE_F128 }
 	};
 
 	llvm::StringMap<TokenType> Lexer::IntNumberLiterals = {
-		{ "i8", TokenType::I8_NUMBER },
+		{ "i8",  TokenType::I8_NUMBER },
 		{ "i16", TokenType::I16_NUMBER },
 		{ "i32", TokenType::I32_NUMBER },
-		{ "i64", TokenType::I64_NUMBER }
+		{ "i64", TokenType::I64_NUMBER },
+
+		{ "u8", TokenType::U8_NUMBER },
+		{ "u16", TokenType::U16_NUMBER },
+		{ "u32", TokenType::U32_NUMBER },
+		{ "u64", TokenType::U64_NUMBER }
 	};
 
 	llvm::StringMap<TokenType> Lexer::FloatNumberLiterals = {
-		{ "f16", TokenType::F16_NUMBER },
-		{ "f32", TokenType::F32_NUMBER },
-		{ "f64", TokenType::F64_NUMBER },
+		{ "f16",  TokenType::F16_NUMBER },
+		{ "f32",  TokenType::F32_NUMBER },
+		{ "f64",  TokenType::F64_NUMBER },
 		{ "f128", TokenType::F128_NUMBER }
 	};
 
@@ -288,7 +293,6 @@ namespace Volt
 
 	bool Lexer::GetNumberToken(Token &Tok)
 	{
-
 		if (CurrentChar() == '.')
 		{
 			if (IsValidNextPos())
@@ -317,8 +321,6 @@ namespace Volt
 		bool HasExponentSign = false;
 		bool HasExponentDigits = false;
 		bool IsInvalidToken = false;
-
-		StringRef Suffix{ 0, 0 };
 
 		while (IsValidPos())
 		{
