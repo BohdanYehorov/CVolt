@@ -145,7 +145,8 @@ namespace Volt
             Os << "BaseType:\n";
             WriteAST(ArrType->BaseType, Indent + 1);
             WriteIndent(Indent);
-            Os << "Length: " << ArrType->Length;
+            Os << "Length:\n";
+            WriteAST(ArrType->Length, Indent + 1);
         }
         else if (auto DerivedType = Cast<DerivedTypeNode>(Node))
         {
@@ -257,7 +258,7 @@ namespace Volt
     void DebugOutput::WriteCompileTimeValue(SemaResult *Value) const
     {
         auto Res = Cast<ExprResult>(Value);
-        if (!Res)
+        if (!Res || Res->IsEmpty())
         {
             Os << "Null";
             return;

@@ -20,17 +20,17 @@
 
 namespace Volt
 {
-    struct CTimeScopeEntry
-    {
-        std::string Name;
-        ExprAddress* Previous = nullptr;
-
-        CTimeScopeEntry(const std::string& Name, ExprAddress* Prev = nullptr)
-            : Name(Name), Previous(Prev) {}
-    };
-
     class TypeChecker
     {
+        struct ScopeEntry
+        {
+            std::string Name;
+            ExprAddress* Prev = nullptr;
+
+            ScopeEntry(const std::string& Name, ExprAddress* Prev)
+                : Name(Name), Prev(Prev) {}
+        };
+
     private:
         CompilationContext& CContext;
 
@@ -44,7 +44,7 @@ namespace Volt
         FunctionTable Functions;
         CTimeVariableTable Variables;
 
-        Array<Array<CTimeScopeEntry>> ScopeStack;
+        Array<Array<ScopeEntry>> ScopeStack;
 
         SmallVec8<std::pair<std::string, QualType>> FunctionParams;
         QualType FunctionReturnType;
@@ -126,7 +126,7 @@ namespace Volt
         void EnterScope();
         void ExitScope();
 
-        void DeclareVariable(const std::string& Name, QualType Type);
+        void DeclareVariable(const std::string& Name, ExprAddress* Addr);
         ExprAddress* GetVariable(const std::string& Name);
 
         friend class LLVMCompiler;

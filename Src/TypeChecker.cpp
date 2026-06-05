@@ -90,7 +90,8 @@ namespace Volt
         if (!FunctionParams.empty())
         {
             for (const auto& [Name, Type] : FunctionParams)
-                DeclareVariable(Name, Type);
+                DeclareVariable(Name, MainArena.Create<ExprAddress>(
+                    ExprResult::CreateEmpty(Type, MainArena)));
         }
 
         for (auto Statement : Block->Statements)
@@ -210,7 +211,7 @@ namespace Volt
             return nullptr;
         }
 
-        Identifier->CompileTimeValue = ExprResult::CreateEmpty(VarAddr->GetType(), MainArena);
+        Identifier->CompileTimeValue = VarAddr->GetValue();
         return VarAddr;
     }
 
@@ -556,17 +557,10 @@ namespace Volt
 
         if (auto RefType = VarType.CastAs<ReferenceType>())
         {
-            SemaResult* Value = VisitNode(Variable->Value);
-            if (!Value) return nullptr;
+            ExprAddress* ValueAddr = VisitToLValue(Variable->Value);
+            if (!ValueAddr) return nullptr;
 
-            auto ValueAddr = Cast<ExprAddress>(Value);
-            if (!ValueAddr)
-            {
-                // SendError
-                return nullptr;
-            }
-
-            DeclareVariable(Variable->Name.str(), VarType);
+            DeclareVariable(Variable->Name.str(), ValueAddr);
             return nullptr;
         }
 
@@ -580,7 +574,10 @@ namespace Volt
             return nullptr;
         }
 
-        DeclareVariable(Variable->Name.str(), VarType);
+        if (!VarType.HasQualifier(QualType::CONST))
+            Value = ExprResult::CreateEmpty(VarType, MainArena);
+
+        DeclareVariable(Variable->Name.str(), MainArena.Create<ExprAddress>(Value));
         return nullptr;
     }
 
@@ -750,7 +747,7 @@ namespace Volt
         llvm_unreachable("Invalid SemaResult");
     }
 
-    ExprAddress * TypeChecker::VisitToLValue(ASTNode *Node)
+    ExprAddress* TypeChecker::VisitToLValue(ASTNode *Node)
     {
         SemaResult* Result = VisitNode(Node);
         if (!Result) return nullptr;
@@ -763,7 +760,7 @@ namespace Volt
         return Addr;
     }
 
-    ExprAddress * TypeChecker::VisitToLValueAndCheckConst(ASTNode *Node)
+    ExprAddress* TypeChecker::VisitToLValueAndCheckConst(ASTNode *Node)
     {
         ExprAddress* Addr = VisitToLValue(Node);
         if (!Addr) return nullptr;
@@ -807,10 +804,10 @@ namespace Volt
 
     void TypeChecker::ExitScope()
     {
-        for (const CTimeScopeEntry& Entry : ScopeStack.Back())
+        for (const auto& Entry : ScopeStack.Back())
         {
-            if (Entry.Previous)
-                Variables[Entry.Name] = Entry.Previous;
+            if (Entry.Prev)
+                Variables[Entry.Name] = Entry.Prev;
             else
                 Variables.erase(Entry.Name);
         }
@@ -818,12 +815,12 @@ namespace Volt
         ScopeStack.Pop();
     }
 
-    void TypeChecker::DeclareVariable(const std::string &Name, QualType Type)
+    void TypeChecker::DeclareVariable(const std::string &Name, ExprAddress* Addr)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
 
-        Variables[Name] = MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(Type, MainArena));
+        Variables[Name] = Addr;
         ScopeStack.Back().Add({ Name, nullptr });
     }
 
