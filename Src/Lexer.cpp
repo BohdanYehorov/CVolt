@@ -9,13 +9,7 @@
 
 namespace Volt
 {
-	std::unordered_set<char> Lexer::OperatorChars = {
-		'+', '-', '*', '/', '%', '=', '!', '<', '>',
-		'&', '|', '^', '~', '.', ':', '?', ',', ';',
-		'(', ')', '[', ']', '{', '}', '$'
-	};
-
-	std::unordered_map<std::string, TokenType> Lexer::Operators = {
+	llvm::StringMap<TokenType> Lexer::Operators = {
 		{ "+", TokenType::OP_ADD },
 		{ "-", TokenType::OP_SUB },
 		{ "*", TokenType::OP_MUL },
@@ -72,7 +66,7 @@ namespace Volt
 		{ "$", TokenType::OP_REFERENCE }
 	};
 
-	FixedMap<std::string, TokenType> Lexer::Keywords {
+	llvm::StringMap<TokenType> Lexer::Keywords {
 		{ "if", TokenType::KW_IF },
 		{ "else", TokenType::KW_ELSE },
 		{ "while", TokenType::KW_WHILE },
@@ -84,7 +78,7 @@ namespace Volt
 		{ "continue", TokenType::KW_CONTINUE }
 	};
 
-	FixedMap<std::string, TokenType> Lexer::DataTypes = {
+	llvm::StringMap<TokenType> Lexer::DataTypes = {
 		{"const", TokenType::TYPE_CONST },
 		{ "void", TokenType::TYPE_VOID },
 
@@ -107,9 +101,23 @@ namespace Volt
 		{ "f128", TokenType::TYPE_F128 }
 	};
 
+	llvm::StringMap<TokenType> Lexer::IntNumberLiterals = {
+		{ "i8", TokenType::I8_NUMBER },
+		{ "i16", TokenType::I16_NUMBER },
+		{ "i32", TokenType::I32_NUMBER },
+		{ "i64", TokenType::I64_NUMBER }
+	};
+
+	llvm::StringMap<TokenType> Lexer::FloatNumberLiterals = {
+		{ "f16", TokenType::F16_NUMBER },
+		{ "f32", TokenType::F32_NUMBER },
+		{ "f64", TokenType::F64_NUMBER },
+		{ "f128", TokenType::F128_NUMBER }
+	};
+
 	std::string Lexer::GetOperatorLexeme(TokenType Type)
 	{
-		static std::unordered_map<TokenType, std::string> ReversedOperatorsMap;
+		static llvm::DenseMap<TokenType, std::string> ReversedOperatorsMap;
 		if (ReversedOperatorsMap.empty())
 		{
 			for (const auto& [Lexeme, TokenType] : Operators)
@@ -119,6 +127,30 @@ namespace Volt
 		if (auto Iter = ReversedOperatorsMap.find(Type); Iter != ReversedOperatorsMap.end())
 			return Iter->second;
 		return "";
+	}
+
+	bool Lexer::IsOperatorChar(UChar Ch)
+	{
+		static constexpr UInt8 OperatorChars[] = {
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		};
+
+		return OperatorChars[Ch];
 	}
 
 	void Lexer::Lex()
@@ -135,9 +167,9 @@ namespace Volt
 
 			if (GetIdentifierToken(Tok))
 				Tokens.Add(Tok);
-			else if (GetNumberToken(Tok))
-				Tokens.Add(Tok);
 			else if (GetOperatorToken(Tok))
+				Tokens.Add(Tok);
+			else if (GetNumberToken(Tok))
 				Tokens.Add(Tok);
 			else if (GetStringToken(Tok))
 				Tokens.Add(Tok);
@@ -239,10 +271,10 @@ namespace Volt
 		TokenType TokenType = TokenType::IDENTIFIER;
 
 		llvm::StringRef Lexeme{ Code.CStr() + StartPos, Pos - StartPos };
-		if (auto KwBucket = Keywords.Find(std::string(Lexeme))/*; KwIter != Keywords.end()*/)
-			TokenType = KwBucket->Value;
-		else if (auto TypeBucket = DataTypes.Find(std::string(Lexeme))/*; TypeIter != DataTypes.end()*/)
-			TokenType = TypeBucket->Value;
+		if (auto KwIter = Keywords.find(Lexeme); KwIter != Keywords.end())
+			TokenType = KwIter->second;
+		else if (auto TypeIter = DataTypes.find(Lexeme); TypeIter != DataTypes.end())
+			TokenType = TypeIter->second;
 		else if (Lexeme == "true")
 			TokenType = TokenType::BOOL_TRUE;
 		else if (Lexeme == "false")
@@ -331,13 +363,6 @@ namespace Volt
 				else
 					HasExponentSign = true;
 			}
-			// else if (isalpha(Ch) || Ch == '_')
-			// {
-			// 	if (Suffix.Length == 0)
-			// 		Suffix.Ptr = Pos;
-			//
-			// 	Suffix.Length++;
-			// }
 			else
 				break;
 
@@ -375,14 +400,8 @@ namespace Volt
 		{
 			if (HasDot || HasExponent)
 			{
-				if (SuffixLit == "f16")
-					TokenType = TokenType::F16_NUMBER;
-				else if (SuffixLit == "f32")
-					TokenType = TokenType::F32_NUMBER;
-				else if (SuffixLit == "f64")
-					TokenType = TokenType::F64_NUMBER;
-				else if (SuffixLit == "f128")
-					TokenType = TokenType::F128_NUMBER;
+				if (auto Iter = FloatNumberLiterals.find(SuffixLit); Iter != FloatNumberLiterals.end())
+					TokenType = Iter->second;
 				else
 				{
 					SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
@@ -393,14 +412,8 @@ namespace Volt
 			}
 			else
 			{
-				if (SuffixLit == "i8")
-					TokenType = TokenType::I8_NUMBER;
-				else if (SuffixLit == "i16")
-					TokenType = TokenType::I16_NUMBER;
-				else if (SuffixLit == "i32")
-					TokenType = TokenType::I32_NUMBER;
-				else if (SuffixLit == "i64")
-					TokenType = TokenType::I64_NUMBER;
+				if (auto Iter = IntNumberLiterals.find(SuffixLit); Iter != IntNumberLiterals.end())
+					TokenType = Iter->second;
 				else
 				{
 					SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
@@ -411,48 +424,6 @@ namespace Volt
 			}
 		}
 
-
-		/* if (HasDot || HasExponent)
-		{
-			if (Suffix.Length == 0)
-				TokenType = TokenType::F64_NUMBER;
-			else if (SuffixStr == "f16")
-				TokenType = TokenType::F16_NUMBER;
-			else if (SuffixStr == "f32")
-				TokenType = TokenType::F32_NUMBER;
-			else if (SuffixStr == "f64")
-				TokenType = TokenType::F64_NUMBER;
-			else if (SuffixStr == "f128")
-				TokenType = TokenType::F128_NUMBER;
-			else
-			{
-				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
-					{ SuffixStr.str() });
-				Tok = InvalidToken(StartPos, StartLine, StartCol);
-				return true;
-			}
-		}
-		else
-		{
-			if (Suffix.Length == 0)
-				TokenType = TokenType::I32_NUMBER;
-			else if (SuffixStr == "i8")
-				TokenType = TokenType::I8_NUMBER;
-			else if (SuffixStr == "i16")
-				TokenType = TokenType::I16_NUMBER;
-			else if (SuffixStr == "i32")
-				TokenType = TokenType::I32_NUMBER;
-			else if (SuffixStr == "i64")
-				TokenType = TokenType::I64_NUMBER;
-			else
-			{
-				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
-					{ std::string(Code.CStr() + Lexeme.Ptr, Lexeme.Length) });
-				Tok = InvalidToken(StartPos, StartLine, StartCol);
-				return true;
-			}
-		} */
-
 		Tok = Token(TokenType, Lexeme,
 						StartPos, StartLine, StartCol);
 
@@ -461,7 +432,7 @@ namespace Volt
 
 	bool Lexer::GetOperatorToken(Token &Tok)
 	{
-		if (!OperatorChars.contains(CurrentChar()))
+		if (!IsOperatorChar(CurrentChar()))
 			return false;
 
 		static size_t MaxOperatorSize = 0;
@@ -484,7 +455,7 @@ namespace Volt
 		{
 			OperatorLexeme.Length = Len;
 
-			if (auto Iter = Operators.find(std::string(
+			if (auto Iter = Operators.find(llvm::StringRef(
 				Code.CStr() + OperatorLexeme.Ptr, Len)); Iter != Operators.end())
 			{
 				Tok = Token(Iter->second, OperatorLexeme, StartPos, StartLine, StartCol);

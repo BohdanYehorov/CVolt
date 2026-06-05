@@ -9,12 +9,9 @@
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/ADT/Array.h"
-#include "Volt/ADT/FixedMap.h"
+#include <llvm/ADT/StringMap.h>
 #include "Token.h"
 #include <string>
-#include <unordered_set>
-#include <unordered_map>
-#include <iostream>
 
 namespace Volt
 {
@@ -23,13 +20,16 @@ namespace Volt
     class Lexer
     {
     private:
-        static std::unordered_set<char> OperatorChars;
-        static std::unordered_map<std::string, TokenType> Operators;
-        static FixedMap<std::string, TokenType> Keywords;
-        static FixedMap<std::string, TokenType> DataTypes;
+        static llvm::StringMap<TokenType> Operators;
+        static llvm::StringMap<TokenType> Keywords;
+        static llvm::StringMap<TokenType> DataTypes;
+        static llvm::StringMap<TokenType> IntNumberLiterals;
+        static llvm::StringMap<TokenType> FloatNumberLiterals;
 
     public:
         static std::string GetOperatorLexeme(TokenType Type);
+
+        static bool IsOperatorChar(UChar Ch);
 
     private:
         size_t Pos = 0, Line = 1, Column = 1;
