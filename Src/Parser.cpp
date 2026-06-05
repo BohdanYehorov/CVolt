@@ -372,20 +372,29 @@ namespace Volt
             case TokenType::TYPE_CHAR:
                 Type = CContext.GetCharType();
                 break;
-            case TokenType::TYPE_BYTE:
+            case TokenType::TYPE_I8:
                 Type = CContext.GetIntegerType(8);
                 break;
-            case TokenType::TYPE_INT:
+            case TokenType::TYPE_I16:
+                Type = CContext.GetIntegerType(16);
+                break;
+            case TokenType::TYPE_I32:
                 Type = CContext.GetIntegerType(32);
                 break;
-            case TokenType::TYPE_LONG:
+            case TokenType::TYPE_I64:
                 Type = CContext.GetIntegerType(64);
                 break;
-            case TokenType::TYPE_FLOAT:
+            case TokenType::TYPE_F16:
+                Type = CContext.GetFPType(16);
+                break;
+            case TokenType::TYPE_F32:
                 Type = CContext.GetFPType(32);
                 break;
-            case TokenType::TYPE_DOUBLE:
+            case TokenType::TYPE_F64:
                 Type = CContext.GetFPType(64);
+                break;
+            case TokenType::TYPE_F128:
+                Type = CContext.GetFPType(128);
                 break;
             case TokenType::OP_LPAREN:
             {
@@ -1295,6 +1304,8 @@ namespace Volt
 
     ASTNode* Parser::ParsePrimary()
     {
+        using enum TokenType;
+
         DepthIncScope DScope(Depth);
 
         if (!IsValidIndex())
@@ -1304,72 +1315,88 @@ namespace Volt
 
         switch (Tok.Type)
         {
-            case TokenType::IDENTIFIER:
+            case IDENTIFIER:
                 Consume();
                 return NodesArena.Create<IdentifierNode>(
                     GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
-            case TokenType::BYTE_NUMBER:
-            {
-                Consume();
-                UInt8 Value;
-                llvm::StringRef NumStr = GetTokenLexeme(Tok);
-                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-                return NodesArena.Create<IntegerNode>(
-                    IntegerNode::BYTE, Value, Tok.Pos, Tok.Line, Tok.Column);
-            }
-            case TokenType::INT_NUMBER:
-            {
-                Consume();
-                UInt32 Value;
-                llvm::StringRef NumStr = GetTokenLexeme(Tok);
-                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-                return NodesArena.Create<IntegerNode>(
-                    IntegerNode::INT, Value, Tok.Pos, Tok.Line, Tok.Column);
-            }
-            case TokenType::LONG_NUMBER:
-            {
-                Consume();
-                UInt64 Value;
 
-                llvm::StringRef NumStr = GetTokenLexeme(Tok);
-                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-                return NodesArena.Create<IntegerNode>(
-                    IntegerNode::LONG, Value, Tok.Pos, Tok.Line, Tok.Column);
-            }
-            case TokenType::FLOAT_NUMBER:
-            {
+            case I8_NUMBER:  case I16_NUMBER:
+            case I32_NUMBER: case I64_NUMBER:
                 Consume();
-                float Value;
+                return CreateInteger(Tok);
 
-                llvm::StringRef NumStr = GetTokenLexeme(Tok);
-                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-                return NodesArena.Create<FloatingPointNode>(
-                    FloatingPointNode::FLOAT, Value, Tok.Pos, Tok.Line, Tok.Column);
-            }
-            case TokenType::DOUBLE_NUMBER:
-            {
+            case F16_NUMBER: case F32_NUMBER:
+            case F64_NUMBER: case F128_NUMBER:
                 Consume();
-                double Value;
-                llvm::StringRef NumStr = GetTokenLexeme(Tok);
-                std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-                return NodesArena.Create<FloatingPointNode>(
-                    FloatingPointNode::DOUBLE, Value, Tok.Pos, Tok.Line, Tok.Column);
-            }
-            case TokenType::BOOL_TRUE:
+                return CreateFloatingPoint(Tok);
+
+            // case TokenType::I8_NUMBER:
+            // {
+            //     Consume();
+            //     return CreateInteger(IntegerNode::I8, Tok);
+            // }
+            // case TokenType::I16_NUMBER:
+            // {
+            //     Consume();
+            //     UInt16 Value;
+            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
+            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
+            //     return NodesArena.Create<IntegerNode>(
+            //         IntegerNode::BYTE, Value, Tok.Pos, Tok.Line, Tok.Column);
+            // }
+            // case TokenType::INT_NUMBER:
+            // {
+            //     Consume();
+            //     UInt32 Value;
+            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
+            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
+            //     return NodesArena.Create<IntegerNode>(
+            //         IntegerNode::INT, Value, Tok.Pos, Tok.Line, Tok.Column);
+            // }
+            // case TokenType::LONG_NUMBER:
+            // {
+            //     Consume();
+            //     UInt64 Value;
+            //
+            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
+            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
+            //     return NodesArena.Create<IntegerNode>(
+            //         IntegerNode::LONG, Value, Tok.Pos, Tok.Line, Tok.Column);
+            // }
+            // case TokenType::FLOAT_NUMBER:
+            // {
+            //     Consume();
+            //     float Value;
+            //
+            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
+            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
+            //     return NodesArena.Create<FloatingPointNode>(
+            //         FloatingPointNode::FLOAT, Value, Tok.Pos, Tok.Line, Tok.Column);
+            // }
+            // case TokenType::DOUBLE_NUMBER:
+            // {
+            //     Consume();
+            //     double Value;
+            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
+            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
+            //     return NodesArena.Create<FloatingPointNode>(
+            //         FloatingPointNode::DOUBLE, Value, Tok.Pos, Tok.Line, Tok.Column);
+            // }
+            case BOOL_TRUE:
                 Consume();
                 return NodesArena.Create<BoolNode>(true, Tok.Pos, Tok.Line, Tok.Column);
-            case TokenType::BOOL_FALSE:
+            case BOOL_FALSE:
                 Consume();
                 return NodesArena.Create<BoolNode>(false, Tok.Pos, Tok.Line, Tok.Column);
-            case TokenType::CHAR:
+            case CHAR:
                 Consume();
                 return NodesArena.Create<CharNode>(
                     GetTokenLexeme(Tok)[0], Tok.Pos, Tok.Line, Tok.Column);
-            case TokenType::STRING:
+            case STRING:
                 Consume();
                 return NodesArena.Create<StringNode>(
                     GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
-            case TokenType::OP_LPAREN:
+            case OP_LPAREN:
             {
                 Consume();
                 ASTNode* Node = ParseAssignment();
@@ -1377,26 +1404,26 @@ namespace Volt
                     return nullptr;
                 return Node;
             }
-            case TokenType::OP_LBRACKET:
+            case OP_LBRACKET:
             {
                 Consume();
                 auto Array = NodesArena.Create<ArrayNode>(Tok.Pos, Tok.Line, Tok.Column);
                 while (IsValidIndex())
                 {
-                    if (CurrentToken().Type == TokenType::OP_RBRACKET)
+                    if (CurrentToken().Type == OP_RBRACKET)
                         break;
                     ASTNode* El = ParseAssignment();
                     if (!El)
                         return nullptr;
                     Array->AddItem(El);
-                    if (!ConsumeIf(TokenType::OP_COMMA))
+                    if (!ConsumeIf(OP_COMMA))
                         break;
                 }
-                if (!Expect(TokenType::OP_RBRACKET))
+                if (!Expect(OP_RBRACKET))
                     return nullptr;
                 return Array;
             }
-            case TokenType::OP_LBRACE:
+            case OP_LBRACE:
                 return ParseBlock();
             default:
                 break;
@@ -1408,5 +1435,47 @@ namespace Volt
         SendError(ParseErrorType::UnexpectedToken, Tok.Line, Tok.Column,
             { std::string(GetTokenLexeme(Tok).str()) });
         return nullptr;
+    }
+
+    ASTNode* Parser::CreateInteger(const Token &Tok) const
+    {
+        using enum TokenType;
+
+        size_t BitWidth;
+        switch (Tok.Type)
+        {
+            case I8_NUMBER:  BitWidth = 8;  break;
+            case I16_NUMBER: BitWidth = 16; break;
+            case I32_NUMBER: BitWidth = 32; break;
+            case I64_NUMBER: BitWidth = 64; break;
+            default: llvm_unreachable("Invalid integer type");
+        }
+
+        UInt64 Value;
+        llvm::StringRef NumStr = GetTokenLexeme(Tok);
+        std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
+        return NodesArena.Create<IntegerNode>(
+            BitWidth, Value, Tok.Pos, Tok.Line, Tok.Column);
+    }
+
+    ASTNode* Parser::CreateFloatingPoint(const Token &Tok) const
+    {
+        using enum TokenType;
+
+        size_t BitWidth;
+        switch (Tok.Type)
+        {
+            case F16_NUMBER:  BitWidth = 16;  break;
+            case F32_NUMBER:  BitWidth = 32;  break;
+            case F64_NUMBER:  BitWidth = 64;  break;
+            case F128_NUMBER: BitWidth = 128; break;
+            default: llvm_unreachable("Invalid floating point type");
+        }
+
+        double Value;
+        llvm::StringRef NumStr = GetTokenLexeme(Tok);
+        std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
+        return NodesArena.Create<FloatingPointNode>(
+            BitWidth, Value, Tok.Pos, Tok.Line, Tok.Column);
     }
 }

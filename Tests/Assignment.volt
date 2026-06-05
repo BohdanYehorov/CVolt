@@ -1,6 +1,6 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int a = 5;
+    let:i32 a = 5;
     a = 8;
     Out(a);
     a += 10;
@@ -24,7 +24,7 @@ fun:int Main()
     a %= 3;
     Out(a);
 
-    let:double b = 5.0;
+    let:f64 b = 5.0;
     b = 8.0;
     Out(b);
     b -= 2.2;

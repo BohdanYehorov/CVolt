@@ -1,7 +1,7 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int Num = 5;
-    let:int* Ptr = $Num;
+    let:i32 Num = 5;
+    let:i32* Ptr = $Num;
     *Ptr = 8;
     Out(Num);
     return 0;

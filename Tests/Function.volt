@@ -3,22 +3,22 @@ fun:void OutHello()
     Out("Hello!");
 }
 
-fun:int Add(int a, int b)
+fun:i32 Add(i32 a, i32 b)
 {
     return a + b;
 }
 
-fun:void SetValue(int$ Ref, int Value)
+fun:void SetValue(i32$ Ref, i32 Value)
 {
     Ref = Value;
 }
 
-fun:int Main()
+fun:i32 Main()
 {
     OutHello();
     Out(Add(2, 5));
 
-    let:int Num = 5;
+    let:i32 Num = 5;
     SetValue(Num, 10);
     Out(Num);
 

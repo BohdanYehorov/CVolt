@@ -1,11 +1,11 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int a = 45b;
-    let:byte b = 85;
-    let:float c = 5.4;
-    let:float d = a;
-    let:double e = 58.4f;
-    let:int f = a + e;
+    let:i32 a = 45i8;
+    let:i8  b = 85;
+    let:f32 c = 5.4;
+    let:f32 d = a;
+    let:f64 e = 58.4f32;
+    let:i32 f = a + e;
 
     Out(a);
     Out(b);

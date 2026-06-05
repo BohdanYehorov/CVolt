@@ -1,6 +1,6 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int i = 0;
+    let:i32 i = 0;
 
     while (true)
     {

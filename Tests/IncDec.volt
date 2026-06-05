@@ -1,6 +1,6 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int a = 10;
+    let:i32 a = 10;
     Out(a++);
     Out(++a);
     Out(a--);

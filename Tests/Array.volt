@@ -1,6 +1,6 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int[5] Arr = [1, 2, 3, 4, 5];
+    let:i32[5] Arr = [1, 2, 3, 4, 5];
     Arr[2] = 10;
     Arr[3] = 8;
 

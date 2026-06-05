@@ -1,7 +1,7 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int Num = 5;
-    let:int$ Ref = Num;
+    let:i32 Num = 5;
+    let:i32$ Ref = Num;
     Ref = 10;
     Out(Ref);
     Out(Num);

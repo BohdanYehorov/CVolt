@@ -1,5 +1,5 @@
 # CVolt
-CVolt - compiler in C++ with LLVM integration, designed for embedded systems and for JIT compilation and calling volt functions in C++.
+CVolt - compiler in C++ with LLVM i32egration, designed for embedded systems and for JIT compilation and calling volt functions in C++.
 
 ## Features
 
@@ -7,7 +7,7 @@ CVolt - compiler in C++ with LLVM integration, designed for embedded systems and
 - JIT compilation
 - Function overloading
 - Arrays
-- Pointers
+- Poi32ers
 - References
 - Const qualifiers
 - Type checking
@@ -61,7 +61,7 @@ Volt
 |- Tests (ParserFuzzer)
 ```
 
-## Example of integration with C++
+## Example of i32egration with C++
 
 ```c++
 // Init JITEngine
@@ -71,7 +71,7 @@ Volt::CompilationContext CContext(Code /*Source Code*/, "test.volt" /*File Name*
 Volt::DebugOutput DebugOutput(llvm::outs(), CContext);
 
 Volt::BuiltinFunctionTable FuncTable(CContext);
-FuncTable.AddFunction("Out", "OutInt", &OutInt);
+FuncTable.AddFunction("Out", "Outi32", &Outi32);
 FuncTable.AddFunction("Out", "OutFloat", &OutFloat); // Builtin function overload
 
 // Lexing
@@ -100,7 +100,7 @@ MyCompiler.Compile();
 
 // Calling function
 Volt::JITEngine Engine(CContext, FuncTable);
-int Res = Engine.CallFunction<int>("Main");
+i32 Res = Engine.CallFunction<i32>("Main");
 ```
 
 ## UnitTests
@@ -168,9 +168,9 @@ for (Initialization; Condition; Iteration)
 
 ## Examples
 
-### Print "Hello, World!"
+### Pri32 "Hello, World!"
 ```c++
-fun:int Main()
+fun:i32 Main()
 {
 	Out("Hello, World!");
 	return 0;
@@ -179,9 +179,9 @@ fun:int Main()
 
 ### If/Else
 ```c++
-fun:int Main()
+fun:i32 Main()
 {
-	let:int Num = 5;
+	let:i32 Num = 5;
 	if (Num < 10)
 		Out("Less than ten");
 	else
@@ -193,9 +193,9 @@ fun:int Main()
 
 ### While
 ```c++
-fun:int Main()
+fun:i32 Main()
 {
-	let:int Num = 0;
+	let:i32 Num = 0;
 	while (Num < 10)
 	{
 		Out(Num);
@@ -208,10 +208,10 @@ fun:int Main()
 
 ### For
 ```c++
-fun:int Main()
+fun:i32 Main()
 {
-	let:int[5] Arr = [1, 2, 3, 4, 5];
-	for (let:int i = 0; i < 5; i++)
+	let:i32[5] Arr = [1, 2, 3, 4, 5];
+	for (let:i32 i = 0; i < 5; i++)
 		Out(Arr[i]);
 
 	return 0;

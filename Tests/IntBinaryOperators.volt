@@ -1,4 +1,4 @@
-fun:int Main()
+fun:i32 Main()
 {
     Out(270 * 669);
     Out(671 % 318);

@@ -82,6 +82,8 @@ namespace Volt
 
         bool GetEscape(char Ch, char& Escape);
 
+        bool GetNumberSuffixLiteral(llvm::StringRef& Lit);
+
         [[nodiscard]] static Token InvalidToken(StringRef Lexeme, size_t Pos, size_t Line, size_t Col)
         { return { TokenType::INVALID, Lexeme, Pos, Line, Col };  }
 

@@ -91,12 +91,20 @@ namespace Volt
 		{ "bool", TokenType::TYPE_BOOL },
 		{ "char", TokenType::TYPE_CHAR },
 
-		{ "byte", TokenType::TYPE_BYTE },
-		{ "int", TokenType::TYPE_INT },
-		{ "long", TokenType::TYPE_LONG },
+		{ "i8", TokenType::TYPE_I8 },
+		{ "i16", TokenType::TYPE_I16 },
+		{ "i32", TokenType::TYPE_I32 },
+		{ "i64", TokenType::TYPE_I64 },
 
-		{ "float", TokenType::TYPE_FLOAT },
-		{ "double", TokenType::TYPE_DOUBLE }
+		{ "u8", TokenType::TYPE_U8 },
+		{ "u16", TokenType::TYPE_U16 },
+		{ "u32", TokenType::TYPE_U32 },
+		{ "u64", TokenType::TYPE_U64 },
+
+		{ "f16", TokenType::TYPE_F16 },
+		{ "f32", TokenType::TYPE_F32 },
+		{ "f64", TokenType::TYPE_F64 },
+		{ "f128", TokenType::TYPE_F128 }
 	};
 
 	std::string Lexer::GetOperatorLexeme(TokenType Type)
@@ -323,13 +331,13 @@ namespace Volt
 				else
 					HasExponentSign = true;
 			}
-			else if (isalpha(Ch) || Ch == '_')
-			{
-				if (Suffix.Length == 0)
-					Suffix.Ptr = Pos;
-
-				Suffix.Length++;
-			}
+			// else if (isalpha(Ch) || Ch == '_')
+			// {
+			// 	if (Suffix.Length == 0)
+			// 		Suffix.Ptr = Pos;
+			//
+			// 	Suffix.Length++;
+			// }
 			else
 				break;
 
@@ -360,13 +368,62 @@ namespace Volt
 
 		TokenType TokenType;
 
-		llvm::StringRef SuffixStr{ Code.CStr() + Suffix.Ptr, Suffix.Length };
-		if (HasDot || HasExponent)
+		llvm::StringRef SuffixLit;
+		if (!GetNumberSuffixLiteral(SuffixLit))
+			TokenType = (HasDot || HasExponent ? TokenType::F64_NUMBER : TokenType::I32_NUMBER);
+		else
+		{
+			if (HasDot || HasExponent)
+			{
+				if (SuffixLit == "f16")
+					TokenType = TokenType::F16_NUMBER;
+				else if (SuffixLit == "f32")
+					TokenType = TokenType::F32_NUMBER;
+				else if (SuffixLit == "f64")
+					TokenType = TokenType::F64_NUMBER;
+				else if (SuffixLit == "f128")
+					TokenType = TokenType::F128_NUMBER;
+				else
+				{
+					SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
+						{ SuffixLit.str() });
+					Tok = InvalidToken(StartPos, StartLine, StartCol);
+					return true;
+				}
+			}
+			else
+			{
+				if (SuffixLit == "i8")
+					TokenType = TokenType::I8_NUMBER;
+				else if (SuffixLit == "i16")
+					TokenType = TokenType::I16_NUMBER;
+				else if (SuffixLit == "i32")
+					TokenType = TokenType::I32_NUMBER;
+				else if (SuffixLit == "i64")
+					TokenType = TokenType::I64_NUMBER;
+				else
+				{
+					SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
+						{ std::string(Code.CStr() + Lexeme.Ptr, Lexeme.Length) });
+					Tok = InvalidToken(StartPos, StartLine, StartCol);
+					return true;
+				}
+			}
+		}
+
+
+		/* if (HasDot || HasExponent)
 		{
 			if (Suffix.Length == 0)
-				TokenType = TokenType::DOUBLE_NUMBER;
-			else if (SuffixStr == "f")
-				TokenType = TokenType::FLOAT_NUMBER;
+				TokenType = TokenType::F64_NUMBER;
+			else if (SuffixStr == "f16")
+				TokenType = TokenType::F16_NUMBER;
+			else if (SuffixStr == "f32")
+				TokenType = TokenType::F32_NUMBER;
+			else if (SuffixStr == "f64")
+				TokenType = TokenType::F64_NUMBER;
+			else if (SuffixStr == "f128")
+				TokenType = TokenType::F128_NUMBER;
 			else
 			{
 				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
@@ -378,11 +435,15 @@ namespace Volt
 		else
 		{
 			if (Suffix.Length == 0)
-				TokenType = TokenType::INT_NUMBER;
-			else if (SuffixStr == "b")
-				TokenType = TokenType::BYTE_NUMBER;
-			else if (SuffixStr == "l")
-				TokenType = TokenType::LONG_NUMBER;
+				TokenType = TokenType::I32_NUMBER;
+			else if (SuffixStr == "i8")
+				TokenType = TokenType::I8_NUMBER;
+			else if (SuffixStr == "i16")
+				TokenType = TokenType::I16_NUMBER;
+			else if (SuffixStr == "i32")
+				TokenType = TokenType::I32_NUMBER;
+			else if (SuffixStr == "i64")
+				TokenType = TokenType::I64_NUMBER;
 			else
 			{
 				SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
@@ -390,7 +451,7 @@ namespace Volt
 				Tok = InvalidToken(StartPos, StartLine, StartCol);
 				return true;
 			}
-		}
+		} */
 
 		Tok = Token(TokenType, Lexeme,
 						StartPos, StartLine, StartCol);
@@ -593,6 +654,28 @@ namespace Volt
 				return false;
 		}
 
+		return true;
+	}
+
+	bool Lexer::GetNumberSuffixLiteral(llvm::StringRef &Lit)
+	{
+		if (!std::isalpha(CurrentUChar()) && CurrentChar() != '_')
+			return false;
+
+		size_t StartPos = Pos;
+
+		while (IsValidPos())
+		{
+			if (UChar Ch = CurrentUChar(); std::isalpha(Ch) || Ch == '_' || std::isdigit(Ch))
+			{
+				MovePos();
+				continue;
+			}
+
+			break;
+		}
+
+		Lit = llvm::StringRef(Code.CStr() + StartPos, Pos - StartPos);
 		return true;
 	}
 }

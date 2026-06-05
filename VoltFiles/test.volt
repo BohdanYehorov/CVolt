@@ -1,6 +1,6 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:const int a = 5;
-    let:int[a * 1] arr = [1, 2, 3, 4, 5];
+    let:i32 Num = 5i32;
+    Out(Num);
     return 0;
 }

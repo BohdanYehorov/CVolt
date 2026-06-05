@@ -1,6 +1,6 @@
-fun:int Main()
+fun:i32 Main()
 {
-    let:int* Ptr = int*(MemAlloc(8));
+    let:i32* Ptr = i32*(MemAlloc(8));
     *Ptr = 2;
     *(Ptr + 1) = 10;
     Out(Ptr[0]);

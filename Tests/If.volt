@@ -1,4 +1,4 @@
-fun:int Main()
+fun:i32 Main()
 {
     if (true)
     {
