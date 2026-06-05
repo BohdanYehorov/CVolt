@@ -102,22 +102,6 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitInt(IntegerNode *Int)
     {
-        // int BitWidth = 0;
-        // switch (Int->Type)
-        // {
-        //     case IntegerNode::BYTE:
-        //         BitWidth = 8;
-        //         break;
-        //     case IntegerNode::INT:
-        //         BitWidth = 32;
-        //         break;
-        //     case IntegerNode::LONG:
-        //         BitWidth = 64;
-        //         break;
-        //     default:
-        //         return nullptr;
-        // }
-
         Int->CompileTimeValue = ExprResult::CreateInteger(
             QualType(CContext.GetIntegerType(Int->BitWidth), QualType::CONST), Int->Value, MainArena);
         return Int->CompileTimeValue;
@@ -125,19 +109,6 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitFloat(FloatingPointNode *Float)
     {
-        // int BitWidth = 0;
-        // switch (Float->Type)
-        // {
-        //     case FloatingPointNode::FLOAT:
-        //         BitWidth = 32;
-        //         break;
-        //     case FloatingPointNode::DOUBLE:
-        //         BitWidth = 64;
-        //         break;
-        //     default:
-        //         return nullptr;
-        // }
-
         Float->CompileTimeValue = ExprResult::CreateFloat(
             QualType(CContext.GetFPType(Float->BitWidth), QualType::CONST), Float->Value, MainArena);
         return Float->CompileTimeValue;

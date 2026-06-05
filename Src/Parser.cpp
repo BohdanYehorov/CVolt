@@ -356,6 +356,8 @@ namespace Volt
 
     DataTypeNodeBase *Parser::ParsePrimitiveType()
     {
+        using enum TokenType;
+
         DepthIncScope DScope(Depth);
 
         const Token& Tok = CurrentToken();
@@ -363,40 +365,22 @@ namespace Volt
         PrimitiveDataType* Type;
         switch (Tok.Type)
         {
-            case TokenType::TYPE_VOID:
-                Type = CContext.GetVoidType();
-                break;
-            case TokenType::TYPE_BOOL:
-                Type = CContext.GetBoolType();
-                break;
-            case TokenType::TYPE_CHAR:
-                Type = CContext.GetCharType();
-                break;
-            case TokenType::TYPE_I8:
-                Type = CContext.GetIntegerType(8);
-                break;
-            case TokenType::TYPE_I16:
-                Type = CContext.GetIntegerType(16);
-                break;
-            case TokenType::TYPE_I32:
-                Type = CContext.GetIntegerType(32);
-                break;
-            case TokenType::TYPE_I64:
-                Type = CContext.GetIntegerType(64);
-                break;
-            case TokenType::TYPE_F16:
-                Type = CContext.GetFPType(16);
-                break;
-            case TokenType::TYPE_F32:
-                Type = CContext.GetFPType(32);
-                break;
-            case TokenType::TYPE_F64:
-                Type = CContext.GetFPType(64);
-                break;
-            case TokenType::TYPE_F128:
-                Type = CContext.GetFPType(128);
-                break;
-            case TokenType::OP_LPAREN:
+            case TYPE_VOID: Type = CContext.GetVoidType(); break;
+            case TYPE_BOOL: Type = CContext.GetBoolType(); break;
+            case TYPE_CHAR: Type = CContext.GetCharType(); break;
+            case TYPE_I8:   Type = CContext.GetIntegerType(8, true);   break;
+            case TYPE_I16:  Type = CContext.GetIntegerType(16, true);  break;
+            case TYPE_I32:  Type = CContext.GetIntegerType(32, true);  break;
+            case TYPE_I64:  Type = CContext.GetIntegerType(64, true);  break;
+            case TYPE_U8:   Type = CContext.GetIntegerType(8, false);  break;
+            case TYPE_U16:  Type = CContext.GetIntegerType(16, false); break;
+            case TYPE_U32:  Type = CContext.GetIntegerType(32, false); break;
+            case TYPE_U64:  Type = CContext.GetIntegerType(64, false); break;
+            case TYPE_F16:  Type = CContext.GetFPType(16);  break;
+            case TYPE_F32:  Type = CContext.GetFPType(32);  break;
+            case TYPE_F64:  Type = CContext.GetFPType(64);  break;
+            case TYPE_F128: Type = CContext.GetFPType(128); break;
+            case OP_LPAREN:
             {
                 Consume();
                 DataTypeNodeBase* Node = ParseQualType();
@@ -1324,64 +1308,10 @@ namespace Volt
             case I32_NUMBER: case I64_NUMBER:
                 Consume();
                 return CreateInteger(Tok);
-
             case F16_NUMBER: case F32_NUMBER:
             case F64_NUMBER: case F128_NUMBER:
                 Consume();
                 return CreateFloatingPoint(Tok);
-
-            // case TokenType::I8_NUMBER:
-            // {
-            //     Consume();
-            //     return CreateInteger(IntegerNode::I8, Tok);
-            // }
-            // case TokenType::I16_NUMBER:
-            // {
-            //     Consume();
-            //     UInt16 Value;
-            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
-            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-            //     return NodesArena.Create<IntegerNode>(
-            //         IntegerNode::BYTE, Value, Tok.Pos, Tok.Line, Tok.Column);
-            // }
-            // case TokenType::INT_NUMBER:
-            // {
-            //     Consume();
-            //     UInt32 Value;
-            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
-            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-            //     return NodesArena.Create<IntegerNode>(
-            //         IntegerNode::INT, Value, Tok.Pos, Tok.Line, Tok.Column);
-            // }
-            // case TokenType::LONG_NUMBER:
-            // {
-            //     Consume();
-            //     UInt64 Value;
-            //
-            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
-            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-            //     return NodesArena.Create<IntegerNode>(
-            //         IntegerNode::LONG, Value, Tok.Pos, Tok.Line, Tok.Column);
-            // }
-            // case TokenType::FLOAT_NUMBER:
-            // {
-            //     Consume();
-            //     float Value;
-            //
-            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
-            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-            //     return NodesArena.Create<FloatingPointNode>(
-            //         FloatingPointNode::FLOAT, Value, Tok.Pos, Tok.Line, Tok.Column);
-            // }
-            // case TokenType::DOUBLE_NUMBER:
-            // {
-            //     Consume();
-            //     double Value;
-            //     llvm::StringRef NumStr = GetTokenLexeme(Tok);
-            //     std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
-            //     return NodesArena.Create<FloatingPointNode>(
-            //         FloatingPointNode::DOUBLE, Value, Tok.Pos, Tok.Line, Tok.Column);
-            // }
             case BOOL_TRUE:
                 Consume();
                 return NodesArena.Create<BoolNode>(true, Tok.Pos, Tok.Line, Tok.Column);
@@ -1442,12 +1372,17 @@ namespace Volt
         using enum TokenType;
 
         size_t BitWidth;
+        bool IsSigned = true;
         switch (Tok.Type)
         {
             case I8_NUMBER:  BitWidth = 8;  break;
             case I16_NUMBER: BitWidth = 16; break;
             case I32_NUMBER: BitWidth = 32; break;
             case I64_NUMBER: BitWidth = 64; break;
+            case U8_NUMBER:  BitWidth = 8;  IsSigned = false; break;
+            case U16_NUMBER: BitWidth = 16; IsSigned = false; break;
+            case U32_NUMBER: BitWidth = 32; IsSigned = false; break;
+            case U64_NUMBER: BitWidth = 64; IsSigned = false; break;
             default: llvm_unreachable("Invalid integer type");
         }
 
@@ -1455,7 +1390,7 @@ namespace Volt
         llvm::StringRef NumStr = GetTokenLexeme(Tok);
         std::from_chars(NumStr.data(), NumStr.data() + NumStr.size(), Value);
         return NodesArena.Create<IntegerNode>(
-            BitWidth, Value, Tok.Pos, Tok.Line, Tok.Column);
+            BitWidth, Value, IsSigned, Tok.Pos, Tok.Line, Tok.Column);
     }
 
     ASTNode* Parser::CreateFloatingPoint(const Token &Tok) const

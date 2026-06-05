@@ -117,8 +117,8 @@ namespace Volt
         ASTNode* ParsePostfix();
         ASTNode* ParsePrimary();
 
-        ASTNode* CreateInteger(const Token& Tok) const;
-        ASTNode* CreateFloatingPoint(const Token& Tok) const;
+        [[nodiscard]] ASTNode* CreateInteger(const Token& Tok) const;
+        [[nodiscard]] ASTNode* CreateFloatingPoint(const Token& Tok) const;
     };
 }
 

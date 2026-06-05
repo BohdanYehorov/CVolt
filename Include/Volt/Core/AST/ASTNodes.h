@@ -67,30 +67,19 @@ namespace Volt
     {
         GENERATED_BODY(IntegerNode, ASTNode)
     public:
-        // enum IntType
-        // {
-        //     I8, I16, I32, I64
-        // };
-
-    public:
-        // IntType Type;
         size_t BitWidth;
         Int64 Value;
-        IntegerNode(size_t BitWidth, Int64 Value, size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), BitWidth(BitWidth), Value(Value) {}
+        bool IsSigned;
+        IntegerNode(size_t BitWidth, Int64 Value, bool IsSigned,
+            size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), BitWidth(BitWidth),
+            Value(Value), IsSigned(IsSigned) {}
     };
 
     class FloatingPointNode : public ASTNode
     {
         GENERATED_BODY(FloatingPointNode, ASTNode)
     public:
-        // enum FPType
-        // {
-        //     F16, F32, F64, F128
-        // };
-
-    public:
-        // FPType Type;
         size_t BitWidth;
         double Value;
         FloatingPointNode(size_t BitWidth, double Value, size_t Pos, size_t Line, size_t Column)

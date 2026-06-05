@@ -7,7 +7,6 @@
 
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Core/Hash/Hash.h"
 #include "Volt/Core/Lexer/Token.h"
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/ADT/String.h"
@@ -16,7 +15,6 @@
 #include "Volt/Core/Errors/TypeError.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-#include <unordered_set>
 
 namespace Volt
 {
@@ -26,7 +24,8 @@ namespace Volt
 		VoidType* CachedVoidType = nullptr;
 		BoolType* CachedBoolType = nullptr;
 		CharType* CachedCharType = nullptr;
-		IntegerType* CachedIntegerTypes[4]  = { nullptr, nullptr, nullptr, nullptr };
+		IntegerType* CachedIntegerTypes[8]  = { nullptr, nullptr, nullptr, nullptr,
+												nullptr, nullptr, nullptr, nullptr };
 		FloatingPointType* CachedFPTypes[4] = { nullptr, nullptr, nullptr, nullptr };
 
 		llvm::FoldingSet<PointerType> PointerTypes;
@@ -63,7 +62,7 @@ namespace Volt
 		[[nodiscard]] VoidType* GetVoidType();
 		[[nodiscard]] BoolType* GetBoolType();
 		[[nodiscard]] CharType* GetCharType();
-		[[nodiscard]] IntegerType* GetIntegerType(size_t BitWidth);
+		[[nodiscard]] IntegerType* GetIntegerType(size_t BitWidth, bool IsSigned = true);
 		[[nodiscard]] FloatingPointType* GetFPType(size_t BitWidth);
 		[[nodiscard]] PointerType* GetPointerType(QualType BaseType);
 		[[nodiscard]] ReferenceType* GetReferenceType(QualType BaseType);

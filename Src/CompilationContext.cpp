@@ -39,30 +39,28 @@ namespace Volt
 		return CachedCharType;
 	}
 
-	IntegerType *CompilationContext::GetIntegerType(size_t BitWidth)
+	IntegerType *CompilationContext::GetIntegerType(size_t BitWidth, bool IsSigned)
 	{
-		static size_t MinBitWidth = 8;
+		assert(BitWidth % 8 == 0 && BitWidth >= 8 && BitWidth <= 64);
 
-		assert(BitWidth % 8 == 0 && BitWidth >= MinBitWidth && BitWidth <= 64);
+		auto Index = std::countr_zero(BitWidth) - 3 + 4 * static_cast<int>(!IsSigned);
 
-		auto Index = static_cast<size_t>(std::log2(BitWidth / MinBitWidth));
 		if (Index >= std::size(CachedIntegerTypes))
-			throw std::range_error("Out of range");
+			llvm_unreachable("Out of range");
 
 		if (!CachedIntegerTypes[Index])
-			CachedIntegerTypes[Index] = MainArena.Create<IntegerType>(BitWidth);
+			CachedIntegerTypes[Index] = MainArena.Create<IntegerType>(BitWidth, IsSigned);
 
 		return CachedIntegerTypes[Index];
 	}
 
 	FloatingPointType *CompilationContext::GetFPType(size_t BitWidth)
 	{
-		static size_t MinBitWidth = 16;
-		assert(BitWidth % 8 == 0 && BitWidth >= MinBitWidth && BitWidth <= 128);
+		assert(BitWidth % 8 == 0 && BitWidth >= 16 && BitWidth <= 128);
 
-		auto Index = static_cast<size_t>(std::log2(BitWidth / MinBitWidth));
+		auto Index = std::countr_zero(BitWidth) - 4;
 		if (Index >= std::size(CachedFPTypes))
-			throw std::range_error("Out of range");
+			llvm_unreachable("Out of range");
 
 		if (!CachedFPTypes[Index])
 			CachedFPTypes[Index] = MainArena.Create<FloatingPointType>(BitWidth);
@@ -72,16 +70,6 @@ namespace Volt
 
 	PointerType *CompilationContext::GetPointerType(QualType BaseType)
 	{
-		// if (!BaseType->PointerVariants)
-		// 	BaseType->InitPointerVariants();
-		//
-		// size_t Index = BaseType.GetQuals();
-		//
-		// if (!BaseType->PointerVariants[Index])
-		// 	BaseType->PointerVariants[Index] = MainArena.Create<PointerType>(BaseType);
-		//
-		// return BaseType->PointerVariants[Index];
-
 		llvm::FoldingSetNodeID ID;
 		PointerType::Profile(ID, BaseType);
 
@@ -96,16 +84,6 @@ namespace Volt
 
 	ReferenceType *CompilationContext::GetReferenceType(QualType BaseType)
 	{
-		// if (!BaseType->ReferenceVariants)
-		// 	BaseType->InitReferenceVariants();
-		//
-		// size_t Index = BaseType.GetQuals();
-		//
-		// if (!BaseType->ReferenceVariants[Index])
-		// 	BaseType->ReferenceVariants[Index] = MainArena.Create<ReferenceType>(BaseType);
-		//
-		// return BaseType->ReferenceVariants[Index];
-
 		llvm::FoldingSetNodeID ID;
 		ReferenceType::Profile(ID, BaseType);
 
@@ -120,16 +98,6 @@ namespace Volt
 
 	ArrayType *CompilationContext::GetArrayType(QualType BaseType, size_t Length)
 	{
-		// if (!BaseType->ArrayVariants)
-		// 	BaseType->InitArrayVariants();
-		//
-		// size_t Index = BaseType.GetQuals();
-		//
-		// if (!BaseType->ArrayVariants[Index])
-		// 	BaseType->ArrayVariants[Index] = MainArena.Create<ArrayType>(BaseType, Length);
-		//
-		// return BaseType->ArrayVariants[Index];
-
 		llvm::FoldingSetNodeID ID;
 		ArrayType::Profile(ID, BaseType, Length, true);
 
