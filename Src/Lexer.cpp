@@ -589,39 +589,17 @@ namespace Volt
 	{
 		switch (Ch)
 		{
-			case '\'':
-				Escape = '\'';
-				break;
-			case '"':
-				Escape = '"';
-				break;
-			case '\\':
-				Escape = '\\';
-				break;
-			case '?':
-				Escape = '\?';
-				break;
-			case 'a':
-				Escape = '\a';
-				break;
-			case 'b':
-				Escape = '\b';
-				break;
-			case 'f':
-				Escape = '\f';
-				break;
-			case 'n':
-				Escape = '\n';
-				break;
-			case 'r':
-				Escape = '\r';
-				break;
-			case 't':
-				Escape = '\t';
-				break;
-			case 'v':
-				Escape = '\v';
-				break;
+			case '\'': Escape = '\''; break;
+			case '"':  Escape = '"';  break;
+			case '\\': Escape = '\\'; break;
+			case '?':  Escape = '\?'; break;
+			case 'a':  Escape = '\a'; break;
+			case 'b':  Escape = '\b'; break;
+			case 'f':  Escape = '\f'; break;
+			case 'n':  Escape = '\n'; break;
+			case 'r':  Escape = '\r'; break;
+			case 't':  Escape = '\t'; break;
+			case 'v':  Escape = '\v'; break;
 			default:
 				SendError(LexErrorType::InvalidEscape, Line, Column, { std::string(1, Ch) });
 				return false;

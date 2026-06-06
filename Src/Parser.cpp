@@ -1306,6 +1306,8 @@ namespace Volt
 
             case I8_NUMBER:  case I16_NUMBER:
             case I32_NUMBER: case I64_NUMBER:
+            case U8_NUMBER:  case U16_NUMBER:
+            case U32_NUMBER: case U64_NUMBER:
                 Consume();
                 return CreateInteger(Tok);
             case F16_NUMBER: case F32_NUMBER:

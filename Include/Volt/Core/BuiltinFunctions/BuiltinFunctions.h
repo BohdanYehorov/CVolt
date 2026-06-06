@@ -5,10 +5,12 @@
 #ifndef CVOLT_BUILTINFUNCTIONS_H
 #define CVOLT_BUILTINFUNCTIONS_H
 
+#include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include <iostream>
 #include <cmath>
 #include <ctime>
 #include <random>
+#include <cstring>
 
 extern "C"
 {
@@ -22,17 +24,42 @@ extern "C"
 		std::cout << Ch << std::endl;
 	}
 
-	inline void OutByte(std::byte Byte)
+	inline void OutI8(Volt::Int8 Num)
 	{
-		std::cout << static_cast<int>(Byte) << std::endl;
+		std::cout << static_cast<int>(Num) << std::endl;
 	}
 
-	inline void OutInt(int Num)
+	inline void OutI16(Volt::Int16 Num)
 	{
 		std::cout << Num << std::endl;
 	}
 
-	inline void OutLong(long Num)
+	inline void OutI32(Volt::Int32 Num)
+	{
+		std::cout << Num << std::endl;
+	}
+
+	inline void OutI64(Volt::Int64 Num)
+	{
+		std::cout << Num << std::endl;
+	}
+
+	inline void OutU8(Volt::UInt8 Num)
+	{
+		std::cout << static_cast<Volt::UInt32>(Num) << std::endl;
+	}
+
+	inline void OutU16(Volt::UInt16 Num)
+	{
+		std::cout << Num << std::endl;
+	}
+
+	inline void OutU32(Volt::UInt32 Num)
+	{
+		std::cout << Num << std::endl;
+	}
+
+	inline void OutU64(Volt::UInt64 Num)
 	{
 		std::cout << Num << std::endl;
 	}

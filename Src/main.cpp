@@ -14,6 +14,8 @@ int main(int Argc, char* Argv[])
 {
     Volt::JITEngine::Init();
 
+    std::byte;
+
 #ifdef _DEBUG
     std::ifstream File("../VoltFiles/test.volt");
     if (!File.is_open())
@@ -45,9 +47,14 @@ int main(int Argc, char* Argv[])
     Volt::BuiltinFunctionTable FuncTable(CContext);
     FuncTable.AddFunction("Out", "OutBool", &OutBool);
     FuncTable.AddFunction("Out", "OutChar", &OutChar);
-    FuncTable.AddFunction("Out", "OutByte", &OutByte);
-    FuncTable.AddFunction("Out", "OutInt", &OutInt);
-    FuncTable.AddFunction("Out", "OutLong", &OutLong);
+    FuncTable.AddFunction("Out", "OutI8", &OutI8);
+    FuncTable.AddFunction("Out", "OutI16", &OutI16);
+    FuncTable.AddFunction("Out", "OutI32", &OutI32);
+    FuncTable.AddFunction("Out", "OutI64", &OutI64);
+    FuncTable.AddFunction("Out", "OutU8", &OutU8);
+    FuncTable.AddFunction("Out", "OutU16", &OutU16);
+    FuncTable.AddFunction("Out", "OutU32", &OutU32);
+    FuncTable.AddFunction("Out", "OutU64", &OutU64);
     FuncTable.AddFunction("Out", "OutStr", &OutStr);
     FuncTable.AddFunction("Out", "OutFloat", &OutFloat);
     FuncTable.AddFunction("Out", "OutDouble", &OutDouble);

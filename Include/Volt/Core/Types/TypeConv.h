@@ -28,29 +28,44 @@ namespace Volt::TypeConv
 		return CContext.GetCharType();
 	}
 
-	template<> inline DataType* GetBaseType<std::byte>(CompilationContext& CContext)
+	template<> inline DataType* GetBaseType<Int8>(CompilationContext& CContext)
 	{
 		return CContext.GetIntegerType(8);
 	}
 
-	template<> inline DataType* GetBaseType<short>(CompilationContext& CContext)
+	template<> inline DataType* GetBaseType<Int16>(CompilationContext& CContext)
 	{
 		return CContext.GetIntegerType(16);
 	}
 
-	template<> inline DataType* GetBaseType<int>(CompilationContext& CContext)
+	template<> inline DataType* GetBaseType<Int32>(CompilationContext& CContext)
 	{
 		return CContext.GetIntegerType(32);
 	}
 
-	template<> inline DataType* GetBaseType<long>(CompilationContext& CContext)
+	template<> inline DataType* GetBaseType<Int64>(CompilationContext& CContext)
 	{
 		return CContext.GetIntegerType(64);
 	}
 
-	template<> inline DataType* GetBaseType<long long>(CompilationContext& CContext)
+	template<> inline DataType* GetBaseType<UInt8>(CompilationContext& CContext)
 	{
-		return CContext.GetIntegerType(64);
+		return CContext.GetIntegerType(8, false);
+	}
+
+	template<> inline DataType* GetBaseType<UInt16>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(16, false);
+	}
+
+	template<> inline DataType* GetBaseType<UInt32>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(32, false);
+	}
+
+	template<> inline DataType* GetBaseType<UInt64>(CompilationContext& CContext)
+	{
+		return CContext.GetIntegerType(64, false);
 	}
 
 	template<> inline DataType* GetBaseType<float>(CompilationContext& CContext)

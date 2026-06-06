@@ -50,6 +50,6 @@ target_precompile_headers(CVolt PRIVATE
 target_link_libraries(CVolt PRIVATE LLVM)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT COMPILE_TO_LIB)
-    target_compile_options(CVolt PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-    target_link_options(CVolt PRIVATE -fsanitize=address)
+    target_compile_options(CVolt PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(CVolt PRIVATE -fsanitize=address,undefined)
 endif ()

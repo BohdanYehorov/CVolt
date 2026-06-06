@@ -27,8 +27,8 @@ namespace Volt
                 return false;
 
             for (size_t i = 0; i < Params.size(); i++)
-                // if (Params[i] != Other.Params[i])
-                if (!Params[i].IsEqual(Other.Params[i]))
+                if (Params[i] != Other.Params[i])
+                // if (!Params[i].IsEqual(Other.Params[i]))
                     return false;
 
             return true;

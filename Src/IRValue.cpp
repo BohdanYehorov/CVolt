@@ -389,11 +389,11 @@ namespace Volt
 				return Builder.CreateICmpNE(Value, Builder.getInt8(0));
 
 			case TypeCategory::INTEGER:
-				return Builder.CreateSExt(Value, CContext.GetLLVMType(To));
+				return To->IsSignedIntegerType() ? Builder.CreateSExt(Value, CContext.GetLLVMType(To)) :
+				                                   Builder.CreateZExt(Value, CContext.GetLLVMType(To));
 
 			case TypeCategory::FLOATING_POINT:
 				return Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
-
 			default:
 				return nullptr;
 		}
@@ -421,13 +421,15 @@ namespace Volt
 				if (!FromIntType || !ToIntType)
 					return nullptr;
 
-				return FromIntType->BitWidth < ToIntType->BitWidth ?
-					Builder.CreateSExt(Value, CContext.GetLLVMType(To)) :
+				return FromIntType->BitWidth < ToIntType->BitWidth ? ToIntType->IsSigned ?
+					Builder.CreateSExt(Value, CContext.GetLLVMType(To))   :
+					Builder.CreateZExt(Value, CContext.GetLLVMType(Type)) :
 					Builder.CreateTrunc(Value, CContext.GetLLVMType(To));
 			}
 
 			case TypeCategory::FLOATING_POINT:
-				return Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
+				return Type->IsSignedIntegerType() ? Builder.CreateSIToFP(Value, CContext.GetLLVMType(To)) :
+													 Builder.CreateUIToFP(Value, CContext.GetLLVMType(To));
 
 			default:
 				return nullptr;
@@ -446,8 +448,11 @@ namespace Volt
 				 	llvm::ConstantFP::get(CContext.GetLLVMType(To), 0.0));
 
 			case TypeCategory::CHAR:
-			case TypeCategory::INTEGER:
 				return Builder.CreateFPToSI(Value, CContext.GetLLVMType(To));
+
+			case TypeCategory::INTEGER:
+				return To->IsSignedIntegerType() ? Builder.CreateFPToSI(Value, CContext.GetLLVMType(To)) :
+				                                   Builder.CreateFPToUI(Value, CContext.GetLLVMType(To));
 
 			case TypeCategory::FLOATING_POINT:
 			{

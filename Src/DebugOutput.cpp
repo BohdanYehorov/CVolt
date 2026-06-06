@@ -266,7 +266,8 @@ namespace Volt
 
         switch (Value->GetType()->GetCategory())
         {
-            case TypeCategory::INTEGER:        Os << Res->GetInt();     break;
+            case TypeCategory::INTEGER:        Os << (Value->GetType()->IsSignedIntegerType() ?
+                                               Res->GetInt() : Res->GetUInt());    break;
             case TypeCategory::FLOATING_POINT: Os << Res->GetFloat();   break;
             case TypeCategory::BOOLEAN:        Os << Res->GetBool();    break;
             case TypeCategory::CHAR:           Os << Res->GetChar();    break;

@@ -27,10 +27,6 @@ namespace Volt
         ARRAY
     };
 
-    class PointerType;
-    class ReferenceType;
-    class ArrayType;
-
     class alignas(8) DataType : public Object
     {
         GENERATED_BODY(DataTypeBase, Object)
@@ -50,10 +46,10 @@ namespace Volt
         virtual size_t GetHash() const = 0;
         virtual std::string ToString() const = 0;
 
-        virtual DataType* CastTo(DataType* To, bool Explicit) const = 0;
+        virtual bool CastTo(DataType* To, bool Explicit) const = 0;
 
-        [[nodiscard]] DataType* ImplicitCast(DataType* To) const { return CastTo(To, false); }
-        [[nodiscard]] DataType* ExplicitCast(DataType* To) const { return CastTo(To, true); }
+        [[nodiscard]] bool ImplicitCast(DataType* To) const { return CastTo(To, false); }
+        [[nodiscard]] bool ExplicitCast(DataType* To) const { return CastTo(To, true); }
 
         [[nodiscard]] bool IsVoidType() const { return Category == TypeCategory::VOID; }
         [[nodiscard]] bool IsBoolType() const { return Category == TypeCategory::BOOLEAN; }
@@ -63,6 +59,12 @@ namespace Volt
         [[nodiscard]] bool IsPointerType() const { return Category == TypeCategory::POINTER; }
         [[nodiscard]] bool IsReferenceType() const { return Category == TypeCategory::REFERENCE; }
         [[nodiscard]] bool IsArrayType() const { return Category == TypeCategory::ARRAY; }
+
+        [[nodiscard]] bool IsSignedIntegerType() const;
+        [[nodiscard]] bool IsUnsignedIntegerType() const
+        {
+            return Category == TypeCategory::INTEGER ? !IsSignedIntegerType() : false;
+        }
 
         [[nodiscard]] TypeCategory GetCategory() const { return Category; }
 
@@ -182,7 +184,7 @@ namespace Volt
         std::string ToString() const override { return "void"; }
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override { return nullptr; }
+        bool CastTo(DataType *To, bool Explicit) const override { return false; }
     };
 
     class BoolType : public PrimitiveDataType
@@ -207,7 +209,7 @@ namespace Volt
         std::string ToString() const override { return "bool"; }
 
     protected:
-        DataType* CastTo(DataType* To, bool Explicit) const override;
+        bool CastTo(DataType* To, bool Explicit) const override;
     };
 
     class CharType : public PrimitiveDataType
@@ -232,7 +234,7 @@ namespace Volt
         std::string ToString() const override { return "char"; }
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override;
+        bool CastTo(DataType *To, bool Explicit) const override;
     };
 
     class IntegerType : public PrimitiveDataType
@@ -257,7 +259,7 @@ namespace Volt
         std::string ToString() const override;
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override;
+        bool CastTo(DataType *To, bool Explicit) const override;
     };
 
     class FloatingPointType : public PrimitiveDataType
@@ -276,7 +278,7 @@ namespace Volt
         std::string ToString() const override;
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override;
+        bool CastTo(DataType *To, bool Explicit) const override;
     };
 
     class PointerType : public DataType, public llvm::FoldingSetNode
@@ -311,7 +313,7 @@ namespace Volt
         }
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override;
+        bool CastTo(DataType *To, bool Explicit) const override;
     };
 
     class ReferenceType : public DataType, public llvm::FoldingSetNode
@@ -348,7 +350,7 @@ namespace Volt
         }
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override;
+        bool CastTo(DataType *To, bool Explicit) const override;
     };
 
     class ArrayType : public DataType, public llvm::FoldingSetNode
@@ -391,7 +393,7 @@ namespace Volt
         }
 
     protected:
-        DataType* CastTo(DataType *To, bool Explicit) const override;
+        bool CastTo(DataType *To, bool Explicit) const override;
     };
 }
 

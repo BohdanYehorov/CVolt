@@ -1,6 +1,7 @@
 fun:i32 Main()
 {
-    let:i32 Num = 5i32;
-    Out(Num);
+    let:u32 a = 5u32;
+    a += 5u32;
+    Out(a);
     return 0;
 }

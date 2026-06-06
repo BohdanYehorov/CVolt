@@ -102,8 +102,8 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitInt(IntegerNode *Int)
     {
-        Int->CompileTimeValue = ExprResult::CreateInteger(
-            QualType(CContext.GetIntegerType(Int->BitWidth), QualType::CONST), Int->Value, MainArena);
+        Int->CompileTimeValue = ExprResult::CreateInteger(QualType(CContext.GetIntegerType(
+            Int->BitWidth, Int->IsSigned), QualType::CONST), Int->Value, MainArena);
         return Int->CompileTimeValue;
     }
 

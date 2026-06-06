@@ -29,13 +29,17 @@ namespace Volt
             {
                 case TypeCategory::INTEGER:
                     return Create<IRValue>(llvm::ConstantInt::get(
-                    CContext.GetLLVMType(Value->GetType().GetType()), Value->GetInt()), Value->GetType().GetType());
+                        CContext.GetLLVMType(Value->GetType().GetType()),
+                        Value->GetType()->IsSignedIntegerType() ? Value->GetInt() : Value->GetUInt(),
+                        Value->GetType()->IsSignedIntegerType()), Value->GetType().GetType());
                 case TypeCategory::FLOATING_POINT:
                     return Create<IRValue>(llvm::ConstantFP::get(
-                        CContext.GetLLVMType(Value->GetType().GetType()), Value->GetFloat()), Value->GetType().GetType());
+                        CContext.GetLLVMType(Value->GetType().GetType()),
+                        Value->GetFloat()), Value->GetType().GetType());
                 case TypeCategory::BOOLEAN:
                     return Create<IRValue>(llvm::ConstantInt::get(
-                        llvm::Type::getInt1Ty(Context), Value->GetBool()), Value->GetType().GetType());
+                        llvm::Type::getInt1Ty(Context),
+                        Value->GetBool()), Value->GetType().GetType());
                 default:
                     return nullptr;
             }
@@ -164,7 +168,7 @@ namespace Volt
     IRValue* LLVMCompiler::CompileInt(const IntegerNode *Int)
     {
         return Create<IRValue>(llvm::ConstantInt::get(
-            CContext.GetLLVMType(Int->CompileTimeValue->GetType().GetType()), Int->Value),
+            CContext.GetLLVMType(Int->CompileTimeValue->GetType().GetType()), Int->Value, Int->IsSigned),
             Int->CompileTimeValue->GetType().GetType());
     }
 

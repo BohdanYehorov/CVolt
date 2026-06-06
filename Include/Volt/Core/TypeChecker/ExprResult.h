@@ -33,15 +33,22 @@ namespace Volt
 		static ExprResult* CreateFromType(QualType Type, T Value, Arena& TypesArena);
 
 	private:
-		AlignedStorage<Int64, double, ExprAddress*> Storage;
+		AlignedStorage<Int64, UInt64, double, ExprAddress*> Storage;
 		bool bIsEmpty = true;
 
 	public:
 		[[nodiscard]] Int64 GetInt() const
 		{
 			assert(!bIsEmpty);
-			assert(Type->IsIntegerType());
+			assert(Type->IsSignedIntegerType());
 			return GetValue<Int64>();
+		}
+
+		[[nodiscard]] UInt64 GetUInt() const
+		{
+			assert(!bIsEmpty);
+			assert(Type->IsUnsignedIntegerType());
+			return GetValue<UInt64>();
 		}
 
 		[[nodiscard]] double GetFloat() const
@@ -109,13 +116,13 @@ namespace Volt
 		ExprResult* CastIntegerTo(QualType To, bool Explicit, CompilationContext& CContext);
 		ExprResult* CastFloatTo(QualType To, bool Explicit, CompilationContext& CContext);
 
-		template <typename IntFunc, typename FloatFunc>
+		template <typename Func>
 		ExprResult* CreateBinaryForIntFloat(
-			ExprResult* Right, IntFunc IntF, FloatFunc FloatF, CompilationContext& CContext) const;
+			ExprResult* Right, Func Fun, CompilationContext& CContext) const;
 
-		template <typename IntFunc>
+		template <typename Func>
 		ExprResult* CreateBinaryForInt(
-			ExprResult* Right, IntFunc IntF, CompilationContext& CContext) const;
+			ExprResult* Right, Func Fun, CompilationContext& CContext) const;
 
 		template <typename T>
 		void SetValue(T Value);
@@ -142,8 +149,8 @@ namespace Volt
 		}
 	}
 
-	template<typename IntFunc, typename FloatFunc>
-	ExprResult *ExprResult::CreateBinaryForIntFloat(ExprResult *Right, IntFunc IntF, FloatFunc FloatF,
+	template<typename Func>
+	ExprResult *ExprResult::CreateBinaryForIntFloat(ExprResult *Right, Func Fun,
 		CompilationContext &CContext) const
 	{
 		if (bIsEmpty)
@@ -152,17 +159,23 @@ namespace Volt
 		if (Type != Right->Type)
 			llvm_unreachable("Cannot create binary for different types");
 
-		if (Type->IsIntegerType())
-			return CreateInteger(Type, IntF(GetInt(), Right->GetInt()), CContext.MainArena);
+		if (auto IntType = Type.CastAs<IntegerType>())
+		{
+			if (IntType->IsSigned)
+				return CreateInteger(Type, Fun(GetInt(), Right->GetInt()), CContext.MainArena);
+
+			return CreateInteger(Type, Fun(GetUInt(), Right->GetUInt()), CContext.MainArena);
+		}
 
 		if (Type->IsFloatingPointType())
-			return CreateFloat(Type, FloatF(GetFloat(), Right->GetFloat()), CContext.MainArena);
+			return CreateFloat(Type, Fun(GetFloat(), Right->GetFloat()), CContext.MainArena);
 
 		return nullptr;
 	}
 
-	template<typename IntFunc>
-	ExprResult *ExprResult::CreateBinaryForInt(ExprResult *Right, IntFunc IntF, CompilationContext &CContext) const
+	template<typename Func>
+	ExprResult *ExprResult::CreateBinaryForInt(
+		ExprResult *Right, Func Fun, CompilationContext &CContext) const
 	{
 		if (bIsEmpty)
 			llvm_unreachable("Cannot create binary for empty value");
@@ -170,8 +183,13 @@ namespace Volt
 		if (Type != Right->Type)
 			llvm_unreachable("Cannot create binary for different types");
 
-		if (Type->IsIntegerType())
-			return CreateInteger(Type, IntF(GetInt(), Right->GetInt()), CContext.MainArena);
+		if (auto IntType = Type.CastAs<IntegerType>())
+		{
+			if (IntType->IsSigned)
+				return CreateInteger(Type, Fun(GetInt(), Right->GetInt()), CContext.MainArena);
+
+			return CreateInteger(Type, Fun(GetUInt(), Right->GetUInt()), CContext.MainArena);
+		}
 
 		return nullptr;
 	}

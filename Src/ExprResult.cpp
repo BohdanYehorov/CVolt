@@ -3,6 +3,9 @@
 //
 
 #include "Volt/Core/TypeChecker/ExprResult.h"
+
+#include <complex.h>
+
 #include "Volt/Core/TypeChecker/ExprAddress.h"
 
 namespace Volt
@@ -14,6 +17,8 @@ namespace Volt
 
 	ExprResult *ExprResult::CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena)
 	{
+		assert(IntType->IsIntegerType());
+
 		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = IntType;
 		Value->SetValue(Integer);
@@ -168,7 +173,6 @@ namespace Volt
 	{
 		return CreateBinaryForIntFloat(Right,
 			[](auto A, auto B) { return A + B; },
-			[](auto A, auto B) { return A + B; },
 			CContext);
 
 	}
@@ -177,7 +181,6 @@ namespace Volt
 	{
 		return CreateBinaryForIntFloat(Right,
 			[](auto A, auto B) { return A - B; },
-			[](auto A, auto B) { return A - B; },
 			CContext);
 	}
 
@@ -185,14 +188,12 @@ namespace Volt
 	{
 		return CreateBinaryForIntFloat(Right,
 			[](auto A, auto B) { return A * B; },
-			[](auto A, auto B) { return A * B; },
 			CContext);
 	}
 
 	ExprResult *ExprResult::CreateDiv(ExprResult *Right, CompilationContext &CContext) const
 	{
 		return CreateBinaryForIntFloat(Right,
-			[](auto A, auto B) { return A / B; },
 			[](auto A, auto B) { return A / B; },
 			CContext);
 	}
@@ -244,7 +245,7 @@ namespace Volt
 		if (bIsEmpty)
 			llvm_unreachable("Cannot create unary for empty value");
 
-		if (Type->IsIntegerType())
+		if (Type->IsSignedIntegerType())
 			return CreateInteger(Type, -GetInt(), CContext.MainArena);
 
 		if (Type->IsFloatingPointType())
@@ -339,16 +340,16 @@ namespace Volt
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				return Explicit ? CreateBool(To, static_cast<bool>(GetInt()), MainArena) : nullptr;
+				return Explicit ? CreateBool(To, static_cast<bool>(GetValue<Int64>()), MainArena) : nullptr;
 
 			case TypeCategory::CHAR:
-				return CreateChar(To, static_cast<char>(GetInt()), MainArena);
+				return CreateChar(To, static_cast<char>(GetValue<Int64>()), MainArena);
 
 			case TypeCategory::INTEGER:
-				return CreateInteger(To, GetInt(), MainArena);
+				return CreateInteger(To, GetValue<Int64>(), MainArena);
 
 			case TypeCategory::FLOATING_POINT:
-				return CreateFloat(To, static_cast<double>(GetInt()), MainArena);
+				return CreateFloat(To, static_cast<double>(GetValue<Int64>()), MainArena);
 
 			default:
 				return nullptr;

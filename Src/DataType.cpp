@@ -7,6 +7,13 @@
 
 namespace Volt
 {
+	bool DataType::IsSignedIntegerType() const
+	{
+		if (auto IntType = Cast<const IntegerType>(this))
+			return IntType->IsSigned;
+		return false;
+	}
+
 	DataType *DataType::GetJointType(DataType *Left, DataType *Right)
 	{
 		if (Left == Right)
@@ -24,7 +31,10 @@ namespace Volt
 		DataType* Src = LeftTypeRank > RightTypeRank ? Right : Left;
 		DataType* Dst = LeftTypeRank > RightTypeRank ? Left : Right;
 
-		return Src->ImplicitCast(Dst);
+		if (Src->ImplicitCast(Dst))
+			return Dst;
+
+		return nullptr;
 	}
 
 	bool QualType::CastTo(QualType To, bool Explicit) const
@@ -32,7 +42,7 @@ namespace Volt
 		if (*this == To)
 			return true;
 
-		return GetType()->CastTo(To.GetType(), Explicit) != nullptr;
+		return GetType()->CastTo(To.GetType(), Explicit);
 	}
 
 	size_t QualType::GetHash() const
@@ -42,13 +52,13 @@ namespace Volt
 		return H;
 	}
 
-	DataType *BoolType::CastTo(DataType *To, bool Explicit) const
+	bool BoolType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
-			return To;
+			return true;
 
 		if (!Explicit)
-			return nullptr;
+			return false;
 
 		switch (To->GetCategory())
 		{
@@ -56,34 +66,35 @@ namespace Volt
 			case TypeCategory::CHAR:
 			case TypeCategory::INTEGER:
 			case TypeCategory::FLOATING_POINT:
-				return To;
+				return true;
 			default:
-				return nullptr;
+				return false;
 		}
 	}
 
-	DataType *CharType::CastTo(DataType *To, bool Explicit) const
+	bool CharType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
-			return To;
+			return true;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				return Explicit ? To : nullptr;
-			case TypeCategory::CHAR:
+				return Explicit;
 			case TypeCategory::INTEGER:
+				return To->IsSignedIntegerType() ? true : Explicit;
+			case TypeCategory::CHAR:
 			case TypeCategory::FLOATING_POINT:
-				return To;
+				return true;
 			default:
-				return nullptr;
+				return false;
 		}
 	}
 
 	bool IntegerType::IsEqual(const DataType *Other) const
 	{
 		if (auto IntType = Cast<const IntegerType>(Other))
-			return IntType->BitWidth == BitWidth;
+			return IntType->BitWidth == BitWidth && IntType->IsSigned == IsSigned;
 		return false;
 	}
 
@@ -113,30 +124,25 @@ namespace Volt
 
 	std::string IntegerType::ToString() const
 	{
-		switch (BitWidth)
-		{
-			case 8:  return "byte";
-			case 32: return "int";
-			case 64: return "long";
-			default: throw std::runtime_error("Unsupported integer size");
-		}
+		return (IsSigned ? "i" : "u") + std::to_string(BitWidth);
 	}
 
-	DataType *IntegerType::CastTo(DataType *To, bool Explicit) const
+	bool IntegerType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
-			return To;
+			return true;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				return Explicit ? To : nullptr;
-			case TypeCategory::CHAR:
+				return Explicit;
 			case TypeCategory::INTEGER:
+				return To->IsSignedIntegerType() == IsSigned ? true : Explicit;
+			case TypeCategory::CHAR:
 			case TypeCategory::FLOATING_POINT:
-				return To;
+				return true;
 			default:
-				return nullptr;
+				return false;
 		}
 	}
 
@@ -193,21 +199,22 @@ namespace Volt
 		}
 	}
 
-	DataType *FloatingPointType::CastTo(DataType *To, bool Explicit) const
+	bool FloatingPointType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
-			return To;
+			return true;
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				return Explicit ? To : nullptr;
-			case TypeCategory::CHAR:
+				return Explicit;
 			case TypeCategory::INTEGER:
+				return To->IsSignedIntegerType() ? true : Explicit;
+			case TypeCategory::CHAR:
 			case TypeCategory::FLOATING_POINT:
-				return To;
+				return true;
 			default:
-				return nullptr;
+				return false;
 		}
 	}
 
@@ -225,31 +232,31 @@ namespace Volt
 		return Hash;
 	}
 
-	DataType *PointerType::CastTo(DataType *To, bool Explicit) const
+	bool PointerType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
-			return To;
+			return true;
 
 		if (auto PtrType = Cast<PointerType>(To))
 		{
 			if (BaseType.HasQualifier(QualType::CONST) && !PtrType->BaseType.HasQualifier(QualType::CONST))
-				return nullptr;
+				return false;
 
 			if (PtrType->BaseType->GetCategory() == TypeCategory::VOID)
-				return To;
+				return true;
 
 			if (Explicit && BaseType->GetCategory() == TypeCategory::VOID)
-				return To;
+				return true;
 
-			return nullptr;
+			return false;
 		}
 
 		switch (To->GetCategory())
 		{
 			case TypeCategory::BOOLEAN:
-				return To;
+				return true;
 			default:
-				return nullptr;
+				return false;
 		}
 	}
 
@@ -279,7 +286,7 @@ namespace Volt
 		return Type.GetType() == BaseType.GetType();
 	}
 
-	DataType *ReferenceType::CastTo(DataType *To, bool Explicit) const
+	bool ReferenceType::CastTo(DataType *To, bool Explicit) const
 	{
 		return BaseType->CastTo(To, Explicit);
 	}
@@ -307,12 +314,12 @@ namespace Volt
 		return BaseType ? BaseType->ToString() + "[" + std::to_string(Length) + "]" : "?";
 	}
 
-	DataType *ArrayType::CastTo(DataType *To, bool Explicit) const
+	bool ArrayType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (auto ArrType = Cast<ArrayType>(To))
 			if (ArrType->BaseType.GetType() == BaseType.GetType())
-				return To;
+				return true;
 
-		return nullptr;
+		return false;
 	}
 }

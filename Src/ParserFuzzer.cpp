@@ -4,6 +4,7 @@
 
 #include <Volt/Tests/Fuzzer/ParserFuzzer.h>
 #include <thread>
+#include <llvm/ADT/StringSet.h>
 
 namespace Volt
 {
@@ -259,7 +260,7 @@ namespace Volt
             Result.push_back(Chr);
         }
 
-        static std::unordered_set<std::string> Keywords =
+        static llvm::StringSet Keywords =
             { "if", "fun", "let", "for", "while", "continue", "break", "return" };
 
         if (Keywords.contains(Result))
