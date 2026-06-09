@@ -4,6 +4,7 @@
 
 #include "Volt/Core/Parser/Operators/Operator.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
+#include "Volt/Support/ErrorHandling.h"
 
 #define GEN_CASE(Op) case TokenType::OP_##Op: return OperatorType::Op;
 #define GEN_CASE_TO_STRING(Op) case OperatorType::Op: return #Op;
@@ -216,7 +217,7 @@ namespace Volt
                 return {};
             }
             default:
-                llvm_unreachable("Invalid arithmetic operator");
+                VoltUnreachable("Invalid arithmetic operator");
         }
     }
 
@@ -275,7 +276,7 @@ namespace Volt
             }
 
             default:
-                llvm_unreachable("Invalid comparison operator");
+                VoltUnreachable("Invalid comparison operator");
         }
     }
 
@@ -307,7 +308,7 @@ namespace Volt
                 return Normalize(Left, Right, QualType(BoolTy, 0));
 
             default:
-                llvm_unreachable("Invalid logical operator");
+                VoltUnreachable("Invalid logical operator");
         }
     }
 
@@ -344,7 +345,7 @@ namespace Volt
             {
                 OperatorType SecondOp = GetSecondOpCompoundAssignment(Op);
                 if (SecondOp == UNKNOWN)
-                    llvm_unreachable("Unknown assignment operator");
+                    VoltUnreachable("Unknown assignment operator");
 
                 QualType TmpLeft = Left, TmpRight = Right;
                 QualType Result = ResolveArithmetic(TmpLeft, TmpRight, SecondOp, Err);

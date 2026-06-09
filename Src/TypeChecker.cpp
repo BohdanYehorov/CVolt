@@ -5,6 +5,7 @@
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 
 #include "Volt/Core/TypeChecker/ExprAddress.h"
+#include "Volt/Support/ErrorHandling.h"
 
 namespace Volt
 {
@@ -244,7 +245,7 @@ namespace Volt
         {
             case OperatorType::INC: AssignmentType = OperatorType::ADD_ASSIGN; break;
             case OperatorType::DEC: AssignmentType = OperatorType::SUB_ASSIGN; break;
-            default: llvm_unreachable("Unknown suffix operator");
+            default: VoltUnreachable("Unknown suffix operator");
         }
 
         OperandAddr->CreateAssignment(ExprResult::CreateFromType(
@@ -263,7 +264,7 @@ namespace Volt
         {
             case OperatorType::INC: AssignmentType = OperatorType::ADD_ASSIGN; break;
             case OperatorType::DEC: AssignmentType = OperatorType::SUB_ASSIGN; break;
-            default: llvm_unreachable("Unknown prefix operator");
+            default: VoltUnreachable("Unknown prefix operator");
         }
 
         OperandAddr->CreateAssignment(ExprResult::CreateFromType(
@@ -298,7 +299,7 @@ namespace Volt
             case SUB: Operand = Operand->CreateNeg(CContext); break;
             case BIT_NOT: Operand = Operand->CreateBitNot(CContext); break;
             case LOGICAL_NOT: Operand = Operand->CreateNot(CContext); break;
-            default: llvm_unreachable("Unknown unary operator");
+            default: VoltUnreachable("Unknown unary operator");
         }
 
         Unary->CompileTimeValue = Operand;
@@ -417,7 +418,7 @@ namespace Volt
             case BIT_XOR: Result = Left->CreateBitXor(Right, CContext); break;
             case RSHIFT:  Result = Left->CreateBitRShift(Right, CContext); break;
             case LSHIFT:  Result = Left->CreateBitLShift(Right, CContext); break;
-            default: llvm_unreachable("Unknown binary operator");
+            default: VoltUnreachable("Unknown binary operator");
         }
 
         Binary->CompileTimeValue = Result;
@@ -730,7 +731,7 @@ namespace Volt
         if (auto Addr = Cast<ExprAddress>(Value))
             return Addr->GetValue();
 
-        llvm_unreachable("Invalid SemaResult");
+        VoltUnreachable("Invalid SemaResult");
     }
 
     ExprAddress* TypeChecker::VisitToLValue(ASTNode *Node)

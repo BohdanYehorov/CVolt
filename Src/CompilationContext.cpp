@@ -3,7 +3,7 @@
 //
 
 #include "Volt/Core/CompilationContext/CompilationContext.h"
-#include <cmath>
+#include "Volt/Support/ErrorHandling.h"
 
 namespace Volt
 {
@@ -46,7 +46,7 @@ namespace Volt
 		auto Index = std::countr_zero(BitWidth) - 3 + 4 * static_cast<int>(!IsSigned);
 
 		if (Index >= std::size(CachedIntegerTypes))
-			llvm_unreachable("Out of range");
+			VoltUnreachable("Out of range");
 
 		if (!CachedIntegerTypes[Index])
 			CachedIntegerTypes[Index] = MainArena.Create<IntegerType>(BitWidth, IsSigned);
@@ -60,7 +60,7 @@ namespace Volt
 
 		auto Index = std::countr_zero(BitWidth) - 4;
 		if (Index >= std::size(CachedFPTypes))
-			llvm_unreachable("Out of range");
+			VoltUnreachable("Out of range");
 
 		if (!CachedFPTypes[Index])
 			CachedFPTypes[Index] = MainArena.Create<FloatingPointType>(BitWidth);

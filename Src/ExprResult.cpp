@@ -105,10 +105,10 @@ namespace Volt
 		using enum OperatorType;
 
 		if (bIsEmpty || Right->bIsEmpty)
-			llvm_unreachable("Cannot compare empty values");
+			VoltUnreachable("Cannot compare empty values");
 
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot compare values with different types");
+			VoltUnreachable("Cannot compare values with different types");
 
 		if (Type->IsIntegerType())
 		{
@@ -124,7 +124,7 @@ namespace Volt
 				case LTE: Result = LeftVal <= RightVal; break;
 				case GT:  Result = LeftVal > RightVal;  break;
 				case GTE: Result = LeftVal >= RightVal; break;
-				default: llvm_unreachable("Unknown comparison operator");
+				default: VoltUnreachable("Unknown comparison operator");
 			}
 
 			return CreateBool(CContext.GetBoolType(), Result, CContext.MainArena);
@@ -144,7 +144,7 @@ namespace Volt
 				case LTE: Result = LeftVal <= RightVal; break;
 				case GT:  Result = LeftVal > RightVal;  break;
 				case GTE: Result = LeftVal >= RightVal; break;
-				default: llvm_unreachable("Unknown comparison operator");
+				default: VoltUnreachable("Unknown comparison operator");
 			}
 
 			return CreateBool(CContext.GetBoolType(), Result, CContext.MainArena);
@@ -160,13 +160,13 @@ namespace Volt
 			{
 				case EQ:  Result = LeftVal == RightVal; break;
 				case NEQ: Result = LeftVal != RightVal; break;
-				default:  llvm_unreachable("Invalid comparison operator for this type");
+				default:  VoltUnreachable("Invalid comparison operator for this type");
 			}
 
 			return CreateBool(CContext.GetBoolType(), Result, CContext.MainArena);
 		}
 
-		llvm_unreachable("Cannot compare this type");
+		VoltUnreachable("Cannot compare this type");
 	}
 
 	ExprResult *ExprResult::CreateAdd(ExprResult *Right, CompilationContext &CContext) const
@@ -243,7 +243,7 @@ namespace Volt
 	ExprResult* ExprResult::CreateNeg(CompilationContext &CContext) const
 	{
 		if (bIsEmpty)
-			llvm_unreachable("Cannot create unary for empty value");
+			VoltUnreachable("Cannot create unary for empty value");
 
 		if (Type->IsSignedIntegerType())
 			return CreateInteger(Type, -GetInt(), CContext.MainArena);
@@ -257,7 +257,7 @@ namespace Volt
 	ExprResult* ExprResult::CreateBitNot(CompilationContext &CContext) const
 	{
 		if (bIsEmpty)
-			llvm_unreachable("Cannot create unary for empty value");
+			VoltUnreachable("Cannot create unary for empty value");
 
 		if (Type->IsIntegerType())
 			return CreateInteger(Type, ~GetInt(), CContext.MainArena);

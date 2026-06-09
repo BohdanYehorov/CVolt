@@ -4,7 +4,7 @@
 
 #include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
-#include <llvm/Support/ErrorHandling.h>
+#include "Volt/Support/ErrorHandling.h"
 
 namespace Volt
 {
@@ -38,12 +38,12 @@ namespace Volt
 	IRValue* IRValue::CastOrBind(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (!To)
-			llvm_unreachable("Type is null");
+			VoltUnreachable("Type is null");
 
 		if (To->IsReferenceType())
 		{
 			if (!bIsLValue)
-				llvm_unreachable("Cannot bind r-value to reference");
+				VoltUnreachable("Cannot bind r-value to reference");
 
 			return this;
 		}
@@ -97,7 +97,7 @@ namespace Volt
 		DataType* BoolType = CContext.GetBoolType();
 		llvm::Value* BoolValue = CastLLVM(BoolType, Builder, CContext);
 		if (!BoolValue)
-			llvm_unreachable("Invalid cast");
+			VoltUnreachable("Invalid cast");
 
 		return CContext.MainArena.Create<IRValue>(Builder.CreateNot(BoolValue), BoolType);
 	}
@@ -107,7 +107,7 @@ namespace Volt
 		using enum OperatorType;
 
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot compare values with different types");
+			VoltUnreachable("Cannot compare values with different types");
 
 		Arena& MainArena = CContext.MainArena;
 
@@ -166,7 +166,7 @@ namespace Volt
 			IRValue* Index = Ptr == this ? Right : this;
 
 			if (!Index->Type->IsIntegerType())
-				llvm_unreachable("Cannot add non-integer type to pointer");
+				VoltUnreachable("Cannot add non-integer type to pointer");
 
 			auto PtrType = Cast<PointerType>(Ptr->Type);
 
@@ -176,7 +176,7 @@ namespace Volt
 		}
 
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot add values with different types");
+			VoltUnreachable("Cannot add values with different types");
 
 		if (Type->IsIntegerType())
 			return MainArena.Create<IRValue>(
@@ -186,13 +186,13 @@ namespace Volt
 			return MainArena.Create<IRValue>(
 				Builder.CreateFAdd(Value, Right->Value), Type);
 
-		llvm_unreachable("Cannot add values with this type");
+		VoltUnreachable("Cannot add values with this type");
 	}
 
 	IRValue* IRValue::CreateSub(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot sub values with different types");
+			VoltUnreachable("Cannot sub values with different types");
 
 		return CContext.MainArena.Create<IRValue>(Type->IsFloatingPointType() ?
 			Builder.CreateFSub(Value, Right->Value) :
@@ -202,7 +202,7 @@ namespace Volt
 	IRValue* IRValue::CreateMul(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot multiply values with different types");
+			VoltUnreachable("Cannot multiply values with different types");
 
 		return CContext.MainArena.Create<IRValue>(Type->IsFloatingPointType() ?
 			Builder.CreateFMul(Value, Right->Value) :
@@ -212,7 +212,7 @@ namespace Volt
 	IRValue* IRValue::CreateDiv(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot multiply values with different types");
+			VoltUnreachable("Cannot multiply values with different types");
 
 		if (auto IntType = Cast<IntegerType>(Type))
 			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
@@ -225,71 +225,71 @@ namespace Volt
 	IRValue* IRValue::CreateMod(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot apply 'mod' to values with different types");
+			VoltUnreachable("Cannot apply 'mod' to values with different types");
 
 		if (auto IntType = Cast<IntegerType>(Type))
 			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
 				Builder.CreateSRem(Value, Right->Value) :
 				Builder.CreateURem(Value, Right->Value), Type);
 
-		llvm_unreachable("Cannot apply 'mod' to non-integer type");
+		VoltUnreachable("Cannot apply 'mod' to non-integer type");
 	}
 
 	IRValue* IRValue::CreateBitAnd(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot apply 'and' to values with different types");
+			VoltUnreachable("Cannot apply 'and' to values with different types");
 
 		if (Type->IsIntegerType())
 			return CContext.MainArena.Create<IRValue>(Builder.CreateAnd(Value, Right->Value), Type);
 
-		llvm_unreachable("Cannot apply 'and' to non-integer type");
+		VoltUnreachable("Cannot apply 'and' to non-integer type");
 	}
 
 	IRValue* IRValue::CreateBitOr(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot apply 'or' to values with different types");
+			VoltUnreachable("Cannot apply 'or' to values with different types");
 
 		if (Type->IsIntegerType())
 			return CContext.MainArena.Create<IRValue>(Builder.CreateOr(Value, Right->Value), Type);
 
-		llvm_unreachable("Cannot apply 'or' to non-integer type");
+		VoltUnreachable("Cannot apply 'or' to non-integer type");
 	}
 
 	IRValue* IRValue::CreateBitXor(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot apply 'xor' to values with different types");
+			VoltUnreachable("Cannot apply 'xor' to values with different types");
 
 		if (Type->IsIntegerType())
 			return CContext.MainArena.Create<IRValue>(Builder.CreateXor(Value, Right->Value), Type);
 
-		llvm_unreachable("Cannot apply 'xor' to non-integer type");
+		VoltUnreachable("Cannot apply 'xor' to non-integer type");
 	}
 
 	IRValue* IRValue::CreateRShift(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot apply 'rshift' to values with different types");
+			VoltUnreachable("Cannot apply 'rshift' to values with different types");
 
 		if (auto IntType = Cast<IntegerType>(Type))
 			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
 				Builder.CreateAShr(Value, Right->Value) :
 				Builder.CreateLShr(Value, Right->Value), Type);
 
-		llvm_unreachable("Cannot apply 'rshift' to non-integer type");
+		VoltUnreachable("Cannot apply 'rshift' to non-integer type");
 	}
 
 	IRValue* IRValue::CreateLShift(IRValue *Right, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
 	{
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot apply 'lshift' to values with different types");
+			VoltUnreachable("Cannot apply 'lshift' to values with different types");
 
 		if (Type->IsIntegerType())
 			return CContext.MainArena.Create<IRValue>(Builder.CreateShl(Value, Right->Value), Type);
 
-		llvm_unreachable("Cannot apply 'lshift' to non-integer type");
+		VoltUnreachable("Cannot apply 'lshift' to non-integer type");
 	}
 
 	IRValue* IRValue::CreateAssignment(IRValue *Right, OperatorType Op,
@@ -298,10 +298,10 @@ namespace Volt
 		using enum OperatorType;
 
 		if (!bIsLValue)
-			llvm_unreachable("Cannot apply assignment operator to r-value");
+			VoltUnreachable("Cannot apply assignment operator to r-value");
 
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot assign value with another type");
+			VoltUnreachable("Cannot assign value with another type");
 
 		if (Op == ASSIGN)
 		{
@@ -353,7 +353,7 @@ namespace Volt
 				break;
 
 			default:
-				llvm_unreachable("Unknown assignment operator");
+				VoltUnreachable("Unknown assignment operator");
 		}
 
 		Builder.CreateStore(NewValue->Value, Value);

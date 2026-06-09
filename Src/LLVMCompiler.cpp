@@ -271,7 +271,7 @@ namespace Volt
             case OperatorType::DEC:
                 return Operand->CreateAssignment(Value, OperatorType::SUB_ASSIGN, Builder, CContext);
             default:
-                llvm_unreachable("Invalid prefix operator");
+                VoltUnreachable("Invalid prefix operator");
         }
     }
 
@@ -292,7 +292,7 @@ namespace Volt
                 Operand->CreateAssignment(Value, OperatorType::SUB_ASSIGN, Builder, CContext);
                 return Temp;
             default:
-                llvm_unreachable("Invalid prefix operator");
+                VoltUnreachable("Invalid prefix operator");
         }
     }
 
@@ -302,7 +302,7 @@ namespace Volt
 
         IRValue* Operand = CompileToRValue(Unary->Operand);
         if (!Operand)
-            llvm_unreachable("Invalid operand");
+            VoltUnreachable("Invalid operand");
 
         switch (Unary->Type)
         {
@@ -310,7 +310,7 @@ namespace Volt
             case SUB:         return Operand->CreateNeg(Builder, CContext);
             case BIT_NOT:     return Operand->CreateNot(Builder, CContext);
             case LOGICAL_NOT: return Operand->CreateLogicalNot(Builder, CContext);
-            default: llvm_unreachable("Unknown unary operator");
+            default: VoltUnreachable("Unknown unary operator");
         }
     }
 
@@ -320,13 +320,13 @@ namespace Volt
         IRValue* Right = CompileToRValue(Comparison->Right);
 
         if (!Right || !Left)
-            llvm_unreachable("Invalid comparison operand");
+            VoltUnreachable("Invalid comparison operand");
 
         Left = Left->CastTo(Comparison->LeftOperandType, Builder, CContext);
         Right = Right->CastTo(Comparison->RightOperandType, Builder, CContext);
 
         if (!Right || !Left)
-            llvm_unreachable("Invalid cast");
+            VoltUnreachable("Invalid cast");
 
         return Left->CreateCmp(Right, Comparison->Type, Builder, CContext);
     }
@@ -336,7 +336,7 @@ namespace Volt
         IRValue* Left = CompileToRValue(Logical->Left);
         Left = Left->CastTo(Logical->LeftOperandType, Builder, CContext);
         if (!Left)
-            llvm_unreachable("Invalid cast");
+            VoltUnreachable("Invalid cast");
 
         llvm::BasicBlock* InsertBlock = Builder.GetInsertBlock();
         llvm::Function* Func = InsertBlock->getParent();
@@ -357,7 +357,7 @@ namespace Volt
                 IRValue* Right = CompileToRValue(Logical->Right);
                 Right = Right->CastTo(Logical->RightOperandType, Builder, CContext);
                 if (!Right)
-                    llvm_unreachable("Invalid cast");
+                    VoltUnreachable("Invalid cast");
                 Builder.CreateStore(Right->GetValue(), Alloca);
 
                 Builder.CreateBr(OrEndBlock);
@@ -380,7 +380,7 @@ namespace Volt
                 IRValue* Right = CompileToRValue(Logical->Right);
                 Right = Right->CastTo(Logical->RightOperandType, Builder, CContext);
                 if (!Right)
-                    llvm_unreachable("Invalid cast");
+                    VoltUnreachable("Invalid cast");
                 Builder.CreateStore(Right->GetValue(), Alloca);
 
                 Builder.CreateBr(AndEndBlock);
@@ -390,7 +390,7 @@ namespace Volt
                     Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->GetType().GetType());
             }
             default:
-                llvm_unreachable("Unknown logical operator");
+                VoltUnreachable("Unknown logical operator");
         }
     }
 
@@ -400,11 +400,11 @@ namespace Volt
         IRValue* Right = CompileToRValue(Assignment->Right);
 
         if (!Value || !Right)
-            llvm_unreachable("Invalid assignment values");
+            VoltUnreachable("Invalid assignment values");
 
         Right = Right->CastTo(Value->GetDataType(), Builder, CContext);
         if (!Right)
-            llvm_unreachable("Invalid cast");
+            VoltUnreachable("Invalid cast");
 
         return Value->CreateAssignment(Right, Assignment->Type, Builder, CContext);
     }
@@ -417,13 +417,13 @@ namespace Volt
         IRValue* Right = CompileToRValue(BinaryOp->Right);
 
         if (!Right || !Left)
-            llvm_unreachable("invalid binary operand");
+            VoltUnreachable("invalid binary operand");
 
         Left = Left->CastTo(BinaryOp->LeftOperandType, Builder, CContext);
         Right = Right->CastTo(BinaryOp->RightOperandType, Builder, CContext);
 
         if (!Right || !Left)
-            llvm_unreachable("invalid cast");
+            VoltUnreachable("invalid cast");
 
         switch (BinaryOp->Type)
         {
@@ -437,7 +437,7 @@ namespace Volt
             case BIT_XOR: return Left->CreateBitXor(Right, Builder, CContext);
             case RSHIFT:  return Left->CreateRShift(Right, Builder, CContext);
             case LSHIFT:  return Left->CreateLShift(Right, Builder, CContext);
-            default: llvm_unreachable("Unknown binary operator");
+            default: VoltUnreachable("Unknown binary operator");
         }
     }
 

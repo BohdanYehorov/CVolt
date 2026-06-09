@@ -1385,7 +1385,7 @@ namespace Volt
             case U16_NUMBER: BitWidth = 16; IsSigned = false; break;
             case U32_NUMBER: BitWidth = 32; IsSigned = false; break;
             case U64_NUMBER: BitWidth = 64; IsSigned = false; break;
-            default: llvm_unreachable("Invalid integer type");
+            default: VoltUnreachable("Invalid integer type");
         }
 
         UInt64 Value;
@@ -1406,7 +1406,7 @@ namespace Volt
             case F32_NUMBER:  BitWidth = 32;  break;
             case F64_NUMBER:  BitWidth = 64;  break;
             case F128_NUMBER: BitWidth = 128; break;
-            default: llvm_unreachable("Invalid floating point type");
+            default: VoltUnreachable("Invalid floating point type");
         }
 
         double Value;

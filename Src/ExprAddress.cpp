@@ -11,7 +11,7 @@ namespace Volt
         using enum OperatorType;
 
         if (Type.HasQualifier(QualType::CONST))
-            llvm_unreachable("Cannot assign to read only value");
+            VoltUnreachable("Cannot assign to read only value");
 
         if (!Value || Value->IsEmpty() || Right->IsEmpty())
         {
@@ -32,7 +32,7 @@ namespace Volt
             case XOR_ASSIGN:    Value = Value->CreateBitXor(Right, CContext); break;
             case RSHIFT_ASSIGN: Value = Value->CreateBitRShift(Right, CContext); break;
             case LSHIFT_ASSIGN: Value = Value->CreateBitLShift(Right, CContext); break;
-            default: llvm_unreachable("Unknown assignment operator");
+            default: VoltUnreachable("Unknown assignment operator");
         }
 
         return Value;

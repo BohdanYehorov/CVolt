@@ -10,6 +10,7 @@
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Core/Memory/AlignedStorage.h"
+#include "Volt/Support/ErrorHandling.h"
 #include "SemaResult.h"
 
 namespace Volt
@@ -154,10 +155,10 @@ namespace Volt
 		CompilationContext &CContext) const
 	{
 		if (bIsEmpty)
-			llvm_unreachable("Cannot create binary for empty value");
+			VoltUnreachable("Cannot create binary for empty value");
 
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot create binary for different types");
+			VoltUnreachable("Cannot create binary for different types");
 
 		if (auto IntType = Type.CastAs<IntegerType>())
 		{
@@ -178,10 +179,10 @@ namespace Volt
 		ExprResult *Right, Func Fun, CompilationContext &CContext) const
 	{
 		if (bIsEmpty)
-			llvm_unreachable("Cannot create binary for empty value");
+			VoltUnreachable("Cannot create binary for empty value");
 
 		if (Type != Right->Type)
-			llvm_unreachable("Cannot create binary for different types");
+			VoltUnreachable("Cannot create binary for different types");
 
 		if (auto IntType = Type.CastAs<IntegerType>())
 		{
