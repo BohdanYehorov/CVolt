@@ -334,7 +334,15 @@ namespace Volt
 
         QualType LeftType = Left->GetType();
         QualType RightType = Right->GetType();
-        QualType Type = Operator::ResolveBinary(LeftType, RightType, Comparison->Type, CContext);
+
+        TypeError Err(Comparison->Line, Comparison->Column);
+        QualType Type = Operator::ResolveComparison(
+            LeftType, RightType, Comparison->Type, Err, CContext);
+        if (!Type)
+        {
+            Errors.Add(std::move(Err));
+            return nullptr;
+        }
 
         Left = Left->ImplicitCast(LeftType, CContext);
         Right = Right->ImplicitCast(RightType, CContext);
@@ -369,7 +377,14 @@ namespace Volt
 
         QualType LeftType = Left->GetType();
         QualType RightType = Right->GetType();
-        QualType Type = Operator::ResolveBinary(LeftType, RightType, Binary->Type, CContext);
+
+        TypeError Err(Binary->Line, Binary->Column);
+        QualType Type = Operator::ResolveBinary(LeftType, RightType, Binary->Type, Err, CContext);
+        if (!Type)
+        {
+            Errors.Add(std::move(Err));
+            return nullptr;
+        }
 
         Left = Left->ImplicitCast(LeftType, CContext);
         Right = Right->ImplicitCast(RightType, CContext);

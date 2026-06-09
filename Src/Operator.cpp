@@ -170,13 +170,19 @@ namespace Volt
         }
     }
 
-    QualType Operator::ResolveArithmetic(QualType &Left, QualType &Right, OperatorType Op)
+    QualType Operator::ResolveArithmetic(QualType &Left, QualType &Right,
+        OperatorType Op, TypeError& Err)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
         QualType JointType = GetJointType(Left, Right);
-        if (!JointType) return {};
+        if (!JointType)
+        {
+            Err.Kind = TypeErrorKind::IncompatibleTypes;
+            Err.Context = { Left->ToString(), Right->ToString() };
+            return {};
+        }
 
         TypeCategory Category = JointType->GetCategory();
 
@@ -187,8 +193,11 @@ namespace Volt
             case MUL:
             case DIV:
             {
-                if (Category == CHAR || Category == INTEGER || Category == FLOATING_POINT)
+                if (Category == INTEGER || Category == FLOATING_POINT)
                     return Normalize(Left, Right, JointType);
+
+                Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
+                Err.Context = { JointType->ToString() };
                 return {};
             }
 
@@ -199,23 +208,31 @@ namespace Volt
             case LSHIFT:
             case RSHIFT:
             {
-                if (Category == CHAR || Category == INTEGER)
+                if (Category == INTEGER)
                     return Normalize(Left, Right, JointType);
+
+                Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
+                Err.Context = { JointType->ToString() };
                 return {};
             }
             default:
-                return {};
+                llvm_unreachable("Invalid arithmetic operator");
         }
     }
 
     QualType Operator::ResolveComparison(QualType &Left, QualType &Right, OperatorType Op,
-        CompilationContext& CContext)
+        TypeError& Err, CompilationContext& CContext)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
         QualType JointType = GetJointType(Left, Right);
-        if (!JointType) return {};
+        if (!JointType)
+        {
+            Err.Kind = TypeErrorKind::IncompatibleTypes;
+            Err.Context = { Left->ToString(), Right->ToString() };
+            return {};
+        }
 
         TypeCategory Category = JointType->GetCategory();
 
@@ -233,6 +250,9 @@ namespace Volt
                     Normalize(Left, Right, JointType);
                     return { CContext.GetBoolType(), 0 };
                 }
+
+                Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
+                Err.Context = { JointType->ToString() };
                 return {};
             }
 
@@ -248,23 +268,37 @@ namespace Volt
                     Normalize(Left, Right, JointType);
                     return { CContext.GetBoolType(), 0 };
                 }
+
+                Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
+                Err.Context = { JointType->ToString() };
                 return {};
             }
 
             default:
-                return {};
+                llvm_unreachable("Invalid comparison operator");
         }
     }
 
     QualType Operator::ResolveLogical(QualType &Left, QualType &Right, OperatorType Op,
-        CompilationContext& CContext)
+        TypeError& Err, CompilationContext& CContext)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
         DataType* BoolTy = CContext.GetBoolType();
-        if (!Left->ImplicitCast(BoolTy) || !Right->ImplicitCast(BoolTy))
+        if (!Left->ImplicitCast(BoolTy))
+        {
+            Err.Kind = TypeErrorKind::IncompatibleTypes;
+            Err.Context = { Left->ToString(), BoolTy->ToString() };
             return {};
+        }
+
+        if (!Right->ImplicitCast(BoolTy))
+        {
+            Err.Kind = TypeErrorKind::IncompatibleTypes;
+            Err.Context = { Right->ToString(), BoolTy->ToString() };
+            return {};
+        }
 
         switch (Op)
         {
@@ -273,17 +307,22 @@ namespace Volt
                 return Normalize(Left, Right, QualType(BoolTy, 0));
 
             default:
-                return {};
+                llvm_unreachable("Invalid logical operator");
         }
     }
 
-    QualType Operator::ResolveAssignment(QualType &Left, QualType &Right, OperatorType Op)
+    QualType Operator::ResolveAssignment(QualType &Left, QualType &Right,
+                                         OperatorType Op, TypeError& Err)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
         if (!Right.ImplicitCast(Left))
+        {
+            Err.Kind = TypeErrorKind::IncompatibleTypes;
+            Err.Context = { Left->ToString(), Right->ToString() };
             return {};
+        }
 
         TypeCategory Category = Left->GetCategory();
 
@@ -296,21 +335,26 @@ namespace Volt
                     Right = Left;
                     return Left;
                 }
-                return {};
+
+                Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
+                Err.Context = { Left->ToString() };
             }
 
             default:
             {
                 OperatorType SecondOp = GetSecondOpCompoundAssignment(Op);
                 if (SecondOp == UNKNOWN)
-                    return {};
+                    llvm_unreachable("Unknown assignment operator");
 
                 QualType TmpLeft = Left, TmpRight = Right;
-                QualType Result = ResolveArithmetic(TmpLeft, TmpRight, SecondOp);
+                QualType Result = ResolveArithmetic(TmpLeft, TmpRight, SecondOp, Err);
                 if (!Result) return {};
 
                 if (!Result.ImplicitCast(Left))
-                    return {};
+                {
+                    Err.Kind = TypeErrorKind::IncompatibleTypes;
+                    Err.Context = { Left->ToString(), Right->ToString() };
+                }
 
                 Right = Left;
                 return Left;
@@ -319,7 +363,7 @@ namespace Volt
     }
 
     QualType Operator::ResolvePointerArithmetic(QualType Left, QualType Right, OperatorType Op,
-        CompilationContext& CContext)
+        TypeError& Err, CompilationContext& CContext)
     {
         using enum TypeCategory;
         using enum OperatorType;
@@ -332,6 +376,8 @@ namespace Volt
             if (Op == ADD || Op == SUB)
                 return Left;
 
+            Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
+            Err.Context = { Left->ToString(), Right->ToString() };
             return {};
         }
 
@@ -340,37 +386,40 @@ namespace Volt
             if (Op == ADD)
                 return Right;
 
+            Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
+            Err.Context = { Left->ToString(), Right->ToString() };
             return {};
         }
 
-        if (LeftCategory == POINTER && RightCategory == POINTER)
-        {
-            if (Op != SUB)
-                return {};
-
-            if (Cast<PointerType>(Left.GetType())->BaseType != Cast<PointerType>(Right.GetType())->BaseType)
-                return {};
-
-            return { CContext.GetIntegerType(64), 0 };
-        }
+        // if (LeftCategory == POINTER && RightCategory == POINTER)
+        // {
+        //     if (Op != SUB)
+        //         return {};
+        //
+        //     if (Cast<PointerType>(Left.GetType())->BaseType != Cast<PointerType>(Right.GetType())->BaseType)
+        //         return {};
+        //
+        //     return { CContext.GetIntegerType(64), 0 };
+        // }
 
         return {};
     }
 
-    QualType Operator::ResolveBinary(QualType &Left, QualType &Right, OperatorType Op, CompilationContext& CContext)
+    QualType Operator::ResolveBinary(QualType &Left, QualType &Right, OperatorType Op,
+        TypeError& Err, CompilationContext& CContext)
     {
         switch (GetBinaryOperatorKind(Op))
         {
             case BinaryOperatorKind::Arithmetic:
-                if (QualType PtrArithmeticResType = ResolvePointerArithmetic(Left, Right, Op, CContext))
+                if (QualType PtrArithmeticResType = ResolvePointerArithmetic(Left, Right, Op, Err, CContext))
                     return PtrArithmeticResType;
-                return ResolveArithmetic(Left, Right, Op);
+                return ResolveArithmetic(Left, Right, Op, Err);
             case BinaryOperatorKind::Comparison:
-                return ResolveComparison(Left, Right, Op, CContext);
+                return ResolveComparison(Left, Right, Op, Err, CContext);
             case BinaryOperatorKind::Logical:
-                return ResolveLogical(Left, Right, Op, CContext);
+                return ResolveLogical(Left, Right, Op, Err, CContext);
             case BinaryOperatorKind::Assignment:
-                return ResolveAssignment(Left, Right, Op);
+                return ResolveAssignment(Left, Right, Op, Err);
             default:
                 return {};
         }

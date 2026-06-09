@@ -19,10 +19,11 @@ namespace Volt
         size_t Column;
         Array<std::string> Context;
 
+        Error(size_t Line, size_t Column) : Line(Line), Column(Column) {}
         Error(size_t Line, size_t Column, Array<std::string>&& Context)
             : Line(Line), Column(Column), Context(std::move(Context)) {}
-        virtual ~Error() = default;
 
+        virtual ~Error() = default;
         [[nodiscard]] virtual std::string ToString() const = 0;
     };
 }

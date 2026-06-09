@@ -8,7 +8,7 @@
 #include "Volt/Core/Enums/TokenType.h"
 #include "Volt/Core/Enums/OperatorType.h"
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Core/TypeDefs/TypeDefs.h"
+#include "Volt/Core/Errors/TypeError.h"
 #include <string>
 
 namespace Volt
@@ -22,6 +22,13 @@ namespace Volt
         Logical,
         Assignment,
         Unknown
+    };
+
+    enum class OperatorErrorKind
+    {
+        None,
+        IncompatibleTypes,
+        InvalidOperandTypes
     };
 
     class Operator
@@ -40,16 +47,19 @@ namespace Volt
 
         [[nodiscard]] static std::string ToString(OperatorType Op);
 
-        [[nodiscard]] static QualType ResolveArithmetic(QualType& Left, QualType& Right, OperatorType Op);
+        [[nodiscard]] static QualType ResolveArithmetic(QualType& Left, QualType& Right, OperatorType Op,
+            TypeError& Err);
         [[nodiscard]] static QualType ResolveComparison(QualType& Left, QualType& Right, OperatorType Op,
-            CompilationContext& CContext);
+            TypeError& Err, CompilationContext& CContext);
         [[nodiscard]] static QualType ResolveLogical(QualType& Left, QualType& Right, OperatorType Op,
-            CompilationContext& CContext);
-        [[nodiscard]] static QualType ResolveAssignment(QualType& Left, QualType& Right, OperatorType Op);
+            TypeError& Err, CompilationContext& CContext);
+        [[nodiscard]] static QualType ResolveAssignment(QualType& Left, QualType& Right, OperatorType Op,
+            TypeError& Err);
         [[nodiscard]] static QualType ResolvePointerArithmetic(QualType Left, QualType Right, OperatorType Op,
-            CompilationContext& CContext);
+            TypeError& Err, CompilationContext& CContext);
+
         [[nodiscard]] static QualType ResolveBinary(QualType& Left, QualType& Right, OperatorType Op,
-            CompilationContext& CContext);
+            TypeError& Err, CompilationContext& CContext);
 
         [[nodiscard]] static BinaryOperatorKind GetBinaryOperatorKind(OperatorType Op);
 
