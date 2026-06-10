@@ -6,6 +6,7 @@
 #define CVOLT_ERRORHANDLING_H
 
 #include <cstdio>
+#include <cstdlib>
 
 #ifdef _MSC_VER
     #define VOLT_FUNC __FUNCSIG__

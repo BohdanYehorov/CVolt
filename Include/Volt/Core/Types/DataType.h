@@ -41,10 +41,8 @@ namespace Volt
     public:
         DataType(TypeCategory Category) : Category(Category) {}
 
-        virtual bool IsEqual(const DataType* Other) const = 0;
         virtual llvm::Type* ToLLVMType(llvm::LLVMContext& Context) const = 0;
         virtual int GetRank() const = 0;
-        virtual size_t GetHash() const = 0;
         virtual std::string ToString() const = 0;
 
         virtual bool CastTo(DataType* To, bool Explicit) const = 0;
@@ -124,6 +122,8 @@ namespace Volt
             return reinterpret_cast<DataType*>(Value & ~(alignof(DataType) - 1));
         }
 
+        [[nodiscard]] uintptr_t RawValue() const { return Value; }
+
         template <typename T>
         [[nodiscard]] T* CastAs() const
         {
@@ -145,15 +145,11 @@ namespace Volt
             Value &= ~Qualifiers;
         }
 
-        [[nodiscard]] bool IsEqual(QualType Other) const
-        {
-            return GetQuals() == Other.GetQuals() && GetType()->IsEqual(Other.GetType());
-        }
-
         [[nodiscard]] bool CastTo(QualType To, bool Explicit) const;
         [[nodiscard]] bool ImplicitCast(QualType To) const { return CastTo(To, false); }
         [[nodiscard]] bool ExplicitCast(QualType To) const { return CastTo(To, true); }
-        [[nodiscard]] size_t GetHash() const;
+
+        [[nodiscard]] std::string ToString() const;
     };
 
     class PrimitiveDataType : public DataType
@@ -170,21 +166,14 @@ namespace Volt
     public:
         VoidType() : PrimitiveDataType(TypeCategory::VOID) {}
 
-        bool IsEqual(const DataType* Other) const override
-        {
-            return Cast<const VoidType>(Other) != nullptr;
-        }
-
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             return llvm::Type::getVoidTy(Context);
         }
 
         int GetRank() const override { return 0; }
-        size_t GetHash() const override { return 0; }
         std::string ToString() const override { return "void"; }
 
-    protected:
         bool CastTo(DataType *To, bool Explicit) const override { return false; }
     };
 
@@ -195,21 +184,14 @@ namespace Volt
     public:
         BoolType() : PrimitiveDataType(TypeCategory::BOOLEAN) {}
 
-        bool IsEqual(const DataType* Other) const override
-        {
-            return Cast<const BoolType>(Other) != nullptr;
-        }
-
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             return llvm::IntegerType::getInt1Ty(Context);
         }
 
         int GetRank() const override { return 1; }
-        size_t GetHash() const override { return 1; }
         std::string ToString() const override { return "bool"; }
 
-    protected:
         bool CastTo(DataType* To, bool Explicit) const override;
     };
 
@@ -220,21 +202,14 @@ namespace Volt
     public:
         CharType() : PrimitiveDataType(TypeCategory::CHAR) {}
 
-        bool IsEqual(const DataType* Other) const override
-        {
-            return Cast<const CharType>(Other) != nullptr;
-        }
-
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             return llvm::IntegerType::getInt8Ty(Context);
         }
 
         int GetRank() const override { return 2; }
-        size_t GetHash() const override { return 2; }
         std::string ToString() const override { return "char"; }
 
-    protected:
         bool CastTo(DataType *To, bool Explicit) const override;
     };
 
@@ -248,18 +223,14 @@ namespace Volt
             : PrimitiveDataType(TypeCategory::INTEGER), BitWidth(BitWidth), IsSigned(IsSigned) {}
 
     public:
-        bool IsEqual(const DataType* Other) const override;
-
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             return llvm::IntegerType::getIntNTy(Context, BitWidth);
         }
 
-        int GetRank() const override;
-        size_t GetHash() const override;
+        int GetRank() const override { return std::countr_zero(BitWidth); }
         std::string ToString() const override;
 
-    protected:
         bool CastTo(DataType *To, bool Explicit) const override;
     };
 
@@ -272,13 +243,10 @@ namespace Volt
             : PrimitiveDataType(TypeCategory::FLOATING_POINT), BitWidth(BitWidth) {}
 
     public:
-        bool IsEqual(const DataType* Other) const override;
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
-        int GetRank() const override;
-        size_t GetHash() const override;
+        int GetRank() const override { return std::countr_zero(BitWidth) + 3; }
         std::string ToString() const override;
 
-    protected:
         bool CastTo(DataType *To, bool Explicit) const override;
     };
 
@@ -291,16 +259,13 @@ namespace Volt
             : DataType(TypeCategory::POINTER), BaseType(BaseType) {}
 
     public:
-        bool IsEqual(const DataType* Other) const override;
-
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             return llvm::PointerType::get(Context, 0);
         }
 
         int GetRank() const override { return 11; }
-        size_t GetHash() const override;
-        std::string ToString() const override { return BaseType ? BaseType->ToString() + "*" : "?"; }
+        std::string ToString() const override;
 
         void Profile(llvm::FoldingSetNodeID& ID) const
         {
@@ -313,7 +278,6 @@ namespace Volt
             ID.AddInteger(Pointee.GetQuals());
         }
 
-    protected:
         bool CastTo(DataType *To, bool Explicit) const override;
     };
 
@@ -326,16 +290,13 @@ namespace Volt
             : DataType(TypeCategory::REFERENCE), BaseType(BaseType) {}
 
     public:
-        bool IsEqual(const DataType* Other) const override;
-
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             return llvm::PointerType::get(Context, 0);
         }
 
         int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
-        size_t GetHash() const override;
-        std::string ToString() const override { return BaseType ? BaseType->ToString() + "$" : "?"; }
+        std::string ToString() const override { return BaseType ? BaseType.ToString() + "$" : "?"; }
 
         bool CanBind(QualType Type) const;
 
@@ -350,7 +311,6 @@ namespace Volt
             ID.AddInteger(BaseType.GetQuals());
         }
 
-    protected:
         bool CastTo(DataType *To, bool Explicit) const override;
     };
 
@@ -368,8 +328,6 @@ namespace Volt
             BaseType(BaseType), Length(0), LengthInit(false) {}
 
     public:
-        bool IsEqual(const DataType* Other) const override;
-
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             if (!BaseType) return nullptr;
@@ -377,7 +335,6 @@ namespace Volt
         }
 
         int GetRank() const override { return 12; }
-        size_t GetHash() const override;
         std::string ToString() const override;
 
         void Profile(llvm::FoldingSetNodeID& ID) const
@@ -393,7 +350,6 @@ namespace Volt
             ID.AddBoolean(LengthInit);
         }
 
-    protected:
         bool CastTo(DataType *To, bool Explicit) const override;
     };
 }

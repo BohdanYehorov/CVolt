@@ -26,15 +26,15 @@ namespace Volt
 		}
 	};
 
-	template <>
-	class Hash<DataType*>
-	{
-	public:
-		size_t operator()(const DataType* Type) const
-		{
-			return Type->GetHash();
-		}
-	};
+	// template <>
+	// class Hash<DataType*>
+	// {
+	// public:
+	// 	size_t operator()(const DataType* Type) const
+	// 	{
+	// 		return Type->GetHash();
+	// 	}
+	// };
 
 	template <>
 	class Hash<QualType>
@@ -42,9 +42,7 @@ namespace Volt
 	public:
 		size_t operator()(const QualType& Type) const
 		{
-			size_t H = Type->GetHash();
-			CombineHashes(H, Hash<UInt32>{}(Type.GetQuals()));
-			return H;
+			return std::hash<uintptr_t>{}(Type.RawValue());
 		}
 	};
 
@@ -56,7 +54,7 @@ namespace Volt
 		{
 			size_t Seed =  std::hash<std::string>{}(Signature.Name);
 			for (auto Param : Signature.Params)
-				CombineHashes(Seed, Param.GetHash());
+				CombineHashes(Seed, Hash<QualType>{}(Param));
 
 			return Seed;
 		}
