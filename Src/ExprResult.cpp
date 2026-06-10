@@ -17,7 +17,7 @@ namespace Volt
 
 	ExprResult *ExprResult::CreateInteger(QualType IntType, Int64 Integer, Arena& MainArena)
 	{
-		assert(IntType->IsIntegerType());
+		VoltAssert(IntType->IsIntegerType());
 
 		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = IntType;

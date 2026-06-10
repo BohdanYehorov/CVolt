@@ -22,7 +22,7 @@ namespace Volt
             DepthIncScope(size_t& Depth) : Depth(Depth)
             {
                 if (++Depth > 10000)
-                    throw std::runtime_error("Big depth");
+                    VoltUnreachable("Big depth");
             }
 
             ~DepthIncScope()

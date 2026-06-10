@@ -153,7 +153,7 @@ namespace Volt
         size_t Padding = CalculatePadding(alignof(T), Ptr);
 
         if (Padding != 0)
-            throw std::runtime_error("Ref Is Not Aligned");
+            VoltUnreachable("Ref Is Not Aligned");
 
         UsedSize = std::max(UsedSize, Ptr + sizeof(T));
         return new (Data + Ptr) T(std::forward<Args_>(Args)...);
@@ -174,10 +174,10 @@ namespace Volt
         size_t Padding = CalculatePadding(alignof(T), Ptr);
 
         if (Padding != 0)
-            throw std::runtime_error("Ref Is Not Aligned");
+            VoltUnreachable("Ref Is Not Aligned");
 
         if (Ptr + sizeof(T) > Size)
-            throw std::runtime_error("Cannot Get This Object");
+            VoltUnreachable("Cannot Get This Object");
 
         return std::launder(reinterpret_cast<T*>(Data + Ptr));
     }
@@ -233,7 +233,7 @@ namespace Volt
     template<typename T, typename ... Args_>
     std::enable_if_t<std::is_base_of_v<Object, T>, T*> Arena::Create(Args_ &&...Args)
     {
-        assert(sizeof(T) <= BlockSize);
+        VoltAssert(sizeof(T) <= BlockSize);
 
         if (Blocks.Empty() || !Blocks.Back().CanWrite<T>())
             Blocks.Emplace(BlockSize);

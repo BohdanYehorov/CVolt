@@ -40,43 +40,43 @@ namespace Volt
 	public:
 		[[nodiscard]] Int64 GetInt() const
 		{
-			assert(!bIsEmpty);
-			assert(Type->IsSignedIntegerType());
+			VoltAssert(!bIsEmpty);
+			VoltAssert(Type->IsSignedIntegerType());
 			return GetValue<Int64>();
 		}
 
 		[[nodiscard]] UInt64 GetUInt() const
 		{
-			assert(!bIsEmpty);
-			assert(Type->IsUnsignedIntegerType());
+			VoltAssert(!bIsEmpty);
+			VoltAssert(Type->IsUnsignedIntegerType());
 			return GetValue<UInt64>();
 		}
 
 		[[nodiscard]] double GetFloat() const
 		{
-			assert(!bIsEmpty);
-			assert(Type->IsFloatingPointType());
+			VoltAssert(!bIsEmpty);
+			VoltAssert(Type->IsFloatingPointType());
 			return GetValue<double>();
 		}
 
 		[[nodiscard]] bool GetBool() const
 		{
-			assert(!bIsEmpty);
-			assert(Type->IsBoolType());
+			VoltAssert(!bIsEmpty);
+			VoltAssert(Type->IsBoolType());
 			return GetValue<bool>();
 		}
 
 		[[nodiscard]] char GetChar() const
 		{
-			assert(!bIsEmpty);
-			assert(Type->IsCharType());
+			VoltAssert(!bIsEmpty);
+			VoltAssert(Type->IsCharType());
 			return GetValue<char>();
 		}
 
 		[[nodiscard]] ExprAddress* GetPointer() const
 		{
-			assert(!bIsEmpty);
-			assert(Type->IsPointerType());
+			VoltAssert(!bIsEmpty);
+			VoltAssert(Type->IsPointerType());
 			return GetValue<ExprAddress*>();
 		}
 

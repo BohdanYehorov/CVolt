@@ -26,7 +26,7 @@ namespace Volt
     {
         size_t Padding = CalculatePadding(Align, Ptr);
         if (Padding != 0)
-            throw std::runtime_error("Ref is not aligned");
+            VoltUnreachable("Ref is not aligned");
 
         std::memcpy(Data + Ptr, InData, InSize);
 

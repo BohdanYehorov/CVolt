@@ -192,7 +192,7 @@ namespace Volt
     void Parser::SendError(ParseErrorType Type, size_t Line, size_t Column, Array<std::string> &&Context)
     {
         if (Errors.Length() >= 100000)
-            throw std::runtime_error("Error list Overload");
+            VoltUnreachable("Error list Overload");
         Errors.Emplace(Type, Line, Column, std::move(Context));
     }
 
@@ -229,7 +229,7 @@ namespace Volt
             }
 
             if (StartIndex == Index)
-                throw std::runtime_error("Infinity loop\n");
+                VoltUnreachable("Infinity loop\n");
 
             StartIndex = Index;
         }
@@ -272,7 +272,7 @@ namespace Volt
             }
 
             if (StartIndex == Index)
-                throw std::runtime_error("Infinity loop");
+                VoltUnreachable("Infinity loop");
 
             StartIndex = Index;
         }

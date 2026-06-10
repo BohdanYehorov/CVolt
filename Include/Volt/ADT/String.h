@@ -107,7 +107,7 @@ namespace Volt
 	template<typename T, typename Alloca>
 	BasicString<T, Alloca>::BasicString(const T *InStr)
 	{
-		assert(InStr != nullptr);
+		VoltAssert(InStr != nullptr && "Cannot construct BasicString with nullptr");
 
 		Len = StrLength(InStr);
 		CreateRawString(Len);
@@ -231,8 +231,7 @@ namespace Volt
 	template<typename T, typename Alloca>
 	BasicString<T, Alloca> BasicString<T, Alloca>::SubStr(RelativeStringRef Ref)
 	{
-		assert(Ref.Pos <= Len);
-		assert(Ref.Pos + Ref.Length <= Len);
+		VoltAssert((Ref.Pos <= Len || Ref.Pos + Ref.Length <= Len)&&"Substring pos out of range");
 
 		auto It = Begin() + Ref.Pos;
 		return BasicString(It, It + Ref.Length);

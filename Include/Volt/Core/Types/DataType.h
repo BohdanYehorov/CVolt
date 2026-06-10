@@ -9,6 +9,7 @@
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
+#include "Volt/Support/ErrorHandling.h"
 #include <llvm/IR/Type.h>
 #include <llvm/ADT/FoldingSet.h>
 
@@ -101,7 +102,7 @@ namespace Volt
 
         QualType(DataType* Type, UInt32 Quals)
         {
-            assert(Quals < alignof(DataType));
+            VoltAssert(Quals < alignof(DataType));
             Value = reinterpret_cast<uintptr_t>(Type) | Quals;
         }
 
@@ -134,13 +135,13 @@ namespace Volt
 
         void AddQualifiers(UInt32 Qualifiers)
         {
-            assert(Qualifiers < alignof(DataType));
+            VoltAssert(Qualifiers < alignof(DataType));
             Value |= Qualifiers;
         }
 
         void RemoveQualifiers(UInt32 Qualifiers)
         {
-            assert(Qualifiers < alignof(DataType));
+            VoltAssert(Qualifiers < alignof(DataType));
             Value &= ~Qualifiers;
         }
 

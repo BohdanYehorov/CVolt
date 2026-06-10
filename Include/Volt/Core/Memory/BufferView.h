@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
+#include "Volt/Support/ErrorHandling.h"
 
 namespace Volt
 {
@@ -64,14 +65,14 @@ namespace Volt
     BufferArrayView<T>::BufferArrayView(std::byte *Ptr, size_t Count) : Ptr(Ptr), Count(Count)
     {
         if (reinterpret_cast<uintptr_t>(Ptr) % alignof(T))
-            throw std::runtime_error("Unaligned Buffer");
+            VoltUnreachable("Unaligned Buffer");
     }
 
     template<typename T>
     T& BufferArrayView<T>::operator[](size_t Index)
     {
         if (Index >= Count)
-            throw std::range_error("Index Out Of Range");
+            VoltUnreachable("Index Out Of Range");
         return *reinterpret_cast<T*>(Ptr + Index * sizeof(T));
     }
 
@@ -79,7 +80,7 @@ namespace Volt
     const T& BufferArrayView<T>::operator[](size_t Index) const
     {
         if (Index >= Count)
-            throw std::range_error("Index Out Of Range");
+            VoltUnreachable("Index Out Of Range");
         return *reinterpret_cast<T*>(Ptr + Index * sizeof(T));
     }
 

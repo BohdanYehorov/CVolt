@@ -25,7 +25,7 @@ namespace Volt
         [[nodiscard]] ExprResult* GetValue() const { return Value; }
         void SetValue(ExprResult* NewValue)
         {
-            assert(NewValue->GetType().GetType() == Value->GetType().GetType());
+            VoltAssert(NewValue->GetType().GetType() == Value->GetType().GetType());
             Value = NewValue;
         }
         ExprResult* CreateAssignment(ExprResult* Right, OperatorType Op, CompilationContext& CContext);

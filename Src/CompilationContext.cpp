@@ -10,7 +10,7 @@ namespace Volt
 	llvm::StringRef CompilationContext::GetTokenLexeme(StringRef Ref) const
 	{
 		if (Ref.Ptr + Ref.Length > Code.Length())
-			throw std::runtime_error("Ref out of code length");
+			VoltUnreachable("Ref out of code length");
 
 		return { Code.CStr() + Ref.Ptr, Ref.Length };
 	}
@@ -41,7 +41,7 @@ namespace Volt
 
 	IntegerType *CompilationContext::GetIntegerType(size_t BitWidth, bool IsSigned)
 	{
-		assert(BitWidth % 8 == 0 && BitWidth >= 8 && BitWidth <= 64);
+		VoltAssert(BitWidth % 8 == 0 && BitWidth >= 8 && BitWidth <= 64);
 
 		auto Index = std::countr_zero(BitWidth) - 3 + 4 * static_cast<int>(!IsSigned);
 
@@ -56,7 +56,7 @@ namespace Volt
 
 	FloatingPointType *CompilationContext::GetFPType(size_t BitWidth)
 	{
-		assert(BitWidth % 8 == 0 && BitWidth >= 16 && BitWidth <= 128);
+		VoltAssert(BitWidth % 8 == 0 && BitWidth >= 16 && BitWidth <= 128);
 
 		auto Index = std::countr_zero(BitWidth) - 4;
 		if (Index >= std::size(CachedFPTypes))
@@ -112,7 +112,7 @@ namespace Volt
 
 	llvm::Type *CompilationContext::GetLLVMType(DataType *Type)
 	{
-		assert(Type);
+		VoltAssert(Type);
 
 		if (!Type->CachedType)
 			Type->CachedType = Type->ToLLVMType(Context);

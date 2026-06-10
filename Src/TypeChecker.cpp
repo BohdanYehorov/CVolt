@@ -710,7 +710,7 @@ namespace Volt
                 return { Array->ResolvedType, 0 };
             }
 
-            throw std::runtime_error("Array length mast be defined in compiler time");
+            VoltUnreachable("Array length mast be defined in compiler time");
         }
         if (auto QualTy = Cast<QualTypeNode>(Type))
         {

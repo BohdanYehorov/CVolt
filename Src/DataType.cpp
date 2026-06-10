@@ -4,6 +4,7 @@
 
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/Hash/Hash.h"
+#include "Volt/Support/ErrorHandling.h"
 
 namespace Volt
 {
@@ -106,7 +107,7 @@ namespace Volt
 			case 16: return  4;
 			case 32: return  5;
 			case 64: return  6;
-			default: assert(false);
+			default: VoltAssert(false);
 		}
 	}
 
@@ -118,7 +119,7 @@ namespace Volt
 			case 16: return  4;
 			case 32: return  5;
 			case 64: return  6;
-			default: assert(false);
+			default: VoltAssert(false);
 		}
 	}
 
@@ -161,7 +162,7 @@ namespace Volt
 			case 32: return llvm::Type::getFloatTy(Context);
 			case 64: return llvm::Type::getDoubleTy(Context);
 			case 128: return llvm::Type::getFP128Ty(Context);
-			default: throw std::runtime_error("Unsupported FP size");
+			default: VoltUnreachable("Unsupported FP size");
 		}
 	}
 
@@ -173,7 +174,7 @@ namespace Volt
 			case 32:  return  8;
 			case 64:  return  9;
 			case 128: return 10;
-			default:  assert(false);
+			default:  VoltAssert(false);
 		}
 	}
 
@@ -185,7 +186,7 @@ namespace Volt
 			case 32:  return  8;
 			case 64:  return  9;
 			case 128: return 10;
-			default:  assert(false);
+			default:  VoltAssert(false);
 		}
 	}
 
@@ -195,7 +196,7 @@ namespace Volt
 			case 32: return "float";
 			case 64: return "double";
 			case 128: return "float128";
-			default: throw std::runtime_error("Unsupported FP size");
+			default: VoltUnreachable("Unsupported FP size");
 		}
 	}
 

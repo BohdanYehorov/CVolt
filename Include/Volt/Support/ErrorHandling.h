@@ -13,12 +13,15 @@
     #define VOLT_FUNC __PRETTY_FUNCTION__
 #endif
 
-#ifdef NDEBUG
-#define VoltUnreachable(msg) __builtin_unreachable()
-#else
-#define VoltUnreachable(msg) (void)(std::fprintf(stderr, "UNREACHABLE: %s\n  at %s:%d in %s\n", \
-msg, __FILE__, __LINE__, VOLT_FUNC), \
-std::abort())
-#endif
+[[noreturn]] inline void VoltUnreachableImpl(
+    const char* Msg, const char* File, unsigned Line, const char* Func)
+{
+    std::fprintf(stderr, "UNREACHABLE: %s\n  at %s:%d in %s\n",
+        Msg, File, Line, Func);
+    std::abort();
+}
+
+#define VoltUnreachable(Msg) VoltUnreachableImpl(Msg, __FILE__, __LINE__, VOLT_FUNC)
+#define VoltAssert(Expr) (static_cast<bool>(Expr) ? void(0) : VoltUnreachable(#Expr))
 
 #endif //CVOLT_ERRORHANDLING_H

@@ -123,7 +123,7 @@ namespace Volt
 				break;
 		}
 
-		throw std::runtime_error("Value by key not found");
+		VoltUnreachable("Value by key not found");
 	}
 
 	template<typename KeyT, typename ValueT, typename Hasher>
@@ -191,7 +191,7 @@ namespace Volt
 				break;
 		}
 
-		throw std::runtime_error("Value by key not found, or FixedMap full");
+		VoltUnreachable("Value by key not found, or FixedMap full");
 	}
 }
 
