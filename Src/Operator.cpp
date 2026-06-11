@@ -428,19 +428,31 @@ namespace Volt
         }
     }
 
-    QualType Operator::ResolveUnary(QualType &Operand, OperatorType Op)
+    QualType Operator::ResolveUnary(QualType &Operand, OperatorType Op, TypeError& Err)
     {
         using enum TypeCategory;
         using enum OperatorType;
 
         switch (Op)
         {
-            case ADD: case SUB:
+            case ADD:
             case INC: case DEC:
             {
                 if (Operand->IsOneOf(INTEGER, FLOATING_POINT))
                     return Operand;
 
+                Err.Kind = TypeErrorKind::UnaryOperandTypeMismatch;
+                Err.Context = { Operand.ToString() };
+                return {};
+            }
+
+            case SUB:
+            {
+                if (Operand->IsSignedIntegerType() || Operand->IsFloatingPointType())
+                    return Operand;
+
+                Err.Kind = TypeErrorKind::UnaryOperandTypeMismatch;
+                Err.Context = { Operand.ToString() };
                 return {};
             }
 
@@ -449,6 +461,8 @@ namespace Volt
                 if (Operand->IsIntegerType())
                     return Operand;
 
+                Err.Kind = TypeErrorKind::UnaryOperandTypeMismatch;
+                Err.Context = { Operand.ToString() };
                 return {};
             }
 
@@ -457,11 +471,13 @@ namespace Volt
                 if (Operand->IsBoolType())
                     return Operand;
 
+                Err.Kind = TypeErrorKind::UnaryOperandTypeMismatch;
+                Err.Context = { Operand.ToString() };
                 return {};
             }
 
             default:
-                return {};
+                VoltUnreachable("Invalid unary operator");
         }
     }
 

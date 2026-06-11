@@ -4,9 +4,6 @@
 
 #include "Volt/Core/Lexer/Lexer.h"
 
-#include <complex>
-#include <sstream>
-
 namespace Volt
 {
 	llvm::StringMap<TokenType> Lexer::Operators = {
@@ -67,15 +64,15 @@ namespace Volt
 	};
 
 	llvm::StringMap<TokenType> Lexer::Keywords {
-			{ "if",       TokenType::KW_IF },
-			{ "else",     TokenType::KW_ELSE },
-			{ "while",    TokenType::KW_WHILE },
-			{ "for",      TokenType::KW_FOR },
-			{ "fun",      TokenType::KW_FUN },
-			{ "let",      TokenType::KW_LET },
-			{ "return",   TokenType::KW_RETURN },
-			{ "break",    TokenType::KW_BREAK },
-			{ "continue", TokenType::KW_CONTINUE }
+		{ "if",       TokenType::KW_IF },
+		{ "else",     TokenType::KW_ELSE },
+		{ "while",    TokenType::KW_WHILE },
+		{ "for",      TokenType::KW_FOR },
+		{ "fun",      TokenType::KW_FUN },
+		{ "let",      TokenType::KW_LET },
+		{ "return",   TokenType::KW_RETURN },
+		{ "break",    TokenType::KW_BREAK },
+		{ "continue", TokenType::KW_CONTINUE }
 	};
 
 	llvm::StringMap<TokenType> Lexer::DataTypes = {

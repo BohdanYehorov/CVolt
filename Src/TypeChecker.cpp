@@ -284,12 +284,14 @@ namespace Volt
         if (Operand->IsEmpty())
         {
             QualType OperandType = Operand->GetType();
-            if (auto Type = Operator::ResolveUnary(OperandType, Unary->Type))
+            TypeError Err(Unary->Line, Unary->Column);
+            if (auto Type = Operator::ResolveUnary(OperandType, Unary->Type, Err))
             {
                 Unary->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);;
                 return Unary->CompileTimeValue;
             }
 
+            Errors.Add(Err);
             return nullptr;
         }
 

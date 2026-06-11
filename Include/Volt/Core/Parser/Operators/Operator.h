@@ -63,7 +63,7 @@ namespace Volt
 
         [[nodiscard]] static BinaryOperatorKind GetBinaryOperatorKind(OperatorType Op);
 
-        [[nodiscard]] static QualType ResolveUnary(QualType& Operand, OperatorType Op);
+        [[nodiscard]] static QualType ResolveUnary(QualType& Operand, OperatorType Op, TypeError& Err);
 
     private:
         static bool CastToJointType(QualType& Left, QualType& Right);
