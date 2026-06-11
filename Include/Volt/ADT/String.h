@@ -6,281 +6,174 @@
 #define CVOLT_STRING_H
 
 #include "ArrayAllocator.h"
-#include "ArrayIterator.h"
 #include <cstring>
 
 namespace Volt
 {
-	struct RelativeStringRef
-	{
-		size_t Pos;
-		size_t Length;
-	};
+    template<typename Alloca = ArrayAllocator<char>>
+    class StringImpl
+    {
+    public:
+        using SizeType = size_t;
+        using DifferenceType = std::ptrdiff_t;
+        using AllocatorType = Alloca;
 
-	template <typename T, typename Alloca = ArrayAllocator<T>>
-	class BasicString
-	{
-		using ValueType = T;
-		using SizeType = size_t;
-		using DifferenceType = std::ptrdiff_t;
-		using AllocatorType = Alloca;
-		using Iterator = ArrayIterator<T>;
-		using ConstIterator = ArrayIterator<const T>;
+    private:
+        char* Data = nullptr;
+        SizeType Len = 0;
+        SizeType Cap = 0;
+        AllocatorType Alloc;
 
-	private:
-		T* Str = nullptr;
-		SizeType Len = 0;
-		SizeType Cap = 0;
-		AllocatorType Alloc;
+    public:
+        StringImpl() = default;
+        StringImpl(std::nullptr_t) = delete;
+        StringImpl(const char* Str)
+        {
+            if (!Str) return;
+            SizeType StrLen = std::strlen(Str);
+            if (StrLen == 0) return;
+            RawResize(StrLen);
+            std::memcpy(Data, Str, StrLen);
+        }
+        StringImpl(std::string_view Str)
+        {
+            if (Str.empty()) return;
+            RawResize(Str.size());
+            std::memcpy(Data, Str.data(), Str.size());
+        }
+        StringImpl(llvm::StringRef Ref)
+        {
+            if (Ref.empty()) return;
+            RawResize(Ref.size());
+            std::memcpy(Data, Ref.data(), Ref.size());
+        }
+        StringImpl(SizeType Len, char Fill) { Resize(Len, Fill); }
 
-	public:
-		BasicString() = default;
-		BasicString(SizeType Count, ValueType Ch);
-		BasicString(const T* InStr);
+        StringImpl(const StringImpl& Other)
+        {
+            if (!Other.Data) return;
 
-		BasicString(std::nullptr_t) = delete;
+            Len = Other.Len;
+            Cap = Other.Cap;
+            Data = Alloc.Allocate(Cap);
+            std::memcpy(Data, Other.Data, Len);
+            Data[Len] = '\0';
+        }
+        StringImpl(StringImpl&& Other) noexcept
+        {
+            std::swap(Len, Other.Len);
+            std::swap(Cap, Other.Cap);
+            std::swap(Data, Other.Data);
+        }
 
-		BasicString(const BasicString& Other);
-		BasicString(BasicString&& Other) noexcept;
+        StringImpl& operator=(const StringImpl& Other)
+        {
+            if (this != &Other)
+            {
+                if (!Other.Data)
+                {
+                    if (Data) Data[0] = '\0';
+                    Len = 0;
+                    return *this;
+                }
+                if (Other.Len + 1 > Cap)
+                {
+                    char* NewData = Alloc.Allocate(Other.Len + 1);
+                    if (Data) Alloc.Deallocate(Data);
+                    Data = NewData;
+                    Cap = Other.Len + 1;
+                }
+                std::memcpy(Data, Other.Data, Other.Len);
+                Data[Other.Len] = '\0';
+                Len = Other.Len;
+            }
 
-		template <typename Iter = Iterator>
-		BasicString(Iter Begin, Iter End);
+            return *this;
+        }
 
-		BasicString& operator=(const BasicString& Other);
-		BasicString& operator=(BasicString&& Other) noexcept;
+        StringImpl& operator=(StringImpl&& Other) noexcept
+        {
+            if (this != &Other)
+            {
+                if (Data) Alloc.Deallocate(Data);
+                Len = Other.Len;
+                Cap = Other.Cap;
+                Data = Other.Data;
 
-		~BasicString() { Alloc.Deallocate(Str); }
+                Other.Len = Other.Cap = 0;
+                Other.Data = nullptr;
+            }
 
-		void Reserve(SizeType NewCap);
+            return *this;
+        }
 
-		void Add(T Ch);
-		void Append(const BasicString& Other);
+        ~StringImpl() { Alloc.Deallocate(Data); }
 
-		[[nodiscard]] const ValueType& operator[](SizeType Index) const { return Str[Index]; }
-		[[nodiscard]] ValueType& operator[](SizeType Index) { return Str[Index]; }
+        [[nodiscard]] char& operator[](SizeType Index) { return Data[Index]; }
+        [[nodiscard]] char operator[](SizeType Index) const { return Data[Index]; }
 
-		[[nodiscard]] bool operator==(const BasicString& Other) const;
-		[[nodiscard]] bool operator!=(const BasicString& Other) const;
+        [[nodiscard]] SizeType Length() const { return Len; }
+        [[nodiscard]] SizeType Capacity() const { return Cap; }
+        [[nodiscard]] char* RawData() { return Data; }
+        [[nodiscard]] const char* RawData() const { return Data; }
+        [[nodiscard]] const char* CStr() const { return Data; }
 
-		[[nodiscard]] ValueType* RawData() const { return Str; }
-		[[nodiscard]] const ValueType* CStr() const { return Str; }
+        [[nodiscard]] bool Empty() const { return Len == 0; }
 
-		[[nodiscard]] SizeType Length() const { return Len; }
-		[[nodiscard]] SizeType Capacity() const { return Cap; }
-		[[nodiscard]] bool Empty() const { return Len == 0; }
+        void Add(char Ch)
+        {
+            if (Len + 1 >= Cap) Reserve(CalculateCapacity(Cap));
+            Data[Len] = Ch;
+            Data[Len + 1] = '\0';
+            Len++;
+        }
 
-		[[nodiscard]] ValueType& Front() { return Str[0]; }
-		[[nodiscard]] const ValueType& Front() const { return Str[0]; }
+        void Pop()
+        {
+            if (Len == 0) return;
+            Len--;
+            Data[Len] = '\0';
+        }
 
-		[[nodiscard]] ValueType& Back() { return Str[Len - 1]; }
-		[[nodiscard]] const ValueType& Back() const { return Str[Len - 1]; }
+        void Reserve(SizeType NewCap)
+        {
+            if (NewCap <= Cap) return;
+            char* NewData = Alloc.Allocate(NewCap);
+            if (Data)
+            {
+                std::memcpy(NewData, Data, Len);
+                Alloc.Deallocate(Data);
+            }
+            NewData[Len] = '\0';
+            Data = NewData;
+            Cap = NewCap;
+        }
 
-		[[nodiscard]] Iterator Begin() { return Iterator(Str); }
-		[[nodiscard]] Iterator End() { return Iterator(Str + Len); }
+        void Resize(SizeType NewLen, char Fill = ' ')
+        {
+            SizeType OldLen = Len;
+            RawResize(NewLen);
+            if (Len > OldLen)
+                std::memset(Data + OldLen, Fill, NewLen - OldLen);
+        }
+    private:
+        static SizeType CalculateCapacity(SizeType InCap)
+        {
+            if (InCap < 32) return 32;
+            return SizeType(1) << (static_cast<SizeType>(std::bit_width(InCap)));
+        }
 
-		[[nodiscard]] Iterator begin() { return Iterator(Str); }
-		[[nodiscard]] Iterator end() { return Iterator(Str + Len); }
+        void RawResize(SizeType NewLen)
+        {
+            if (NewLen == Len) return;
+            if (NewLen > Len)
+                Reserve(CalculateCapacity(NewLen + 1));
+            Data[NewLen] = '\0';
+            Len = NewLen;
+        }
+    };
 
-		[[nodiscard]] ConstIterator begin() const { return ConstIterator(Str); }
-		[[nodiscard]] ConstIterator end()   const { return ConstIterator(Str + Len); }
-
-		BasicString SubStr(RelativeStringRef Ref);
-
-	public:
-		void CreateRawString(SizeType InLen);
-		void RawResize(SizeType NewLen);
-
-		static SizeType StrLength(const T* Str);
-		static SizeType CalculateCapacity(SizeType Len) { return Len * 2; }
-		static void StrCopy(ValueType *Dst, const ValueType *Src, size_t Len);
-	};
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca>::BasicString(SizeType Count, ValueType Ch)
-	{
-		CreateRawString(Count);
-
-		for (size_t i = 0; i < Count; i++)
-			Str[i] = Ch;
-	}
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca>::BasicString(const T *InStr)
-	{
-		VoltAssert(InStr != nullptr && "Cannot construct BasicString with nullptr");
-
-		Len = StrLength(InStr);
-		CreateRawString(Len);
-		std::memcpy(Str, InStr, Len);
-	}
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca>::BasicString(const BasicString &Other)
-	{
-		CreateRawString(Other.Len);
-		std::memcpy(Str, Other.Str, Other.Len * sizeof(ValueType));
-	}
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca>::BasicString(BasicString &&Other) noexcept
-	{
-		Str = Other.Str;
-		Len = Other.Len;
-		Cap = Other.Cap;
-
-		Other.Str = nullptr;
-		Other.Len = 0;
-		Other.Cap = 0;
-	}
-
-	template<typename T, typename Alloca>
-	template<typename Iter>
-	BasicString<T, Alloca>::BasicString(Iter Begin, Iter End)
-	{
-		SizeType NewLen = End - Begin;
-		CreateRawString(NewLen);
-
-		std::memcpy(
-			Str,
-			std::addressof(*Begin),
-			NewLen * sizeof(ValueType)
-		);
-	}
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca>& BasicString<T, Alloca>::operator=(const BasicString &Other)
-	{
-		if (this == &Other) return *this;
-
-		if (Cap >= Other.Len + 1)
-			StrCopy(Str, Other.Str, Other.Len);
-		else
-		{
-			if (Str) Alloc.Deallocate(Str);
-			Str = Alloc.Allocate(Other.Len + 1);
-			StrCopy(Str, Other.Str, Other.Len);
-			Cap = Other.Len + 1;
-		}
-
-		Len = Other.Len;
-		return *this;
-	}
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca> & BasicString<T, Alloca>::operator=(BasicString &&Other) noexcept
-	{
-		if (this != Other)
-		{
-			Str = Other.Str;
-			Cap = Other.Cap;
-			Len = Other.Len;
-
-			Str = nullptr;
-			Cap = 0;
-			Len = 0;
-		}
-
-		return *this;
-	}
-
-	template<typename T, typename Alloca>
-	void BasicString<T, Alloca>::Reserve(SizeType NewCap)
-	{
-		if (NewCap <= Cap)
-			return;
-
-		ValueType* NewStr = Alloc.Allocate(NewCap);
-
-		if (Str)
-		{
-			StrCopy(NewStr, Str, Len);
-			Alloc.Deallocate(Str);
-		}
-
-		Str = NewStr;
-		Cap = NewCap;
-	}
-
-	template<typename T, typename Alloca>
-	void BasicString<T, Alloca>::Add(T Ch)
-	{
-		RawResize(Len + 1);
-		Str[Len - 1] = Ch;
-	}
-
-	template<typename T, typename Alloca>
-	void BasicString<T, Alloca>::Append(const BasicString &Other)
-	{
-		SizeType OldLen = Len;
-		RawResize(Len + Other.Len);
-		std::memcpy(Str + OldLen, Other.Str, Other.Len * sizeof(ValueType));
-	}
-
-	template<typename T, typename Alloca>
-	bool BasicString<T, Alloca>::operator==(const BasicString &Other) const
-	{
-		return Len == Other.Len && std::memcmp(Str, Other.Str, Len) == 0;
-	}
-
-	template<typename T, typename Alloca>
-	bool BasicString<T, Alloca>::operator!=(const BasicString &Other) const
-	{
-		return !(*this == Other);
-	}
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca> BasicString<T, Alloca>::SubStr(RelativeStringRef Ref)
-	{
-		VoltAssert((Ref.Pos <= Len || Ref.Pos + Ref.Length <= Len)&&"Substring pos out of range");
-
-		auto It = Begin() + Ref.Pos;
-		return BasicString(It, It + Ref.Length);
-	}
-
-	template<typename T, typename Alloca>
-	void BasicString<T, Alloca>::CreateRawString(SizeType InLen)
-	{
-		Cap = CalculateCapacity(InLen + 1);
-		Str = Alloc.Allocate(Cap);
-		Str[InLen] = T(0);
-		Len = InLen;
-	}
-
-	template<typename T, typename Alloca>
-	void BasicString<T, Alloca>::RawResize(SizeType NewLen)
-	{
-		if (NewLen == Len) return;
-
-		if (NewLen >= Cap)
-			Reserve(CalculateCapacity(NewLen + 1));
-
-		Len = NewLen;
-		Str[Len] = T(0);
-	}
-
-	template<typename T, typename Alloca>
-	BasicString<T, Alloca>::SizeType BasicString<T, Alloca>::StrLength(const T *Str)
-	{
-		SizeType Len = 0;
-		while (Str[Len] != T(0))
-			++Len;
-
-		return Len;
-	}
-
-	template<typename T, typename Alloca>
-	void BasicString<T, Alloca>::StrCopy(ValueType *Dst, const ValueType *Src, size_t Len)
-	{
-		std::memcpy(Dst, Src, (Len + 1) * sizeof(ValueType));
-	}
-
-	using String = BasicString<char>;
-	using UString = BasicString<char32_t>;
-
-	inline std::ostream& operator<<(std::ostream& Os, const String& Str)
-	{
-		return Os << Str.CStr();
-	}
+    using String = StringImpl<ArrayAllocator<char>>;
 }
 
 #endif //CVOLT_STRING_H

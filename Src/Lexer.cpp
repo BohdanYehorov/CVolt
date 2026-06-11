@@ -67,15 +67,15 @@ namespace Volt
 	};
 
 	llvm::StringMap<TokenType> Lexer::Keywords {
-		{ "if",       TokenType::KW_IF },
-		{ "else",     TokenType::KW_ELSE },
-		{ "while",    TokenType::KW_WHILE },
-		{ "for",      TokenType::KW_FOR },
-		{ "fun",      TokenType::KW_FUN },
-		{ "let",      TokenType::KW_LET },
-		{ "return",   TokenType::KW_RETURN },
-		{ "break",    TokenType::KW_BREAK },
-		{ "continue", TokenType::KW_CONTINUE }
+			{ "if",       TokenType::KW_IF },
+			{ "else",     TokenType::KW_ELSE },
+			{ "while",    TokenType::KW_WHILE },
+			{ "for",      TokenType::KW_FOR },
+			{ "fun",      TokenType::KW_FUN },
+			{ "let",      TokenType::KW_LET },
+			{ "return",   TokenType::KW_RETURN },
+			{ "break",    TokenType::KW_BREAK },
+			{ "continue", TokenType::KW_CONTINUE }
 	};
 
 	llvm::StringMap<TokenType> Lexer::DataTypes = {
@@ -533,55 +533,53 @@ namespace Volt
 		size_t StartPos = Pos, StartLine = Line, StartCol = Column;
 		MovePos();
 
-		String Str;
+		size_t StringStart = Code.Length();
 
 		while (IsValidPos())
 		{
 			char Ch = CurrentChar();
-			if (Ch == '"')
+			switch (Ch)
 			{
-				MovePos();
-				size_t Start = Code.Length();
-				Code.Append(Str);
-				Tok = Token(TokenType::STRING,
-					{ Start, Str.Length() }, StartPos, StartLine, StartCol);
-				return true;
-			}
-			if (Ch == '\\')
-			{
-				MovePos();
-				if (!IsValidPos())
+				case '"':
 				{
-					size_t Start = Code.Length();
-					Code.Append(Str);
-					SendError(LexErrorType::UnterminatedEscape, StartLine, StartCol);
-					Tok = Token(TokenType::INVALID,
-						{ Start, Str.Length() }, StartPos, StartLine, StartCol);
+					MovePos();
+					Tok = Token(TokenType::STRING,{ StringStart,
+						Code.Length() - StringStart }, StartPos, StartLine, StartCol);
 					return true;
 				}
+				case '\\':
+				{
+					MovePos();
+					if (!IsValidPos())
+					{
+						SendError(LexErrorType::UnterminatedEscape, StartLine, StartCol);
+						Tok = InvalidToken({ StringStart,
+							Code.Length() - StringStart }, StartPos, StartLine, StartCol);
+						return true;
+					}
 
-				if (char Escape; GetEscape(CurrentChar(), Escape))
-					Str.Add(Escape);
+					if (char Escape; GetEscape(CurrentChar(), Escape))
+						Code.Add(Escape);
+					break;
+				}
+				case '\n':
+				{
+					SendError(LexErrorType::NewlineInString, StartLine, StartCol);
+					Tok = InvalidToken({ StringStart,
+						Code.Length() - StringStart }, StartPos, StartLine, StartCol);
+					return true;
+				}
+				default:
+					Code.Add(Ch);
+					break;
 			}
-			else if (Ch == '\n')
-			{
-				size_t Start = Code.Length();
-				Code.Append(Str);
-				SendError(LexErrorType::NewlineInString, StartLine, StartCol);
-				Tok = InvalidToken({ Start, Str.Length() }, StartPos, StartLine, StartCol);
-				return true;
-			}
-			else
-				Str.Add(Ch);
 
 			MovePos();
 		}
 
-		size_t Start = Code.Length();
-		Code.Append(Str);
 		SendError(LexErrorType::UnterminatedString, StartLine, StartCol);
-		Tok = Token(TokenType::INVALID,
-			{Start, Str.Length()}, StartPos, StartLine, StartCol);
+		Tok = InvalidToken({ StringStart,
+			Code.Length() - StringStart }, StartPos, StartLine, StartCol);
 		return true;
 	}
 

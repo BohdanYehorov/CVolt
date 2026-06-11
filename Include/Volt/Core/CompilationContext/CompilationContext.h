@@ -56,6 +56,7 @@ namespace Volt
 
 		[[nodiscard]] llvm::StringRef GetTokenLexeme(StringRef Ref) const;
 
+		[[nodiscard]] const String& GetSourceCode() const { return Code; }
 		[[nodiscard]] const Array<Token>& GetTokens() const { return Tokens; }
 		[[nodiscard]] const ASTNode* GetASTTree() const { return ASTTree; }
 
