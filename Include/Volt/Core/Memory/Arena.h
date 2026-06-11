@@ -32,30 +32,29 @@ namespace Volt
         void Deallocate();
 
         template <typename T, typename ...Args_>
-        T* Construct(PtrT Ptr, Args_&&... Args);
+        T* Construct(UIntPtrTy Ptr, Args_&&... Args);
 
-        void* Write(PtrT Ptr, const void* InData, size_t InSize, size_t Align = 1);
-
-        template <typename T>
-        T* Write(PtrT Ptr, const T* InData, size_t Count);
+        void* Write(UIntPtrTy Ptr, const void* InData, size_t InSize, size_t Align = 1);
 
         template <typename T>
-        T* Read(PtrT Ptr) const;
+        T* Write(UIntPtrTy Ptr, const T* InData, size_t Count);
 
-        StringRef Write(PtrT Ptr, const std::string& Str)
+        template <typename T>
+        T* Read(UIntPtrTy Ptr) const;
+
+        StringRef Write(UIntPtrTy Ptr, const std::string& Str)
         {
             Write<char>(Ptr, Str.c_str(), Str.size());
             return { Ptr, Str.size() };
         }
 
         template<typename T>
-        BufferArrayView<T> Read(PtrT Ptr, size_t Count) const;
-        [[nodiscard]] BufferStringView Read(PtrT Ptr, size_t Count) const { return BufferStringView{ Data + Ptr, Count }; }
+        BufferArrayView<T> Read(UIntPtrTy Ptr, size_t Count) const;
+        [[nodiscard]] BufferStringView Read(UIntPtrTy Ptr, size_t Count) const { return BufferStringView{ Data + Ptr, Count }; }
         [[nodiscard]] BufferStringView Read(StringRef Ref) const { return Read(Ref.Ptr, Ref.Length); }
 
     private:
         static size_t CalculatePadding(size_t Align, size_t Pos);
-        static size_t CalculateCapacity(size_t InSize) { return static_cast<size_t>(static_cast<float>(InSize) * 1.5f); }
 
         friend class ArenaStream;
     };
@@ -64,8 +63,8 @@ namespace Volt
     {
     private:
         ArenaAllocator Alloc;
-        PtrT WritePtr = 0;
-        mutable PtrT ReadPtr = 0;
+        UIntPtrTy WritePtr = 0;
+        mutable UIntPtrTy ReadPtr = 0;
 
     public:
         ArenaStream() = default;
@@ -74,8 +73,8 @@ namespace Volt
         [[nodiscard]] size_t GetSize() const { return Alloc.GetSize(); }
         [[nodiscard]] size_t GetUsedSize() const { return Alloc.GetUsedSize(); }
         [[nodiscard]] void* GetData() const { return Alloc.GetData(); }
-        [[nodiscard]] PtrT GetWritePtr() const { return WritePtr; }
-        [[nodiscard]] PtrT GetReadPtr() const { return ReadPtr; }
+        [[nodiscard]] UIntPtrTy GetWritePtr() const { return WritePtr; }
+        [[nodiscard]] UIntPtrTy GetReadPtr() const { return ReadPtr; }
         [[nodiscard]] ArenaAllocator& GetArenaAllocator() { return Alloc; }
         [[nodiscard]] const ArenaAllocator& GetArenaAllocator() const { return Alloc; }
 
@@ -87,8 +86,8 @@ namespace Volt
         void Allocate(size_t InSize) { Alloc.Allocate(InSize); }
         void Deallocate();
 
-        void SetWritePtr(PtrT NewWritePtr) { WritePtr = NewWritePtr; }
-        void SetReadPtr(PtrT NewReadPtr) const { ReadPtr = NewReadPtr; }
+        void SetWritePtr(UIntPtrTy NewWritePtr) { WritePtr = NewWritePtr; }
+        void SetReadPtr(UIntPtrTy NewReadPtr) const { ReadPtr = NewReadPtr; }
 
         template <typename T, typename ...Args_>
         T* Construct(Args_&&... Args);
@@ -148,7 +147,7 @@ namespace Volt
     };
 
     template<typename T, typename ... Args_>
-    T* ArenaAllocator::Construct(PtrT Ptr, Args_&&... Args)
+    T* ArenaAllocator::Construct(UIntPtrTy Ptr, Args_&&... Args)
     {
         size_t Padding = CalculatePadding(alignof(T), Ptr);
 
@@ -160,7 +159,7 @@ namespace Volt
     }
 
     template<typename T>
-    T* ArenaAllocator::Write(PtrT Ptr, const T* InData, size_t Count)
+    T* ArenaAllocator::Write(UIntPtrTy Ptr, const T* InData, size_t Count)
     {
         static_assert(std::is_trivially_copyable_v<T>,
                   "ArenaAllocator::Init requires trivially copyable type");
@@ -169,7 +168,7 @@ namespace Volt
     }
 
     template<typename T>
-    T* ArenaAllocator::Read(PtrT Ptr) const
+    T* ArenaAllocator::Read(UIntPtrTy Ptr) const
     {
         size_t Padding = CalculatePadding(alignof(T), Ptr);
 
@@ -183,7 +182,7 @@ namespace Volt
     }
 
     template<typename T>
-    BufferArrayView<T> ArenaAllocator::Read(PtrT Ptr, size_t Count) const
+    BufferArrayView<T> ArenaAllocator::Read(UIntPtrTy Ptr, size_t Count) const
     {
         return BufferArrayView<T>(Data + Ptr, Count);
     }

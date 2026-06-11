@@ -67,6 +67,13 @@ namespace Volt
 
         [[nodiscard]] TypeCategory GetCategory() const { return Category; }
 
+        template <typename ...Args_>
+        [[nodiscard]] bool IsOneOf(Args_... Args) const
+        {
+            static_assert((std::same_as<Args_, TypeCategory> && ...));
+            return ((Args == Category) || ...);
+        }
+
     protected:
         static DataType* GetJointType(DataType* Left, DataType* Right);
 
@@ -88,20 +95,20 @@ namespace Volt
         };
 
     private:
-        uintptr_t Value;
+        UIntPtrTy Value;
 
     public:
         QualType() : Value(0) {}
 
         QualType(DataType* Type)
         {
-            Value = reinterpret_cast<uintptr_t>(Type);
+            Value = reinterpret_cast<UIntPtrTy>(Type);
         }
 
         QualType(DataType* Type, UInt32 Quals)
         {
             VoltAssert(Quals < alignof(DataType));
-            Value = reinterpret_cast<uintptr_t>(Type) | Quals;
+            Value = reinterpret_cast<UIntPtrTy>(Type) | Quals;
         }
 
         operator bool() const { return GetType() != nullptr; }
@@ -122,7 +129,7 @@ namespace Volt
             return reinterpret_cast<DataType*>(Value & ~(alignof(DataType) - 1));
         }
 
-        [[nodiscard]] uintptr_t RawValue() const { return Value; }
+        [[nodiscard]] UIntPtrTy RawValue() const { return Value; }
 
         template <typename T>
         [[nodiscard]] T* CastAs() const

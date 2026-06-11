@@ -56,7 +56,7 @@ namespace Volt
         [[nodiscard]] static QualType ResolveAssignment(QualType& Left, QualType& Right, OperatorType Op,
             TypeError& Err);
         [[nodiscard]] static QualType ResolvePointerArithmetic(QualType Left, QualType Right, OperatorType Op,
-            TypeError& Err, CompilationContext& CContext);
+            TypeError& Err);
 
         [[nodiscard]] static QualType ResolveBinary(QualType& Left, QualType& Right, OperatorType Op,
             TypeError& Err, CompilationContext& CContext);

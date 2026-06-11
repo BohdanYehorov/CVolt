@@ -185,16 +185,12 @@ namespace Volt
             return {};
         }
 
-        TypeCategory Category = JointType->GetCategory();
-
         switch (Op)
         {
-            case ADD:
-            case SUB:
-            case MUL:
-            case DIV:
+            case ADD: case SUB:
+            case MUL: case DIV:
             {
-                if (Category == INTEGER || Category == FLOATING_POINT)
+                if (JointType->IsOneOf(INTEGER, FLOATING_POINT))
                     return Normalize(Left, Right, JointType);
 
                 Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
@@ -202,14 +198,11 @@ namespace Volt
                 return {};
             }
 
-            case MOD:
-            case BIT_AND:
-            case BIT_OR:
-            case BIT_XOR:
-            case LSHIFT:
-            case RSHIFT:
+            case MOD:    case BIT_AND:
+            case BIT_OR: case BIT_XOR:
+            case LSHIFT: case RSHIFT:
             {
-                if (Category == INTEGER)
+                if (JointType->IsIntegerType())
                     return Normalize(Left, Right, JointType);
 
                 Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
@@ -235,18 +228,11 @@ namespace Volt
             return {};
         }
 
-        TypeCategory Category = JointType->GetCategory();
-
         switch (Op)
         {
-            case EQ:
-            case NEQ:
+            case EQ: case NEQ:
             {
-                if (Category == BOOLEAN ||
-                    Category == CHAR ||
-                    Category == INTEGER ||
-                    Category == FLOATING_POINT ||
-                    Category == POINTER)
+                if (JointType->IsOneOf(BOOLEAN, CHAR, INTEGER, FLOATING_POINT, POINTER))
                 {
                     Normalize(Left, Right, JointType);
                     return { CContext.GetBoolType(), 0 };
@@ -257,14 +243,10 @@ namespace Volt
                 return {};
             }
 
-            case GT:
-            case GTE:
-            case LT:
-            case LTE:
+            case GT: case GTE:
+            case LT: case LTE:
             {
-                if (Category == CHAR ||
-                    Category == INTEGER ||
-                    Category == FLOATING_POINT)
+                if (JointType->IsOneOf(INTEGER, FLOATING_POINT))
                 {
                     Normalize(Left, Right, JointType);
                     return { CContext.GetBoolType(), 0 };
@@ -325,13 +307,11 @@ namespace Volt
             return {};
         }
 
-        TypeCategory Category = Left->GetCategory();
-
         switch (Op)
         {
             case ASSIGN:
             {
-                if (Category != VOID)
+                if (!Left->IsVoidType())
                 {
                     Right = Left;
                     return Left;
@@ -364,7 +344,7 @@ namespace Volt
     }
 
     QualType Operator::ResolvePointerArithmetic(QualType Left, QualType Right, OperatorType Op,
-        TypeError& Err, CompilationContext& CContext)
+        TypeError& Err)
     {
         using enum TypeCategory;
         using enum OperatorType;
@@ -392,17 +372,6 @@ namespace Volt
             return {};
         }
 
-        // if (LeftCategory == POINTER && RightCategory == POINTER)
-        // {
-        //     if (Op != SUB)
-        //         return {};
-        //
-        //     if (Cast<PointerType>(Left.GetType())->BaseType != Cast<PointerType>(Right.GetType())->BaseType)
-        //         return {};
-        //
-        //     return { CContext.GetIntegerType(64), 0 };
-        // }
-
         return {};
     }
 
@@ -412,7 +381,7 @@ namespace Volt
         switch (GetBinaryOperatorKind(Op))
         {
             case BinaryOperatorKind::Arithmetic:
-                if (QualType PtrArithmeticResType = ResolvePointerArithmetic(Left, Right, Op, Err, CContext))
+                if (QualType PtrArithmeticResType = ResolvePointerArithmetic(Left, Right, Op, Err))
                     return PtrArithmeticResType;
                 return ResolveArithmetic(Left, Right, Op, Err);
             case BinaryOperatorKind::Comparison:
@@ -422,7 +391,7 @@ namespace Volt
             case BinaryOperatorKind::Assignment:
                 return ResolveAssignment(Left, Right, Op, Err);
             default:
-                return {};
+                VoltUnreachable("Invalid binary operator kind");
         }
     }
 
@@ -432,40 +401,26 @@ namespace Volt
 
         switch (Op)
         {
-            case ADD:
-            case SUB:
-            case MUL:
-            case DIV:
-            case MOD:
-            case BIT_AND:
-            case BIT_OR:
-            case BIT_XOR:
-            case LSHIFT:
-            case RSHIFT:
+            case ADD:     case SUB:    case MUL:
+            case DIV:     case MOD:
+            case BIT_AND: case BIT_OR: case BIT_XOR:
+            case LSHIFT:  case RSHIFT:
                 return BinaryOperatorKind::Arithmetic;
 
-            case EQ:
-            case NEQ:
-            case GT:
-            case GTE:
-            case LT:
-            case LTE:
+            case EQ: case NEQ:
+            case GT: case GTE:
+            case LT: case LTE:
                 return BinaryOperatorKind::Comparison;
 
-            case LOGICAL_AND:
-            case LOGICAL_OR:
+            case LOGICAL_AND: case LOGICAL_OR:
                 return BinaryOperatorKind::Logical;
 
-            case ADD_ASSIGN:
-            case SUB_ASSIGN:
-            case MUL_ASSIGN:
-            case DIV_ASSIGN:
-            case MOD_ASSIGN:
-            case AND_ASSIGN:
-            case OR_ASSIGN:
-            case XOR_ASSIGN:
-            case LSHIFT_ASSIGN:
-            case RSHIFT_ASSIGN:
+            case ASSIGN:
+            case ADD_ASSIGN:    case SUB_ASSIGN:
+            case MUL_ASSIGN:    case DIV_ASSIGN:
+            case MOD_ASSIGN:    case AND_ASSIGN:
+            case OR_ASSIGN:     case XOR_ASSIGN:
+            case LSHIFT_ASSIGN: case RSHIFT_ASSIGN:
                 return BinaryOperatorKind::Assignment;
 
             default:
@@ -478,16 +433,12 @@ namespace Volt
         using enum TypeCategory;
         using enum OperatorType;
 
-        TypeCategory Category = Operand->GetCategory();
-
         switch (Op)
         {
-            case ADD:
-            case SUB:
-            case INC:
-            case DEC:
+            case ADD: case SUB:
+            case INC: case DEC:
             {
-                if (Category == CHAR || Category == INTEGER || Category == FLOATING_POINT)
+                if (Operand->IsOneOf(INTEGER, FLOATING_POINT))
                     return Operand;
 
                 return {};
@@ -495,7 +446,7 @@ namespace Volt
 
             case BIT_NOT:
             {
-                if (Category == CHAR || Category == INTEGER)
+                if (Operand->IsIntegerType())
                     return Operand;
 
                 return {};
@@ -503,7 +454,7 @@ namespace Volt
 
             case LOGICAL_NOT:
             {
-                if (Category == BOOLEAN)
+                if (Operand->IsBoolType())
                     return Operand;
 
                 return {};
@@ -526,7 +477,6 @@ namespace Volt
 
         QualType& Dst = LeftRank > RightRank ? Left : Right;
         QualType& Src = Dst == Left ? Right : Left;
-        // Src = Src->ImplicitCast(Dst);
         if (!Src.ImplicitCast(Dst)) return false;
         Src = Dst;
 
@@ -553,17 +503,17 @@ namespace Volt
 
         switch (Op)
         {
-            case ADD_ASSIGN: return ADD;
-            case SUB_ASSIGN: return SUB;
-            case MUL_ASSIGN: return MUL;
-            case DIV_ASSIGN: return DIV;
-            case MOD_ASSIGN: return MOD;
-            case AND_ASSIGN: return BIT_AND;
-            case OR_ASSIGN: return BIT_OR;
-            case XOR_ASSIGN: return BIT_XOR;
+            case ADD_ASSIGN:    return ADD;
+            case SUB_ASSIGN:    return SUB;
+            case MUL_ASSIGN:    return MUL;
+            case DIV_ASSIGN:    return DIV;
+            case MOD_ASSIGN:    return MOD;
+            case AND_ASSIGN:    return BIT_AND;
+            case OR_ASSIGN:     return BIT_OR;
+            case XOR_ASSIGN:    return BIT_XOR;
             case LSHIFT_ASSIGN: return LSHIFT;
             case RSHIFT_ASSIGN: return RSHIFT;
-            default: return UNKNOWN;
+            default:            return UNKNOWN;
         }
     }
 }

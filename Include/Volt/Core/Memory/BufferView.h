@@ -53,18 +53,18 @@ namespace Volt
 
     struct StringRef
     {
-        PtrT Ptr = 0;
+        UIntPtrTy Ptr = 0;
         size_t Length = 0;
 
         StringRef() = default;
-        StringRef(PtrT Ptr, size_t Length)
+        StringRef(UIntPtrTy Ptr, size_t Length)
             : Ptr(Ptr), Length(Length) {}
     };
 
     template<typename T>
     BufferArrayView<T>::BufferArrayView(std::byte *Ptr, size_t Count) : Ptr(Ptr), Count(Count)
     {
-        if (reinterpret_cast<uintptr_t>(Ptr) % alignof(T))
+        if (reinterpret_cast<UIntPtrTy>(Ptr) % alignof(T))
             VoltUnreachable("Unaligned Buffer");
     }
 

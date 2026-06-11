@@ -38,6 +38,12 @@ namespace Volt
             return reinterpret_cast<To*>(Obj);
         return nullptr;
     }
+
+    template<typename Base, typename T>
+    bool IsA(const T* Obj)
+    {
+        return Obj && Obj->Object_IsA(Base::Object_StaticType());
+    }
 }
 
 #endif //CVOLT_OBJECT_H

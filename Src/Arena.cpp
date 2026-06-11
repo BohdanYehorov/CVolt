@@ -22,7 +22,7 @@ namespace Volt
         Size = 0;
     }
 
-    void* ArenaAllocator::Write(PtrT Ptr, const void* InData, size_t InSize, size_t Align)
+    void* ArenaAllocator::Write(UIntPtrTy Ptr, const void* InData, size_t InSize, size_t Align)
     {
         size_t Padding = CalculatePadding(Align, Ptr);
         if (Padding != 0)

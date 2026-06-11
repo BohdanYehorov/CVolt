@@ -26,23 +26,13 @@ namespace Volt
 		}
 	};
 
-	// template <>
-	// class Hash<DataType*>
-	// {
-	// public:
-	// 	size_t operator()(const DataType* Type) const
-	// 	{
-	// 		return Type->GetHash();
-	// 	}
-	// };
-
 	template <>
 	class Hash<QualType>
 	{
 	public:
 		size_t operator()(const QualType& Type) const
 		{
-			return std::hash<uintptr_t>{}(Type.RawValue());
+			return std::hash<UIntPtrTy>{}(Type.RawValue());
 		}
 	};
 
