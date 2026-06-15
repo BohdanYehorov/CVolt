@@ -189,15 +189,8 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitRef(RefNode *Ref)
     {
-        SemaResult* RefValue = VisitNode(Ref->Target);
-        if (!RefValue) return nullptr;
-
-        auto RefAddr = Cast<ExprAddress>(RefValue);
-        if (!RefAddr)
-        {
-            // SendError
-            return nullptr;
-        }
+        ExprAddress* RefAddr = VisitToLValue(Ref->Target);
+        if (!RefAddr) return nullptr;
 
         if (RefAddr->IsEmpty())
             Ref->CompileTimeValue = ExprResult::CreateEmpty(
@@ -212,12 +205,10 @@ namespace Volt
     SemaResult *TypeChecker::VisitUnref(UnrefNode *Unref)
     {
         ExprResult* UnrefValue = VisitToRValue(Unref->Target);
-        if (!UnrefValue)
-            return nullptr;
+        if (!UnrefValue) return nullptr;
 
         QualType Type = UnrefValue->GetType();
-        if (!Type)
-            return nullptr;
+        if (!Type) return nullptr;
 
         if (auto PtrType = Cast<PointerType>(Type.GetType()))
         {
@@ -315,10 +306,12 @@ namespace Volt
 
         if (!Right || !LeftAddr) return nullptr;
 
-        Right = Right->ImplicitCast(LeftAddr->GetType(), CContext);
+        QualType RightType = Right->GetType();
+        Right = Right->ImplicitCast(LeftAddr->GetType().GetNotReferenceType(), CContext);
         if (!Right)
         {
-            //SendError(TypeErrorKind::AssignmentTypeMismatch, Assignment->Right);
+            SendError(TypeErrorKind::IncompatibleTypes, Assignment,
+                { RightType.ToString(), LeftAddr->GetType().ToString() });
             return nullptr;
         }
 
@@ -349,12 +342,6 @@ namespace Volt
 
         Left = Left->ImplicitCast(LeftType, CContext);
         Right = Right->ImplicitCast(RightType, CContext);
-
-        if (!Left || !Right)
-        {
-            // SendError
-            return nullptr;
-        }
 
         Comparison->LeftOperandType = Left->GetType().GetType();
         Comparison->RightOperandType = Right->GetType().GetType();
@@ -391,12 +378,6 @@ namespace Volt
 
         Left = Left->ImplicitCast(LeftType, CContext);
         Right = Right->ImplicitCast(RightType, CContext);
-
-        if (!Left || !Right)
-        {
-            // SendError
-            return nullptr;
-        }
 
         Binary->LeftOperandType = Left->GetType().GetType();
         Binary->RightOperandType = Right->GetType().GetType();
@@ -769,11 +750,6 @@ namespace Volt
             Type = RefType->BaseType;
 
         return Type;
-    }
-
-    bool TypeChecker::CanCastPointers(PointerType *Src, PointerType *Dst)
-    {
-        return Src == Dst || Dst->BaseType->GetCategory() == TypeCategory::VOID;
     }
 
     bool TypeChecker::ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column)

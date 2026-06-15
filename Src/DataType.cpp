@@ -45,6 +45,13 @@ namespace Volt
 		return GetType()->CastTo(To.GetType(), Explicit);
 	}
 
+	QualType QualType::GetNotReferenceType() const
+	{
+		if (auto RefType = CastAs<ReferenceType>())
+			return RefType->BaseType;
+		return *this;
+	}
+
 	std::string QualType::ToString() const
 	{
 		std::string Quals;

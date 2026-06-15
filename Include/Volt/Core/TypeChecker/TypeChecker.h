@@ -120,7 +120,6 @@ namespace Volt
         template <typename MapT>
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);
 
-        [[nodiscard]] static bool CanCastPointers(PointerType* Src, PointerType* Dst);
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
         void EnterScope();

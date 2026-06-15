@@ -156,6 +156,8 @@ namespace Volt
         [[nodiscard]] bool ImplicitCast(QualType To) const { return CastTo(To, false); }
         [[nodiscard]] bool ExplicitCast(QualType To) const { return CastTo(To, true); }
 
+        [[nodiscard]] QualType GetNotReferenceType() const;
+
         [[nodiscard]] std::string ToString() const;
     };
 
