@@ -1,6 +1,9 @@
 # CVolt
 Volt - programming language, designed as scripting for embedding in C++ applications and game engines. CVolt compiler uses llvm as backend and compiles in JIT.
 
+## Demo: Breakout game written in Volt
+![demo](Assets/Demos/demo.gif)
+
 ⚠️ CVolt in active development and not production-ready yet. Bugs are expected.
 
 ## Features
