@@ -14,8 +14,6 @@ int main(int Argc, char* Argv[])
 {
     Volt::JITEngine::Init();
 
-    std::byte;
-
 #ifdef _DEBUG
     std::ifstream File("../VoltFiles/test.volt");
     if (!File.is_open())
@@ -109,7 +107,7 @@ int main(int Argc, char* Argv[])
 #endif
 
     Volt::JITEngine Engine(CContext, FuncTable);
-    int Res = Engine.CallFunction<int>("Main");
+    Volt::Int32 Res = Engine.CallFunction<Volt::Int32>("Main");
 
 #ifdef _DEBUG
     std::cout << "\n====================================================\n";

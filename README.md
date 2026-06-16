@@ -1,18 +1,25 @@
 # CVolt
-CVolt - compiler in C++ with LLVM i32egration, designed for embedded systems and for JIT compilation and calling volt functions in C++.
+Volt - programming language, designed as scripting for embedding in C++ applications and game engines. CVolt compiler uses llvm as backend and compiles in JIT.
+
+⚠️ CVolt in active development and not production-ready yet. Bugs are expected.
 
 ## Features
-
 - LLVM IR generation
 - JIT compilation
 - Function overloading
 - Arrays
-- Poi32ers
+- Pointers
 - References
 - Const qualifiers
 - Type checking
 - Compile-time evaluation
 - Arena allocator
+
+## Requirements
+- LLVM 21.1.0
+- C++20
+- CMake + Ninja
+- Platform: Linux x64 (tested), Windows x64 (likely works), x86 not supported
 
 ## Build project
 ```bash
@@ -61,7 +68,7 @@ Volt
 |- Tests (ParserFuzzer)
 ```
 
-## Example of i32egration with C++
+## Example of Integration with C++
 
 ```c++
 // Init JITEngine
@@ -71,7 +78,7 @@ Volt::CompilationContext CContext(Code /*Source Code*/, "test.volt" /*File Name*
 Volt::DebugOutput DebugOutput(llvm::outs(), CContext);
 
 Volt::BuiltinFunctionTable FuncTable(CContext);
-FuncTable.AddFunction("Out", "Outi32", &Outi32);
+FuncTable.AddFunction("Out", "OutInt", &OutInt);
 FuncTable.AddFunction("Out", "OutFloat", &OutFloat); // Builtin function overload
 
 // Lexing
@@ -100,7 +107,7 @@ MyCompiler.Compile();
 
 // Calling function
 Volt::JITEngine Engine(CContext, FuncTable);
-i32 Res = Engine.CallFunction<i32>("Main");
+Volt::Int32 Res = Engine.CallFunction<Volt::Int32>("Main");
 ```
 
 ## UnitTests
@@ -168,7 +175,7 @@ for (Initialization; Condition; Iteration)
 
 ## Examples
 
-### Pri32 "Hello, World!"
+### Print "Hello, World!"
 ```c++
 fun:i32 Main()
 {

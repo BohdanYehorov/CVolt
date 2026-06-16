@@ -5,8 +5,6 @@
 #include "Volt/Compiler/LLVMCompiler.h"
 #include <llvm/Support/TargetSelect.h>
 
-#define ERROR(Message) throw CompilerError(Message);
-
 namespace Volt
 {
     void LLVMCompiler::Compile()
@@ -117,7 +115,7 @@ namespace Volt
         if (Cast<const ContinueNode>(Node))
             return CompileContinue();
 
-        ERROR("Cannot resolve node: '" + Node->GetName() + "'");
+        VoltUnreachableFmt("Cannot resolve node: '{}'", Node->GetName());
     }
 
     IRValue *LLVMCompiler::CompileBlock(const BlockNode *Block)
@@ -132,19 +130,6 @@ namespace Volt
                 llvm::Type* ArgType = Arg->getType();
 
                 auto Type = FunctionParams[i];
-                // if (auto RefType = Cast<ReferenceType>(Type))
-                // {
-                //     DeclareVariable(Arg->getName().str(),
-                //         Create<IRValue>(Arg, RefType->BaseType.GetType(), true));
-                //     continue;
-                // }
-                //
-                // llvm::AllocaInst* Alloca = Builder.CreateAlloca(ArgType, nullptr, Arg->getName());
-                //
-                // Builder.CreateStore(Arg, Alloca);
-                // DeclareVariable(Arg->getName().str(),
-                //     Create<IRValue>(Alloca, FunctionParams[i], true));
-
                 DeclareVariable(Arg->getName().str(), Create<IRValue>(Arg, Type, Builder));
             }
             CurrentFunction = nullptr;
@@ -201,7 +186,7 @@ namespace Volt
     IRValue *LLVMCompiler::CompileArray(const ArrayNode *Array)
     {
         if (Array->Elements.empty())
-            ERROR("Array empty")
+            VoltUnreachable("Array empty");
 
         llvm::Type* ArrType = nullptr;
 
@@ -237,14 +222,14 @@ namespace Volt
         if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
             return Iter->second;
 
-        ERROR("Cannot resolve symbol: '" + Value + "'")
+        VoltUnreachableFmt("Cannot resolve symbol: '{}'", Value);
     }
 
     IRValue *LLVMCompiler::CompileRef(const RefNode *Ref)
     {
         IRValue* Value = CompileNode(Ref->Target);
         if (!Value || !Value->IsLValue())
-            ERROR("Cannot apply operator '$' to r-value")
+            VoltUnreachable("Cannot apply operator '$' to r-value");
 
        return Create<IRValue>(Value->GetValue(), CContext.GetPointerType({ Value->GetDataType(), 0 }));
     }
@@ -451,40 +436,6 @@ namespace Volt
 
         for (const auto Arg : Args)
         {
-            // if (Arg->ExpectedType->IsReferenceType())
-            // {
-            //     IRValue* ArgValue = CompileNode(Arg);
-            //     if (!ArgValue || !ArgValue->IsLValue())
-            //         return nullptr;
-            //
-            //     LLVMArgs.push_back(ArgValue->GetValue());
-            //     continue;
-            // }
-            //
-            // IRValue* ArgValue = CompileNode(Arg);
-            //
-            // if (!ArgValue)
-            //     return nullptr;
-            //
-            // ArgValue = ArgValue->GetRValue(Builder, CContext);
-            //
-            // // if (Arg->ExpectedType)
-            // //     if (!ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
-            // //         return nullptr;
-            //
-            // if (Arg->ExpectedType)
-            // {
-            //     if (auto CastedValue = ArgValue->CastTo(Arg->ExpectedType, Builder, CContext))
-            //     {
-            //         LLVMArgs.push_back(CastedValue->GetValue());
-            //         continue;
-            //     }
-            //
-            //     return nullptr;
-            // }
-            //
-            // return nullptr;
-
             IRValue* ArgValue = CompileNode(Arg)->CastOrBind(Arg->ExpectedType, Builder, CContext);
             if (!ArgValue)
                 return nullptr;
@@ -578,7 +529,7 @@ namespace Volt
             if (auto Arr = Cast<ArrayNode>(Var->Value))
             {
                 if (ArrType->Length < Arr->Elements.size())
-                    ERROR("Too many elements in array initializer");
+                    VoltUnreachable("Too many elements in array initializer");
                 FillArray(Arr, Alloca);
             }
         }
@@ -636,7 +587,7 @@ namespace Volt
         if (auto FuncCallee = Cast<FunctionCallee>(Function->ResolvedCallee))
             FuncCallee->Function = Func;
         else
-            ERROR("Function definition '" + FuncName + "' is unknown");
+            VoltUnreachableFmt("Function definition '{}' is unknown", FuncName);
 
         llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
         Builder.SetInsertPoint(Entry);
@@ -649,7 +600,7 @@ namespace Volt
             if (RetType->isVoidTy())
                 Builder.CreateRetVoid();
             else
-                ERROR("Function '" + FuncName + "' must return value");
+                VoltUnreachableFmt("Function '{}' must return value", FuncName);
         }
 
         return nullptr;
@@ -793,7 +744,7 @@ namespace Volt
     IRValue *LLVMCompiler::CompileBreak()
     {
         if (LoopEndStack.empty())
-            ERROR("'break' used outside loop")
+            VoltUnreachable("'break' used outside loop");
 
         Builder.CreateBr(LoopEndStack.top());
         return nullptr;
@@ -802,7 +753,7 @@ namespace Volt
     IRValue *LLVMCompiler::CompileContinue()
     {
         if (LoopHeaderStack.empty())
-            ERROR("'continue' used outside loop")
+            VoltUnreachable("'continue' used outside loop");
 
         Builder.CreateBr(LoopHeaderStack.top());
         return nullptr;
@@ -817,15 +768,13 @@ namespace Volt
                 return Entry.Name == Name;
             });
             Iter != ScopeStack.Back().End())
-            ERROR("This variable: '" + Name + "' has already declared in this scope");
-
-        ScopeEntry Entry;
-        Entry.Name = Name;
+            VoltUnreachableFmt("This variable: '{}' has already declared in this scope", Name);
 
         if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
-            Entry.Previous = Iter->second;
+            ScopeStack.Back().Emplace(Name, Iter->second);
+        else
+            ScopeStack.Back().Emplace(Name, nullptr);
 
-        ScopeStack.Back().Add(Entry);
         SymbolTable[Name] = Var;
     }
 
@@ -869,7 +818,7 @@ namespace Volt
     void LLVMCompiler::FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca)
     {
         if (Array->Elements.empty())
-            ERROR("Array empty")
+            VoltUnreachable("Array empty");
 
         llvm::Value* Idx[2] = {
             Builder.getInt32(0),

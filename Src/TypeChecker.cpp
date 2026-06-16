@@ -525,7 +525,20 @@ namespace Volt
         if (!VarType)
             return nullptr;
 
-        if (auto RefType = VarType.CastAs<ReferenceType>())
+        const std::string& Name{ Variable->Name };
+        if (auto Iter = std::find_if(
+            ScopeStack.Back().Begin(), ScopeStack.Back().End(),
+            [&Name](const ScopeEntry& Entry) -> bool
+            {
+                return Entry.Name == Name;
+            });
+            Iter != ScopeStack.Back().End())
+        {
+            SendError(TypeErrorKind::DoubleVariableDeclaration, Variable, { Name });
+            return nullptr;
+        }
+
+        if (VarType->IsReferenceType())
         {
             ExprAddress* ValueAddr = VisitToLValue(Variable->Value);
             if (!ValueAddr) return nullptr;
@@ -724,7 +737,7 @@ namespace Volt
         auto Addr = Cast<ExprAddress>(Result);
         if (!Addr)
         {
-            // SendError
+            SendError(TypeErrorKind::NonLValue, Node);
             return nullptr;
         }
         return Addr;
@@ -742,14 +755,6 @@ namespace Volt
         }
 
         return Addr;
-    }
-
-    QualType TypeChecker::GetNotReferenceType(QualType Type)
-    {
-        if (auto RefType = Type.CastAs<ReferenceType>())
-            Type = RefType->BaseType;
-
-        return Type;
     }
 
     bool TypeChecker::ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column)
@@ -784,9 +789,10 @@ namespace Volt
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
+        else
+            ScopeStack.Back().Emplace(Name, nullptr);
 
         Variables[Name] = Addr;
-        ScopeStack.Back().Add({ Name, nullptr });
     }
 
     ExprAddress* TypeChecker::GetVariable(const std::string &Name)

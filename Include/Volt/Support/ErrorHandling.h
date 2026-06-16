@@ -7,6 +7,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 
 #ifdef _MSC_VER
     #define VOLT_FUNC __FUNCSIG__
@@ -23,6 +24,7 @@
 }
 
 #define VoltUnreachable(Msg) VoltUnreachableImpl(Msg, __FILE__, __LINE__, VOLT_FUNC)
+#define VoltUnreachableFmt(Msg, ...) VoltUnreachable(std::format(Msg, ##__VA_ARGS__).c_str())
 #define VoltAssert(Expr) (static_cast<bool>(Expr) ? void(0) : VoltUnreachable(#Expr))
 
 #endif //CVOLT_ERRORHANDLING_H

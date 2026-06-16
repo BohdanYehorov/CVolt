@@ -11,9 +11,7 @@
 #include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
-#include "Volt/Compiler/Types/CompilerTypes.h"
 #include "Volt/Core/TypeDefs/UMap.h"
-#include "Volt/Core/TypeDefs/VariableTable.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "ExprResult.h"
 #include "ExprAddress.h"
@@ -31,6 +29,8 @@ namespace Volt
                 : Name(Name), Prev(Prev) {}
         };
 
+        using VariableTable = llvm::StringMap<ExprAddress*>;
+
     private:
         CompilationContext& CContext;
 
@@ -42,7 +42,7 @@ namespace Volt
         Array<TypeError>& Errors;
 
         FunctionTable Functions;
-        CTimeVariableTable Variables;
+        VariableTable Variables;
 
         Array<Array<ScopeEntry>> ScopeStack;
 
@@ -114,8 +114,6 @@ namespace Volt
 
         ExprAddress* VisitToLValue(ASTNode* Node);
         ExprAddress* VisitToLValueAndCheckConst(ASTNode* Node);
-
-        static QualType GetNotReferenceType(QualType Type);
 
         template <typename MapT>
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);

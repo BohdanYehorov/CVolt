@@ -6,7 +6,6 @@
 #define CVOLT_LLVMCOMPILER_H
 
 #include "Volt/Core/AST/ASTNodes.h"
-#include "Types/CompilerTypes.h"
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
@@ -14,13 +13,23 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include <unordered_map>
 #include <stack>
 
 namespace Volt
 {
     class LLVMCompiler
     {
+        struct ScopeEntry
+        {
+            std::string Name;
+            IRValue* Previous = nullptr;
+
+            ScopeEntry(const std::string& Name, IRValue* Previous)
+                : Name(Name), Previous(Previous) {}
+        };
+
+        using VariableTable = llvm::StringMap<IRValue*>;
+
     private:
         CompilationContext& CContext;
 
