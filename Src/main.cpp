@@ -9,6 +9,7 @@
 #include "Volt/Debug/DebugOutput/DebugOutput.h"
 #include <fstream>
 #include <sstream>
+#include <Volt/Tests/Fuzzer/ParserFuzzer.h>
 
 int main(int Argc, char* Argv[])
 {
@@ -79,6 +80,16 @@ int main(int Argc, char* Argv[])
 
     Volt::Parser MyParser(CContext);
     MyParser.Parse();
+
+    DebugOutput.WriteAST();
+
+    // if (CContext.HasErrors())
+    // {
+    //     DebugOutput.WriteLexErrors();
+    //     DebugOutput.WriteParseErrors();
+    //     DebugOutput.WriteTypeErrors();
+    //     return -1;
+    // }
 
     Volt::TypeChecker MyTypeChecker(CContext, FuncTable);
     MyTypeChecker.Check();

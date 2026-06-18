@@ -3,7 +3,6 @@
 //
 
 #include "Volt/Compiler/LLVMCompiler.h"
-#include <llvm/Support/TargetSelect.h>
 
 namespace Volt
 {
@@ -102,6 +101,10 @@ namespace Volt
             return CompileVariable(Var);
         if (const auto Function = Cast<const FunctionNode>(Node))
             return CompileFunction(Function);
+        if (const auto Class = Cast<const ClassNode>(Node))
+            return nullptr;
+        if (const auto MemberAccess = Cast<const MemberAccessNode>(Node))
+            return CompileMemberAccess(MemberAccess);
         if (const auto Return = Cast<const ReturnNode>(Node))
             return CompileReturn(Return);
         if (const auto If = Cast<const IfNode>(Node))
@@ -110,9 +113,9 @@ namespace Volt
             return CompileWhile(While);
         if (const auto For = Cast<const ForNode>(Node))
             return CompileFor(For);
-        if (Cast<const BreakNode>(Node))
+        if (IsA<const BreakNode>(Node))
             return CompileBreak();
-        if (Cast<const ContinueNode>(Node))
+        if (IsA<const ContinueNode>(Node))
             return CompileContinue();
 
         VoltUnreachableFmt("Cannot resolve node: '{}'", Node->GetName());
@@ -455,6 +458,20 @@ namespace Volt
         }
 
         return nullptr;
+    }
+
+    IRValue *LLVMCompiler::CompileMemberAccess(const MemberAccessNode *MemberAccess)
+    {
+        IRValue* Target = CompileNode(MemberAccess->Target);
+        if (!Target) return nullptr;
+        if (!Target->IsLValue())
+            VoltUnreachable("Cannot access to r-value value");
+
+        llvm::Value* Value = Target->GetValue();
+
+        return Create<IRValue>(Builder.CreateStructGEP(CContext.GetLLVMType(Target->GetDataType()),
+            Value, MemberAccess->ResolvedMemberIndex),
+            MemberAccess->CompileTimeValue->GetType().GetType(), true);
     }
 
     IRValue *LLVMCompiler::CompileSubscript(const SubscriptNode *Subscript)

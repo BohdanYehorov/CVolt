@@ -327,11 +327,6 @@ namespace Volt
                         TypeNode, Tok.Pos, Tok.Line, Tok.Column);
                     Consume();
                     break;
-                // case TokenType::OP_REFERENCE:
-                //     TypeNode = NodesArena.Create<ReferenceTypeNode>(
-                //         TypeNode, Tok.Pos, Tok.Line, Tok.Column);
-                //     Consume();
-                //     break;
                 case TokenType::OP_LBRACKET:
                 {
                     Consume();
@@ -380,11 +375,18 @@ namespace Volt
             case TYPE_F32:  Type = CContext.GetFPType(32);  break;
             case TYPE_F64:  Type = CContext.GetFPType(64);  break;
             case TYPE_F128: Type = CContext.GetFPType(128); break;
+            case IDENTIFIER:
+            {
+                llvm::StringRef Lexeme = GetTokenLexeme(Tok);
+                if (!CustomTypes.contains(Lexeme)) return nullptr;
+                Consume();
+                return NodesArena.Create<ClassTypeNode>(Lexeme, Tok.Pos, Tok.Line, Tok.Column);
+            }
             case OP_LPAREN:
             {
                 Consume();
                 DataTypeNodeBase* Node = ParseQualType();
-                if (!Expect(TokenType::OP_RPAREN))
+                if (!Expect(OP_RPAREN))
                     return nullptr;
                 return Node;
             }
@@ -490,7 +492,7 @@ namespace Volt
         return Function;
     }
 
-    ASTNode* Parser::ParseVariable()
+    VariableNode* Parser::ParseVariable()
     {
         DepthIncScope DScope(Depth);
 
@@ -540,6 +542,60 @@ namespace Volt
         return NodesArena.Create<VariableNode>(
             DataType, Name, nullptr,
             DataType->Pos, DataType->Line, DataType->Column);
+    }
+
+    ASTNode* Parser::ParseClass()
+    {
+        const Token* FirstTokPtr = nullptr;
+        if (!ConsumeIf(TokenType::KW_CLASS, FirstTokPtr))
+            return nullptr;
+
+        const Token* TokPtr;
+        if (!ConsumeIf(TokenType::IDENTIFIER, TokPtr))
+        {
+            SendError(ParseErrorType::ExpectedDeclaratorName);
+            Synchronize();
+            return nullptr;
+        }
+        llvm::StringRef Name = GetTokenLexeme(*TokPtr);
+        CustomTypes.insert(Name);
+
+        if (!Expect(TokenType::OP_LBRACE))
+            return nullptr;
+
+        llvm::TinyPtrVector<VariableNode*> Fields;
+        while (IsValidIndex())
+        {
+            TokenType TokType = CurrentToken().Type;
+            if (TokType == TokenType::OP_RBRACE)
+                break;
+
+            switch (TokType)
+            {
+                case TokenType::KW_LET:
+                {
+                    if (VariableNode* Field = ParseVariable())
+                    {
+                        Fields.push_back(Field);
+                        if (!Expect(TokenType::OP_SEMICOLON))
+                            return nullptr;
+                        SkipSemicolons();
+                        break;
+                    }
+                    return nullptr;
+                }
+                default:
+                    SendError(ParseErrorType::ExpectedDeclaration);
+                    Synchronize();
+                    return nullptr;
+            }
+        }
+
+        if (!Expect(TokenType::OP_RBRACE))
+            return nullptr;
+
+        return NodesArena.Create<ClassNode>(Name, std::move(Fields),
+            FirstTokPtr->Pos, FirstTokPtr->Line, FirstTokPtr->Column);
     }
 
     ASTNode* Parser::ParseIf()
@@ -837,6 +893,18 @@ namespace Volt
             }
 
             return ParseFunction();
+        }
+
+        if (IsValidIndex() && CurrentToken().Type == TokenType::KW_CLASS)
+        {
+            if (InBlock)
+            {
+                // SendError
+                Synchronize();
+                return nullptr;
+            }
+
+            return ParseClass();
         }
 
         if (auto Variable = Cast<VariableNode>(ParseVariable()))
@@ -1263,6 +1331,13 @@ namespace Volt
 
                     Operand = NodesArena.Create<SubscriptNode>(
                         Operand, Index, Operand->Pos, Operand->Line, Operand->Column);
+                    break;
+                }
+                case TokenType::OP_DOT:
+                {
+                    Consume();
+                    Operand = NodesArena.Create<MemberAccessNode>(
+                        Operand, ParsePrimary(), Operand->Pos, Operand->Line, Operand->Column);
                     break;
                 }
                 default:

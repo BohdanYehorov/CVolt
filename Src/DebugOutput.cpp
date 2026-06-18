@@ -3,6 +3,9 @@
 //
 
 #include "Volt/Debug/DebugOutput/DebugOutput.h"
+
+#include <complex.h>
+
 #include "Volt/Core/TypeChecker/ExprResult.h"
 
 namespace Volt
@@ -155,6 +158,10 @@ namespace Volt
             Os << "BaseType:\n";
             WriteAST(DerivedType->BaseType, Indent + 1);
         }
+        else if (auto ClassTy = Cast<ClassTypeNode>(Node))
+        {
+            Os << "Name: " << ClassTy->Name << '\n';
+        }
         else if (auto ExplicitCast = Cast<ExplicitCastNode>(Node))
         {
             Os << "Type: \n";
@@ -208,6 +215,20 @@ namespace Volt
         {
             Os << "Return Value:\n";
             WriteAST(Return->ReturnValue, Indent + 1);
+        }
+        else if (auto Class = Cast<ClassNode>(Node))
+        {
+            Os << "Fields:\n";
+            for (auto Field : Class->Fields)
+                WriteAST(Field, Indent + 1);
+        }
+        else if (auto MemberAccess = Cast<MemberAccessNode>(Node))
+        {
+            Os << "Target:\n";
+            WriteAST(MemberAccess->Target, Indent + 1);
+            WriteIndent(Indent);
+            Os << "Member:\n";
+            WriteAST(MemberAccess->Member, Indent + 1);
         }
         else if (auto If = Cast<IfNode>(Node))
         {

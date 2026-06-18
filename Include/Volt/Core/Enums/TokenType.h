@@ -94,6 +94,7 @@ namespace Volt
 		KW_RETURN,
 		KW_BREAK,
 		KW_CONTINUE,
+		KW_CLASS,
 
 		TYPE_CONST,
 		TYPE_VOID,

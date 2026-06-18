@@ -31,6 +31,7 @@ namespace Volt
 		llvm::FoldingSet<PointerType> PointerTypes;
 		llvm::FoldingSet<ReferenceType> ReferenceTypes;
 		llvm::FoldingSet<ArrayType> ArrayTypes;
+		llvm::StringMap<ClassType*> ClassTypes;
 
 	private:
 		String Code;
@@ -68,6 +69,10 @@ namespace Volt
 		[[nodiscard]] PointerType* GetPointerType(QualType BaseType);
 		[[nodiscard]] ReferenceType* GetReferenceType(QualType BaseType);
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
+
+		bool CreateClassType(const std::string& Name, const Array<Field>& Fields);
+		[[nodiscard]] ClassType* GetClassType(const std::string& Name);
+
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);
 
 		[[nodiscard]] bool HasErrors() const { return !LexErrors.Empty() ||

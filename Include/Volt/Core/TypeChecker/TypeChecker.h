@@ -97,6 +97,8 @@ namespace Volt
         SemaResult *VisitExplicitCast(ExplicitCastNode *ECast);
         SemaResult *VisitVariable(VariableNode *Variable);
         SemaResult *VisitFunction(FunctionNode *Function);
+        SemaResult *VisitClass(ClassNode *Class);
+        SemaResult *VisitMemberAccess(MemberAccessNode *MemberAccess);
         SemaResult *VisitIf(IfNode *If);
         SemaResult *VisitWhile(WhileNode *While);
         SemaResult *VisitFor(ForNode *For);

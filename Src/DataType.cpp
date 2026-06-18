@@ -3,6 +3,8 @@
 //
 
 #include "Volt/Core/Types/DataType.h"
+
+#include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Support/ErrorHandling.h"
 
 namespace Volt
@@ -226,4 +228,35 @@ namespace Volt
 
 		return false;
 	}
+
+	llvm::Type *ClassType::ToLLVMType(llvm::LLVMContext &Context) const
+	{
+		SmallVec4<llvm::Type*> Types;
+		Types.reserve(Fields.Length());
+		for (auto Field : Fields)
+			Types.push_back(Field.Type->ToLLVMType(Context));
+
+		return llvm::StructType::create(Context, Types, Name);
+	}
+
+	size_t ClassType::GetFieldIndex(const std::string &Name)
+	{
+		for (size_t i = 0; i < Fields.Length(); i++)
+		{
+			if (Fields[i].Name == Name)
+				return i;
+		}
+
+		return Fields.Length();
+	}
+
+	// const Field *ClassType::FindField(const std::string &Name)
+	// {
+	// 	auto Iter = std::find_if(Fields.Begin(), Fields.End(),
+	// 			[&Name](const Field& Field) -> bool { return Field.Name == Name; });
+	//
+	// 	if (Iter != Fields.End())
+	// 		return Iter.Get();
+	// 	return nullptr;
+	// }
 }

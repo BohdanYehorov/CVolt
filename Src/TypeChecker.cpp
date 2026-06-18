@@ -63,6 +63,10 @@ namespace Volt
             return VisitVariable(Variable);
         if (auto Function = Cast<FunctionNode>(Node))
             return VisitFunction(Function);
+        if (auto Class = Cast<ClassNode>(Node))
+            return VisitClass(Class);
+        if (auto MemberAccess = Cast<MemberAccessNode>(Node))
+            return VisitMemberAccess(MemberAccess);
         if (auto If = Cast<IfNode>(Node))
             return VisitIf(If);
         if (auto While = Cast<WhileNode>(Node))
@@ -590,6 +594,52 @@ namespace Volt
         return nullptr;
     }
 
+    SemaResult *TypeChecker::VisitClass(ClassNode *Class)
+    {
+        Array<Field> Fields;
+        Fields.Reserve(Class->Fields.size());
+        for (auto Field : Class->Fields)
+            Fields.Emplace(std::string(Field->Name), VisitType(Field->Type));
+
+        CContext.CreateClassType(std::string(Class->Name), Fields);
+        return nullptr;
+    }
+
+    SemaResult *TypeChecker::VisitMemberAccess(MemberAccessNode *MemberAccess)
+    {
+        ExprAddress* Res = VisitToLValue(MemberAccess->Target);
+        if (!Res)
+        {
+            SendError(TypeErrorKind::NonLValue, MemberAccess);
+            return nullptr;
+        }
+
+        std::string FieldName;
+        if (auto Identifier = Cast<IdentifierNode>(MemberAccess->Member))
+            FieldName = std::string(Identifier->Value);
+        else
+            return nullptr;
+
+        QualType TargetType = Res->GetType();
+        if (auto ClassTy = TargetType.CastAs<ClassType>())
+        {
+            size_t Index = ClassTy->GetFieldIndex(FieldName);
+            if (Index == ClassTy->Fields.Length())
+            {
+                SendError(TypeErrorKind::UndefinedVariable, MemberAccess, { FieldName });
+                return nullptr;
+            }
+
+            QualType FieldType = ClassTy->Fields[Index].Type;
+            MemberAccess->ResolvedMemberIndex = Index;
+            MemberAccess->CompileTimeValue = MainArena.Create<ExprAddress>(
+                ExprResult::CreateEmpty(FieldType, MainArena));
+            return MemberAccess->CompileTimeValue;
+        }
+
+        return nullptr;
+    }
+
     SemaResult *TypeChecker::VisitIf(IfNode *If)
     {
         ExprResult* Cond = VisitToRValue(If->Condition);
@@ -707,6 +757,18 @@ namespace Volt
             }
 
             VoltUnreachable("Array length mast be defined in compiler time");
+        }
+        if (auto Class = Cast<ClassTypeNode>(Type))
+        {
+            auto ClassTy = CContext.GetClassType(std::string(Class->Name));
+            if (!ClassTy)
+            {
+                // SendError
+                return nullptr;
+            }
+
+            Class->ResolvedType = ClassTy;
+            return { ClassTy, 0 };
         }
         if (auto QualTy = Cast<QualTypeNode>(Type))
         {

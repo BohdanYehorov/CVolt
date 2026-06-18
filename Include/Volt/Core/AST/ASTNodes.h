@@ -310,6 +310,15 @@ namespace Volt
             : DerivedTypeNode(BaseType, Pos, Line, Column), Length(Length) {}
     };
 
+    class ClassTypeNode : public DataTypeNodeBase
+    {
+        GENERATED_BODY(ClassTypeNode, DataTypeNodeBase)
+    public:
+        llvm::StringRef Name;
+        ClassTypeNode(llvm::StringRef Name, size_t Pos, size_t Line, size_t Column)
+            : DataTypeNodeBase(Pos, Line, Column), Name(Name) {}
+    };
+
     class ExplicitCastNode : public ASTNode
     {
         GENERATED_BODY(ExplicitCastNode, ASTNode)
@@ -392,6 +401,31 @@ namespace Volt
         ASTNode* ReturnValue;
         ReturnNode(ASTNode* ReturnValue, size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), ReturnValue(ReturnValue) {}
+    };
+
+    class ClassNode : public ASTNode
+    {
+        GENERATED_BODY(ClassNode, ASTNode)
+    public:
+        llvm::StringRef Name;
+        llvm::TinyPtrVector<VariableNode*> Fields;
+        // llvm::TinyPtrVector<FunctionNode*> Methods;
+
+        ClassNode(llvm::StringRef Name, llvm::TinyPtrVector<VariableNode*>&& Fields,
+            size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Name(Name), Fields(std::move(Fields)) {}
+    };
+
+    class MemberAccessNode : public ASTNode
+    {
+        GENERATED_BODY(MemberAccessNode, ASTNode)
+    public:
+        size_t ResolvedMemberIndex = 0;
+        ASTNode* Target;
+        ASTNode* Member;
+
+        MemberAccessNode(ASTNode* Target, ASTNode* Member, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Target(Target), Member(Member) {}
     };
 
     class IfNode : public ASTNode

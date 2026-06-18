@@ -83,6 +83,7 @@ namespace Volt
         IRValue *CompileAssignment(const AssignmentNode *Assignment);
         IRValue *CompileBinary(const BinaryOpNode *BinaryOp);
         IRValue *CompileCall(const CallNode *Call);
+        IRValue *CompileMemberAccess(const MemberAccessNode *MemberAccess);
         IRValue *CompileSubscript(const SubscriptNode *Subscript);
         IRValue *CompileExplicitCast(const ExplicitCastNode *ExplicitCast);
         IRValue *CompileVariable(const VariableNode *Var);

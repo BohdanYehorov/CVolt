@@ -9,7 +9,7 @@
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/Core/Errors/ParseError.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
-#include <ostream>
+#include <llvm/ADT/StringSet.h>
 
 namespace Volt
 {
@@ -46,6 +46,8 @@ namespace Volt
         bool InBlock = false;
         bool InFunction = false;
         bool InLoop = false;
+
+        llvm::StringSet<> CustomTypes;
 
         size_t Depth = 0;
 
@@ -92,7 +94,8 @@ namespace Volt
 
         ASTNode* ParseParameter();
         ASTNode* ParseFunction();
-        ASTNode* ParseVariable();
+        VariableNode* ParseVariable();
+        ASTNode* ParseClass();
         ASTNode* ParseIf();
         ASTNode* ParseWhile();
         ASTNode* ParseFor();

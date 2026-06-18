@@ -110,6 +110,20 @@ namespace Volt
 		return Type;
 	}
 
+	bool CompilationContext::CreateClassType(const std::string &Name, const Array<Field> &Fields)
+	{
+		if (ClassTypes.contains(Name)) return false;
+		ClassTypes[Name] = MainArena.Create<ClassType>(Name, Fields);
+		return true;
+	}
+
+	ClassType* CompilationContext::GetClassType(const std::string &Name)
+	{
+		if (auto Iter = ClassTypes.find(Name); Iter != ClassTypes.end())
+			return Iter->second;
+		return nullptr;
+	}
+
 	llvm::Type *CompilationContext::GetLLVMType(DataType *Type)
 	{
 		VoltAssert(Type);

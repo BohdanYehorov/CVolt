@@ -10,8 +10,10 @@
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include "Volt/Support/ErrorHandling.h"
+#include "Volt/ADT/Array.h"
 #include <llvm/IR/Type.h>
 #include <llvm/ADT/FoldingSet.h>
+#include <llvm/ADT/TinyPtrVector.h>
 
 namespace Volt
 {
@@ -25,12 +27,13 @@ namespace Volt
         FLOATING_POINT,
         POINTER,
         REFERENCE,
-        ARRAY
+        ARRAY,
+        CLASS
     };
 
     class alignas(8) DataType : public Object
     {
-        GENERATED_BODY(DataTypeBase, Object)
+        GENERATED_BODY(DataType, Object)
     private:
         mutable size_t CachedHash = 0;
         llvm::Type* CachedType = nullptr;
@@ -360,6 +363,35 @@ namespace Volt
         }
 
         bool CastTo(DataType *To, bool Explicit) const override;
+    };
+
+    struct Field
+    {
+        std::string Name;
+        QualType Type;
+
+        Field(std::string Name, QualType Type)
+            : Name(std::move(Name)), Type(Type) {}
+    };
+
+    class ClassType : public DataType
+    {
+        GENERATED_BODY(ClassType, DataType)
+    public:
+        std::string Name;
+        Array<Field> Fields;
+
+    public:
+        ClassType(const std::string& Name, const Array<Field>& Fields)
+            : DataType(TypeCategory::CLASS), Name(Name), Fields(Fields) {}
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
+        int GetRank() const override { return -1; }
+        std::string ToString() const override { return Name; }
+        bool CastTo(DataType *To, bool Explicit) const override { return this == To; }
+
+        //const Field* FindField(const std::string& Name);
+        size_t GetFieldIndex(const std::string& Name);
     };
 }
 

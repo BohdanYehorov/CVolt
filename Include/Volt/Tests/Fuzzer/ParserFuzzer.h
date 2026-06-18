@@ -16,47 +16,32 @@ namespace Volt
     {
     private:
         static std::mt19937 Gen;
-        std::ofstream OutFile;
 
+        size_t MaxStatementsCount;
         size_t MaxDepth;
 
-        bool InBlock = false;
-        bool InFunction = false;
-        bool InStatement = false;
-        std::string Tabs;
-        size_t TabsCount = 0;
-
     public:
-        ParserFuzzer(size_t MaxDepth)
+        ParserFuzzer()
             : MaxDepth(MaxDepth) {}
 
-        std::string GenExpr();
-        std::string GenBlock();
-        std::string GenFunctionDeclExpr();
-        std::string GenVarDeclExpr();
-        std::string GenIf();
-        std::string GenWhile();
-        std::string GenFor();
-        std::string GenGlobalExpr();
-        void StartTest(size_t Tests);
+    //private:
+        std::string RandomIntegerType();
+        std::string RandomFloatingPointType();
 
-        std::string GenBinaryExpr();
-        std::string GenPrefixUnary();
-        std::string GenSuffixUnary();
-
-        static std::string GenPrimary();
-        static std::string GenIdentifier();
-        static std::string GenByte();
-        static std::string GenInt();
-        static std::string GenLong();
-        static std::string GenFloat();
-        static std::string GenDouble();
     private:
-        static Int8 RandomInt8(Int8 Min, Int8 Max);
-        static int RandomInt(int Min, int Max);
-        static Int64 RandomInt64(Int64 Min, Int64 Max);
-        static float RandomFloat(float Min, float Max);
-        static double RandomDouble(double Min, double Max);
+        template <typename T>
+        static T RandomInt(T Min, T Max)
+        {
+            std::uniform_int_distribution<T> Dist(Min, Max);
+            return Dist(Gen);
+        }
+
+        template <typename T>
+        static T RandomFloat(T Min, T Max)
+        {
+            std::uniform_real_distribution<T> Dist(Min, Max);
+            return Dist(Gen);
+        }
     };
 }
 
