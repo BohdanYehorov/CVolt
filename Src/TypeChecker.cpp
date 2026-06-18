@@ -608,19 +608,21 @@ namespace Volt
     SemaResult *TypeChecker::VisitMemberAccess(MemberAccessNode *MemberAccess)
     {
         ExprAddress* Res = VisitToLValue(MemberAccess->Target);
-        if (!Res)
-        {
-            SendError(TypeErrorKind::NonLValue, MemberAccess);
-            return nullptr;
-        }
+        if (!Res) return nullptr;
 
         std::string FieldName;
         if (auto Identifier = Cast<IdentifierNode>(MemberAccess->Member))
             FieldName = std::string(Identifier->Value);
         else
+        {
+            SendError(TypeErrorKind::MemberNotIdentifier, MemberAccess->Member);
             return nullptr;
+        }
 
         QualType TargetType = Res->GetType();
+        if (auto PtrType = TargetType.CastAs<PointerType>())
+            TargetType = PtrType->BaseType;
+
         if (auto ClassTy = TargetType.CastAs<ClassType>())
         {
             size_t Index = ClassTy->GetFieldIndex(FieldName);
@@ -637,6 +639,7 @@ namespace Volt
             return MemberAccess->CompileTimeValue;
         }
 
+        SendError(TypeErrorKind::AccessToNonClassType, MemberAccess);
         return nullptr;
     }
 

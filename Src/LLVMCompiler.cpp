@@ -468,8 +468,15 @@ namespace Volt
             VoltUnreachable("Cannot access to r-value value");
 
         llvm::Value* Value = Target->GetValue();
+        DataType* Type = Target->GetDataType();
 
-        return Create<IRValue>(Builder.CreateStructGEP(CContext.GetLLVMType(Target->GetDataType()),
+        if (auto PtrType = Cast<PointerType>(Type))
+        {
+            Value = Builder.CreateLoad(Value->getType(), Value);
+            Type = PtrType->BaseType.GetType();
+        }
+
+        return Create<IRValue>(Builder.CreateStructGEP(CContext.GetLLVMType(Type),
             Value, MemberAccess->ResolvedMemberIndex),
             MemberAccess->CompileTimeValue->GetType().GetType(), true);
     }

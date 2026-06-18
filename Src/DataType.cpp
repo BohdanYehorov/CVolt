@@ -249,14 +249,4 @@ namespace Volt
 
 		return Fields.Length();
 	}
-
-	// const Field *ClassType::FindField(const std::string &Name)
-	// {
-	// 	auto Iter = std::find_if(Fields.Begin(), Fields.End(),
-	// 			[&Name](const Field& Field) -> bool { return Field.Name == Name; });
-	//
-	// 	if (Iter != Fields.End())
-	// 		return Iter.Get();
-	// 	return nullptr;
-	// }
 }

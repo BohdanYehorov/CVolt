@@ -506,7 +506,6 @@ namespace Volt
             return nullptr;
         }
 
-        size_t StartIndex = Index;
         DataTypeNodeBase* DataType = ParseDataType();
         if (!DataType)
         {
@@ -1375,9 +1374,15 @@ namespace Volt
         switch (Tok.Type)
         {
             case IDENTIFIER:
+            {
+                llvm::StringRef Lexeme = GetTokenLexeme(Tok);
+                if (CustomTypes.contains(Lexeme))
+                    return ParseDataType();
+
                 Consume();
                 return NodesArena.Create<IdentifierNode>(
-                    GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
+                    Lexeme, Tok.Pos, Tok.Line, Tok.Column);
+            }
 
             case I8_NUMBER:  case I16_NUMBER:
             case I32_NUMBER: case I64_NUMBER:

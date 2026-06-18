@@ -6,10 +6,13 @@ class Vec2
 
 fun:i32 Main()
 {
-    let:Vec2 a;
-    a.x = 7;
-    a.y = 8;
-    Out(a.x);
-    Out(a.y);
+    let:Vec2* Ptr = Vec2*(MemAlloc(8));
+    Ptr.x = 5;
+    Ptr.y = 10;
+
+    Out(Ptr.x);
+    Out(Ptr.y);
+
+    MemFree(Ptr);
     return 0;
 }

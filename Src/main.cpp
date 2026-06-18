@@ -83,14 +83,6 @@ int main(int Argc, char* Argv[])
 
     DebugOutput.WriteAST();
 
-    // if (CContext.HasErrors())
-    // {
-    //     DebugOutput.WriteLexErrors();
-    //     DebugOutput.WriteParseErrors();
-    //     DebugOutput.WriteTypeErrors();
-    //     return -1;
-    // }
-
     Volt::TypeChecker MyTypeChecker(CContext, FuncTable);
     MyTypeChecker.Check();
 

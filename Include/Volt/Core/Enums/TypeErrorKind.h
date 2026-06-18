@@ -47,7 +47,9 @@ namespace Volt
 		IndexingNonArray,
 		IndexNotInteger,
 		ArrayElementTypeMismatch,
-		InvalidArrayLiteral
+		InvalidArrayLiteral,
+		MemberNotIdentifier,
+		AccessToNonClassType
 	};
 }
 
