@@ -91,17 +91,8 @@ namespace Volt
     void TypeChecker::VisitBlock(BlockNode *Block)
     {
         EnterScope();
-
-        if (!FunctionParams.empty())
-        {
-            for (const auto& [Name, Type] : FunctionParams)
-                DeclareVariable(Name, MainArena.Create<ExprAddress>(
-                    ExprResult::CreateEmpty(Type, MainArena)));
-        }
-
         for (auto Statement : Block->Statements)
             VisitNode(Statement);
-
         ExitScope();
     }
 
@@ -572,12 +563,14 @@ namespace Volt
     {
         SmallVec8<QualType> Params;
         Params.reserve(Function->Params.size());
-        FunctionParams.reserve(Function->Params.size());
+
+        EnterScope();
         for (const auto& Param : Function->Params)
         {
             QualType ParamType = VisitType(Param->Type);
             Params.push_back(ParamType);
-            FunctionParams.emplace_back(Param->Name.str(), ParamType);
+            DeclareVariable(std::string(Param->Name), MainArena.Create<ExprAddress>(
+                ExprResult::CreateEmpty(ParamType, MainArena)));
         }
 
         FunctionSignature Signature(Function->Name.str(), Params);
@@ -591,6 +584,7 @@ namespace Volt
         VisitBlock(Cast<BlockNode>(Function->Body));
         FunctionReturnType = QualType();
 
+        ExitScope();
         return nullptr;
     }
 
@@ -619,7 +613,7 @@ namespace Volt
             return nullptr;
         }
 
-        QualType TargetType = Res->GetType();
+        QualType TargetType = Res->GetType().GetNotReferenceType();
         if (auto PtrType = TargetType.CastAs<PointerType>())
             TargetType = PtrType->BaseType;
 

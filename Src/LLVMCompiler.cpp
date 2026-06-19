@@ -125,21 +125,6 @@ namespace Volt
     {
         EnterScope();
 
-        if (CurrentFunction)
-        {
-            for (size_t i = 0; i < FunctionParams.size(); i++)
-            {
-                llvm::Argument* Arg = CurrentFunction->arg_begin() + i;
-                llvm::Type* ArgType = Arg->getType();
-
-                auto Type = FunctionParams[i];
-                DeclareVariable(Arg->getName().str(), Create<IRValue>(Arg, Type, Builder));
-            }
-            CurrentFunction = nullptr;
-        }
-
-        FunctionParams = {};
-
         for (auto Stmt : Block->Statements)
         {
             CompileNode(Stmt);
@@ -149,7 +134,6 @@ namespace Volt
         }
 
         ExitScope();
-
         return nullptr;
     }
 
@@ -593,28 +577,26 @@ namespace Volt
         llvm::Function* Func = llvm::Function::Create(
             FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
 
-        SmallVec8<DataType*> ParamsTypes;
-
         const auto& FuncParams = Function->Params;
-        ParamsTypes.reserve(FuncParams.size());
+
+        EnterScope();
+        llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
+        Builder.SetInsertPoint(Entry);
+
         for (size_t i = 0; i < FuncParams.size(); i++)
         {
             DataType* ParamType = FuncParams[i]->Type->ResolvedType;
             auto Arg = Func->args().begin() + i;
             Arg->setName(FuncParams[i]->Name.str());
-            ParamsTypes.push_back(ParamType);
+            DeclareVariable(FuncParams[i]->Name.str(),
+                Create<IRValue>(Arg, ParamType, Builder));
         }
-
-        CurrentFunction = Func;
-        FunctionParams = ParamsTypes;
 
         if (auto FuncCallee = Cast<FunctionCallee>(Function->ResolvedCallee))
             FuncCallee->Function = Func;
         else
             VoltUnreachableFmt("Function definition '{}' is unknown", FuncName);
 
-        llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
-        Builder.SetInsertPoint(Entry);
         CompileBlock(Cast<BlockNode>(Function->Body));
 
         llvm::BasicBlock* Bb = Builder.GetInsertBlock();
@@ -627,6 +609,7 @@ namespace Volt
                 VoltUnreachableFmt("Function '{}' must return value", FuncName);
         }
 
+        ExitScope();
         return nullptr;
     }
 

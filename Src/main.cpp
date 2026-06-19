@@ -81,8 +81,6 @@ int main(int Argc, char* Argv[])
     Volt::Parser MyParser(CContext);
     MyParser.Parse();
 
-    DebugOutput.WriteAST();
-
     Volt::TypeChecker MyTypeChecker(CContext, FuncTable);
     MyTypeChecker.Check();
 

@@ -46,8 +46,8 @@ namespace Volt
         std::stack<llvm::BasicBlock*> LoopEndStack;
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
-        llvm::Function* CurrentFunction = nullptr;
-        llvm::ArrayRef<DataType*> FunctionParams;
+        // llvm::Function* CurrentFunction = nullptr;
+        // llvm::ArrayRef<DataType*> FunctionParams;
 
     public:
         LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
