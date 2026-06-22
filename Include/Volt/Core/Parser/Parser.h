@@ -92,16 +92,16 @@ namespace Volt
         DataTypeNodeBase* ParseWrappedType();
         DataTypeNodeBase* ParsePrimitiveType();
 
-        ASTNode* ParseParameter();
-        ASTNode* ParseFunction();
+        ParamNode* ParseParameter();
+        FunctionNode* ParseFunction();
         VariableNode* ParseVariable();
-        ASTNode* ParseClass();
-        ASTNode* ParseIf();
-        ASTNode* ParseWhile();
-        ASTNode* ParseFor();
-        ASTNode* ParseReturn();
-        ASTNode* ParseBreak();
-        ASTNode* ParseContinue();
+        ClassNode* ParseClass();
+        IfNode* ParseIf();
+        WhileNode* ParseWhile();
+        ForNode* ParseFor();
+        ReturnNode* ParseReturn();
+        BreakNode* ParseBreak();
+        ContinueNode* ParseContinue();
 
         ASTNode* ParseExpression();
         ASTNode* ParseStatement();

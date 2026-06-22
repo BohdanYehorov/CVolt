@@ -46,8 +46,7 @@ namespace Volt
         std::stack<llvm::BasicBlock*> LoopEndStack;
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
-        // llvm::Function* CurrentFunction = nullptr;
-        // llvm::ArrayRef<DataType*> FunctionParams;
+        DataType* FunctionReturnType = nullptr;
 
     public:
         LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
@@ -89,6 +88,8 @@ namespace Volt
         IRValue *CompileVariable(const VariableNode *Var);
         IRValue *CompileFunction(const FunctionNode *Function);
         IRValue *CompileReturn(const ReturnNode *Return);
+        IRValue *CompileMethod(const FunctionNode *Method, ClassType* Type);
+        IRValue *CompileClass(const ClassNode *Class);
         IRValue *CompileIf(const IfNode *If);
         IRValue *CompileWhile(const WhileNode *While);
         IRValue *CompileFor(const ForNode *For);

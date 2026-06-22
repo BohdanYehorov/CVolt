@@ -7,6 +7,7 @@
 
 #include "Volt/Core/Memory/Arena.h"
 #include "Volt/Core/Types/DataType.h"
+#include "Volt/Core/Types/ClassType.h"
 #include "Volt/Core/Lexer/Token.h"
 #include "Volt/Core/AST/ASTNodes.h"
 #include "Volt/ADT/String.h"
@@ -70,7 +71,7 @@ namespace Volt
 		[[nodiscard]] ReferenceType* GetReferenceType(QualType BaseType);
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 
-		bool CreateClassType(const std::string& Name, const Array<Field>& Fields);
+		ClassType* CreateClassType(const std::string& Name, const Array<Field>& Fields);
 		[[nodiscard]] ClassType* GetClassType(const std::string& Name);
 
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);

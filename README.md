@@ -17,7 +17,7 @@ Volt - programming language, designed as scripting for embedding in C++ applicat
 - Type checking
 - Compile-time evaluation
 - Arena allocator
-- Struct-like classes
+- Struct-like classes with methods
 
 ## Requirements
 - LLVM 21.1.0
@@ -177,7 +177,7 @@ class <Name>
 };
 ```
 ### Note
-Classes support only fields yet.
+Currently, classes support only fields and methods
 
 ### Comments
 ```c++

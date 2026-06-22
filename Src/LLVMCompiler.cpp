@@ -102,7 +102,7 @@ namespace Volt
         if (const auto Function = Cast<const FunctionNode>(Node))
             return CompileFunction(Function);
         if (const auto Class = Cast<const ClassNode>(Node))
-            return nullptr;
+            return CompileClass(Class);
         if (const auto MemberAccess = Cast<const MemberAccessNode>(Node))
             return CompileMemberAccess(MemberAccess);
         if (const auto Return = Cast<const ReturnNode>(Node))
@@ -419,7 +419,17 @@ namespace Volt
 
         SmallVec8<llvm::Value*> LLVMArgs;
 
-        LLVMArgs.reserve(Args.size());
+        if (auto MemberAccess = Cast<MemberAccessNode>(Call->Callee))
+        {
+            IRValue* Res = CompileNode(MemberAccess);
+            if (!Res || !Res->IsLValue()) return nullptr;
+            VoltAssert(Res->GetDataType()->IsClassType());
+
+            LLVMArgs.reserve(Args.size() + 1);
+            LLVMArgs.push_back(Res->GetValue());
+        }
+        else
+            LLVMArgs.reserve(Args.size());
 
         for (const auto Arg : Args)
         {
@@ -597,7 +607,9 @@ namespace Volt
         else
             VoltUnreachableFmt("Function definition '{}' is unknown", FuncName);
 
+        FunctionReturnType = Function->ReturnType->ResolvedType;
         CompileBlock(Cast<BlockNode>(Function->Body));
+        FunctionReturnType = nullptr;
 
         llvm::BasicBlock* Bb = Builder.GetInsertBlock();
 
@@ -620,11 +632,84 @@ namespace Volt
             IRValue* RetVal = CompileToRValue(Return->ReturnValue);
             if (!RetVal) return nullptr;
 
+            RetVal = RetVal->CastOrBind(FunctionReturnType, Builder, CContext);
+            if (!RetVal)
+                VoltUnreachable("Invalid Cast");
+
             Builder.CreateRet(RetVal->GetValue());
             return nullptr;
         }
 
         Builder.CreateRetVoid();
+        return nullptr;
+    }
+
+    IRValue *LLVMCompiler::CompileMethod(const FunctionNode *Method, ClassType *Type)
+    {
+        DataType* ThisType = CContext.GetPointerType(Type);
+
+        SmallVec8<llvm::Type*> Params;
+        Params.reserve(Method->Params.size() + 1);
+        Params.push_back(CContext.GetLLVMType(ThisType));
+
+        for (const auto Param : Method->Params)
+        {
+            DataType* ParamType = Param->Type->ResolvedType;
+            Params.push_back(CContext.GetLLVMType(ParamType));
+        }
+
+        llvm::Type* RetType = CContext.GetLLVMType(Method->ReturnType->ResolvedType);
+        llvm::FunctionType* FuncType = llvm::FunctionType::get(
+            RetType, Params, false);
+
+        std::string FuncName = std::format("{}.{}", Type->Name, Method->Name.str());
+        llvm::Function* Func = llvm::Function::Create(
+            FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
+
+        const auto& FuncParams = Method->Params;
+
+        EnterScope();
+        llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
+        Builder.SetInsertPoint(Entry);
+
+        DeclareVariable("this", Create<IRValue>(Func->args().begin(), ThisType, Builder));
+        for (size_t i = 0; i < FuncParams.size() + 0; i++)
+        {
+            DataType* ParamType = FuncParams[i]->Type->ResolvedType;
+            auto Arg = Func->args().begin() + i + 1;
+            Arg->setName(FuncParams[i]->Name.str());
+            DeclareVariable(FuncParams[i]->Name.str(),
+                Create<IRValue>(Arg, ParamType, Builder));
+        }
+
+        if (auto FuncCallee = Cast<FunctionCallee>(Method->ResolvedCallee))
+            FuncCallee->Function = Func;
+        else
+            VoltUnreachableFmt("Function definition '{}' is unknown", FuncName);
+
+        FunctionReturnType = Method->ReturnType->ResolvedType;
+        CompileBlock(Cast<BlockNode>(Method->Body));
+        FunctionReturnType = nullptr;
+
+        llvm::BasicBlock* Bb = Builder.GetInsertBlock();
+
+        if (!Bb->getTerminator())
+        {
+            if (RetType->isVoidTy())
+                Builder.CreateRetVoid();
+            else
+                VoltUnreachableFmt("Function '{}' must return value", FuncName);
+        }
+
+        ExitScope();
+        return nullptr;
+    }
+
+    IRValue *LLVMCompiler::CompileClass(const ClassNode *Class)
+    {
+        for (auto Method : Class->Methods)
+            CompileMethod(Method, CContext.GetClassType(Class->Name.str()));
+
         return nullptr;
     }
 

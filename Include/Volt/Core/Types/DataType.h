@@ -61,6 +61,7 @@ namespace Volt
         [[nodiscard]] bool IsPointerType() const { return Category == TypeCategory::POINTER; }
         [[nodiscard]] bool IsReferenceType() const { return Category == TypeCategory::REFERENCE; }
         [[nodiscard]] bool IsArrayType() const { return Category == TypeCategory::ARRAY; }
+        [[nodiscard]] bool IsClassType() const { return Category == TypeCategory::CLASS; }
 
         [[nodiscard]] bool IsSignedIntegerType() const;
         [[nodiscard]] bool IsUnsignedIntegerType() const
@@ -363,35 +364,6 @@ namespace Volt
         }
 
         bool CastTo(DataType *To, bool Explicit) const override;
-    };
-
-    struct Field
-    {
-        std::string Name;
-        QualType Type;
-
-        Field(std::string Name, QualType Type)
-            : Name(std::move(Name)), Type(Type) {}
-    };
-
-    class ClassType : public DataType
-    {
-        GENERATED_BODY(ClassType, DataType)
-    public:
-        std::string Name;
-        Array<Field> Fields;
-
-    public:
-        ClassType(const std::string& Name, const Array<Field>& Fields)
-            : DataType(TypeCategory::CLASS), Name(Name), Fields(Fields) {}
-
-        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
-        int GetRank() const override { return -1; }
-        std::string ToString() const override { return Name; }
-        bool CastTo(DataType *To, bool Explicit) const override { return this == To; }
-
-        //const Field* FindField(const std::string& Name);
-        size_t GetFieldIndex(const std::string& Name);
     };
 }
 

@@ -221,6 +221,11 @@ namespace Volt
             Os << "Fields:\n";
             for (auto Field : Class->Fields)
                 WriteAST(Field, Indent + 1);
+
+            WriteIndent(Indent);
+            Os << "Methods:\n";
+            for (auto Method : Class->Methods)
+                WriteAST(Method, Indent + 1);
         }
         else if (auto MemberAccess = Cast<MemberAccessNode>(Node))
         {

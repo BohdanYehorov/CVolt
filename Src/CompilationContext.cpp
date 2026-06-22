@@ -110,11 +110,12 @@ namespace Volt
 		return Type;
 	}
 
-	bool CompilationContext::CreateClassType(const std::string &Name, const Array<Field> &Fields)
+	ClassType* CompilationContext::CreateClassType(const std::string &Name, const Array<Field> &Fields)
 	{
-		if (ClassTypes.contains(Name)) return false;
-		ClassTypes[Name] = MainArena.Create<ClassType>(Name, Fields);
-		return true;
+		if (ClassTypes.contains(Name)) return nullptr;
+		ClassType* Type = MainArena.Create<ClassType>(Name, Fields);
+		ClassTypes[Name] = Type;
+		return Type;
 	}
 
 	ClassType* CompilationContext::GetClassType(const std::string &Name)

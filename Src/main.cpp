@@ -61,6 +61,7 @@ int main(int Argc, char* Argv[])
     FuncTable.AddFunction("In", "InInt", &InInt);
     FuncTable.AddFunction("In", "InIntWithLabel", &InIntWithLabel);
     FuncTable.AddFunction("Time", "Time", &Time);
+    FuncTable.AddFunction("Sqrt", "Sqrt", &Sqrt);
     FuncTable.AddFunction("Sin", "Sin", &Sin);
     FuncTable.AddFunction("Cos", "Cos", &Cos);
     FuncTable.AddFunction("Tan", "Tan", &Tan);

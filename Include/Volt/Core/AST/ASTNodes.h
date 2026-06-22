@@ -409,11 +409,11 @@ namespace Volt
     public:
         llvm::StringRef Name;
         llvm::TinyPtrVector<VariableNode*> Fields;
-        // llvm::TinyPtrVector<FunctionNode*> Methods;
+        llvm::TinyPtrVector<FunctionNode*> Methods;
 
         ClassNode(llvm::StringRef Name, llvm::TinyPtrVector<VariableNode*>&& Fields,
-            size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Name(Name), Fields(std::move(Fields)) {}
+            llvm::TinyPtrVector<FunctionNode*>&& Methods, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Name(Name), Fields(std::move(Fields)), Methods(std::move(Methods)) {}
     };
 
     class MemberAccessNode : public ASTNode

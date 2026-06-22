@@ -6,6 +6,7 @@
 #define CVOLT_BUILTINFUNCCALLEE_H
 
 #include "Volt/Core/Types/DataType.h"
+#include "Callee.h"
 #include <llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h>
 
 namespace Volt

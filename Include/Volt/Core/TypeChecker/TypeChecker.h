@@ -93,10 +93,13 @@ namespace Volt
         SemaResult *VisitComparison(ComparisonNode* Comparison);
         SemaResult *VisitBinary(BinaryOpNode *Binary);
         SemaResult *VisitCall(CallNode *Call);
+        SemaResult *VisitFunctionCall(CallNode *Call);
+        SemaResult *VisitMethodCall(CallNode *Call);
         SemaResult *VisitSubscript(SubscriptNode *Subscript);
         SemaResult *VisitExplicitCast(ExplicitCastNode *ECast);
         SemaResult *VisitVariable(VariableNode *Variable);
         SemaResult *VisitFunction(FunctionNode *Function);
+        void VisitMethod(FunctionNode* Method, ClassType* Type);
         SemaResult *VisitClass(ClassNode *Class);
         SemaResult *VisitMemberAccess(MemberAccessNode *MemberAccess);
         SemaResult *VisitIf(IfNode *If);
@@ -116,6 +119,8 @@ namespace Volt
 
         ExprAddress* VisitToLValue(ASTNode* Node);
         ExprAddress* VisitToLValueAndCheckConst(ASTNode* Node);
+
+        FunctionCallee* CreateFunction(FunctionNode* Function, FunctionSignature& Signature, QualType ThisType = {});
 
         template <typename MapT>
         MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);

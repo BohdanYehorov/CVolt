@@ -405,6 +405,18 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitCall(CallNode *Call)
     {
+        if (SemaResult* Res = VisitFunctionCall(Call))
+            return Res;
+
+        if (SemaResult* Res = VisitMethodCall(Call))
+            return Res;
+
+        SendError(TypeErrorKind::InvalidCalleeType, Call->Callee);
+        return nullptr;
+    }
+
+    SemaResult *TypeChecker::VisitFunctionCall(CallNode *Call)
+    {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
             const std::string& Name = Identifier->Value.str();
@@ -458,7 +470,74 @@ namespace Volt
             return nullptr;
         }
 
-        SendError(TypeErrorKind::InvalidCalleeType, Call->Callee);
+        return nullptr;
+    }
+
+    SemaResult *TypeChecker::VisitMethodCall(CallNode *Call)
+    {
+        if (auto MemberAccess = Cast<MemberAccessNode>(Call->Callee))
+        {
+            ExprAddress* Res = VisitToLValue(MemberAccess->Target);
+            if (!Res) return nullptr;
+
+            std::string FieldName;
+            if (auto Identifier = Cast<IdentifierNode>(MemberAccess->Member))
+                FieldName = std::string(Identifier->Value);
+            else
+            {
+                SendError(TypeErrorKind::MemberNotIdentifier, MemberAccess->Member);
+                return nullptr;
+            }
+
+            QualType TargetType = Res->GetType().GetNotReferenceType();
+            if (auto PtrType = TargetType.CastAs<PointerType>())
+                TargetType = PtrType->BaseType;
+
+            if (auto ClassTy = TargetType.CastAs<ClassType>())
+            {
+                MemberAccess->CompileTimeValue = ExprResult::CreateEmpty(ClassTy, MainArena);
+
+                size_t ArgsCount = Call->Arguments.size();
+                SmallVec8<QualType> ArgTypes;
+                ArgTypes.reserve(ArgsCount + 1);
+                ArgTypes.push_back(CContext.GetPointerType(ClassTy));
+
+                for (auto Arg : Call->Arguments)
+                {
+                    ExprResult* ArgValue = VisitToRValue(Arg);
+                    if (!ArgValue)
+                        return nullptr;
+
+                    QualType ArgType = ArgValue->GetType();
+                    if (!ArgType)
+                        return nullptr;
+
+                    ArgTypes.push_back(ArgType);
+                }
+
+                FunctionSignature Signature(FieldName, ArgTypes);
+
+                if (auto Iter = TryGetOverload(Signature, ClassTy->Methods); Iter != ClassTy->Methods.end())
+                {
+                    Call->ResolvedCallee = Iter->second;
+
+                    for (size_t i = 0; i < ArgsCount; i++)
+                        Call->Arguments[i]->ExpectedType = Iter->first.Params[i + 1].GetType();
+
+                    return ExprResult::CreateEmpty(Iter->second->ReturnType, MainArena);
+                }
+
+                Array<std::string> ErrorContext = { ClassTy->Name + "." + FieldName };
+                ErrorContext.Reserve(ArgsCount);
+
+                for (auto Arg : ArgTypes)
+                    ErrorContext.Add(Arg->ToString());
+
+                SendError(TypeErrorKind::NoFunctionOverload, Call->Callee, std::move(ErrorContext));
+                return nullptr;
+            }
+        }
+
         return nullptr;
     }
 
@@ -561,31 +640,34 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitFunction(FunctionNode *Function)
     {
-        SmallVec8<QualType> Params;
-        Params.reserve(Function->Params.size());
-
         EnterScope();
-        for (const auto& Param : Function->Params)
-        {
-            QualType ParamType = VisitType(Param->Type);
-            Params.push_back(ParamType);
-            DeclareVariable(std::string(Param->Name), MainArena.Create<ExprAddress>(
-                ExprResult::CreateEmpty(ParamType, MainArena)));
-        }
 
-        FunctionSignature Signature(Function->Name.str(), Params);
-        QualType ReturnType = VisitType(Function->ReturnType);
+        FunctionSignature Signature;
+        FunctionCallee* FuncCallee = CreateFunction(Function, Signature);
 
-        auto FuncCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
-        Function->ResolvedCallee = FuncCallee;
         Functions[Signature] = FuncCallee;
 
-        FunctionReturnType = ReturnType;
+        FunctionReturnType = FuncCallee->ReturnType;
         VisitBlock(Cast<BlockNode>(Function->Body));
-        FunctionReturnType = QualType();
+        FunctionReturnType = {};
 
         ExitScope();
         return nullptr;
+    }
+
+    void TypeChecker::VisitMethod(FunctionNode *Method, ClassType* Type)
+    {
+        EnterScope();
+
+        FunctionSignature Signature;
+        FunctionCallee* FuncCallee = CreateFunction(Method, Signature, CContext.GetPointerType(Type));
+        Type->AddMethod(Signature, FuncCallee);
+
+        FunctionReturnType = FuncCallee->ReturnType;
+        VisitBlock(Cast<BlockNode>(Method->Body));
+        FunctionReturnType = {};
+
+        ExitScope();
     }
 
     SemaResult *TypeChecker::VisitClass(ClassNode *Class)
@@ -595,7 +677,16 @@ namespace Volt
         for (auto Field : Class->Fields)
             Fields.Emplace(std::string(Field->Name), VisitType(Field->Type));
 
-        CContext.CreateClassType(std::string(Class->Name), Fields);
+        ClassType* Type = CContext.CreateClassType(std::string(Class->Name), Fields);
+        if (!Type)
+        {
+            // SendError
+            return nullptr;
+        }
+
+        for (auto Method : Class->Methods)
+            VisitMethod(Method, Type);
+
         return nullptr;
     }
 
@@ -683,6 +774,8 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitFor(ForNode *For)
     {
+        EnterScope();
+
         VisitNode(For->Initialization);
 
         ExprResult* Cond = VisitToRValue(For->Condition);
@@ -701,6 +794,8 @@ namespace Volt
         VisitNode(For->Iteration);
         VisitNode(For->Body);
 
+        ExitScope();
+
         return nullptr;
     }
 
@@ -714,8 +809,10 @@ namespace Volt
                 return nullptr;
             }
 
-            QualType ReturnType = VisitNode(Return->ReturnValue)->GetType();
-            if (!ReturnType.ImplicitCast(FunctionReturnType))
+            SemaResult* ReturnValue = VisitNode(Return->ReturnValue);
+            if (!ReturnValue) return nullptr;
+
+            if (!ReturnValue->GetType().ImplicitCast(FunctionReturnType))
                 SendError(TypeErrorKind::ReturnTypeMismatch, Return->ReturnValue);
 
             return nullptr;
@@ -814,6 +911,37 @@ namespace Volt
         }
 
         return Addr;
+    }
+
+    FunctionCallee* TypeChecker::CreateFunction(FunctionNode *Function, FunctionSignature &Signature,
+        QualType ThisType)
+    {
+        Signature.Name = Function->Name;
+
+        if (ThisType)
+        {
+            Signature.Params.reserve(Function->Params.size() + 1);
+            Signature.Params.push_back(ThisType);
+            DeclareVariable("this", MainArena.Create<ExprAddress>(
+            ExprResult::CreateEmpty(ThisType, MainArena)));
+        }
+        else
+            Signature.Params.reserve(Function->Params.size());
+
+        for (const auto& Param : Function->Params)
+        {
+            QualType ParamType = VisitType(Param->Type);
+            Signature.Params.push_back(ParamType);
+            DeclareVariable(std::string(Param->Name), MainArena.Create<ExprAddress>(
+                ExprResult::CreateEmpty(ParamType, MainArena)));
+        }
+
+        QualType ReturnType = VisitType(Function->ReturnType);
+
+        auto FuncCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
+        Function->ResolvedCallee = FuncCallee;
+
+        return FuncCallee;
     }
 
     bool TypeChecker::ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column)

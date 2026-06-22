@@ -100,6 +100,11 @@ extern "C"
 		return std::time(nullptr);
 	}
 
+	inline double Sqrt(double X)
+	{
+		return std::sqrt(X);
+	}
+
 	inline double Sin(double Angle)
 	{
 		return std::sin(Angle);

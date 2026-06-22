@@ -25,6 +25,8 @@ namespace Volt
 				return std::format("Variable '{}' is undefined.", Context[0]);
 			case UninitializedVariable:
 				return std::format("Variable '{}' is uninitialized.", Context[0]);
+			case DoubleVariableDeclaration:
+				return std::format("Variable '{}' already declared in this scope.", Context[0]);
 			case Redeclaration:
 				return std::format("Redeclaration '{}.'", Context[0]);
 			case ImmutableAssignment:

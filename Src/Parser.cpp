@@ -399,7 +399,7 @@ namespace Volt
             Type, Tok.Pos, Tok.Line, Tok.Column);
     }
 
-    ASTNode* Parser::ParseParameter()
+    ParamNode* Parser::ParseParameter()
     {
         DepthIncScope DScope(Depth);
 
@@ -427,7 +427,7 @@ namespace Volt
             DataType->Pos, DataType->Line, DataType->Column);
     }
 
-    ASTNode* Parser::ParseFunction()
+    FunctionNode* Parser::ParseFunction()
     {
         DepthIncScope DScope(Depth);
 
@@ -543,7 +543,7 @@ namespace Volt
             DataType->Pos, DataType->Line, DataType->Column);
     }
 
-    ASTNode* Parser::ParseClass()
+    ClassNode* Parser::ParseClass()
     {
         const Token* FirstTokPtr = nullptr;
         if (!ConsumeIf(TokenType::KW_CLASS, FirstTokPtr))
@@ -563,6 +563,7 @@ namespace Volt
             return nullptr;
 
         llvm::TinyPtrVector<VariableNode*> Fields;
+        llvm::TinyPtrVector<FunctionNode*> Methods;
         while (IsValidIndex())
         {
             TokenType TokType = CurrentToken().Type;
@@ -583,6 +584,15 @@ namespace Volt
                     }
                     return nullptr;
                 }
+                case TokenType::KW_FUN:
+                {
+                    if (FunctionNode* Method = ParseFunction())
+                    {
+                        Methods.push_back(Method);
+                        break;
+                    }
+                    return nullptr;
+                }
                 default:
                     SendError(ParseErrorType::ExpectedDeclaration);
                     Synchronize();
@@ -593,11 +603,11 @@ namespace Volt
         if (!Expect(TokenType::OP_RBRACE))
             return nullptr;
 
-        return NodesArena.Create<ClassNode>(Name, std::move(Fields),
+        return NodesArena.Create<ClassNode>(Name, std::move(Fields), std::move(Methods),
             FirstTokPtr->Pos, FirstTokPtr->Line, FirstTokPtr->Column);
     }
 
-    ASTNode* Parser::ParseIf()
+    IfNode* Parser::ParseIf()
     {
         DepthIncScope DScope(Depth);
 
@@ -670,7 +680,7 @@ namespace Volt
         return If;
     }
 
-    ASTNode* Parser::ParseWhile()
+    WhileNode* Parser::ParseWhile()
     {
         DepthIncScope DScope(Depth);
 
@@ -722,7 +732,7 @@ namespace Volt
             Condition, Branch, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
-    ASTNode* Parser::ParseFor()
+    ForNode* Parser::ParseFor()
     {
         DepthIncScope DScope(Depth);
 
@@ -802,7 +812,7 @@ namespace Volt
             Body, TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
-    ASTNode* Parser::ParseReturn()
+    ReturnNode* Parser::ParseReturn()
     {
         DepthIncScope DScope(Depth);
 
@@ -825,7 +835,7 @@ namespace Volt
             ParseAssignment(), TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
-    ASTNode* Parser::ParseBreak()
+    BreakNode* Parser::ParseBreak()
     {
         DepthIncScope DScope(Depth);
 
@@ -842,7 +852,7 @@ namespace Volt
         return NodesArena.Create<BreakNode>(TokPtr->Pos, TokPtr->Line, TokPtr->Column);
     }
 
-    ASTNode* Parser::ParseContinue()
+    ContinueNode* Parser::ParseContinue()
     {
         DepthIncScope DScope(Depth);
 
