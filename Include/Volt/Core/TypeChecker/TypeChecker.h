@@ -97,6 +97,7 @@ namespace Volt
         SemaResult *VisitMethodCall(CallNode *Call);
         SemaResult *VisitSubscript(SubscriptNode *Subscript);
         SemaResult *VisitExplicitCast(ExplicitCastNode *ECast);
+        SemaResult *VisitConstruct(ConstructNode *Construct);
         SemaResult *VisitVariable(VariableNode *Variable);
         SemaResult *VisitFunction(FunctionNode *Function);
         void VisitMethod(FunctionNode* Method, ClassType* Type);

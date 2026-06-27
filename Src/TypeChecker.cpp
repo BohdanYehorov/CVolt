@@ -59,6 +59,8 @@ namespace Volt
             return VisitSubscript(Subscript);
         if (auto ECast = Cast<ExplicitCastNode>(Node))
             return VisitExplicitCast(ECast);
+        if (auto Construct = Cast<ConstructNode>(Node))
+            return VisitConstruct(Construct);
         if (auto Variable = Cast<VariableNode>(Node))
             return VisitVariable(Variable);
         if (auto Function = Cast<FunctionNode>(Node))
@@ -421,7 +423,7 @@ namespace Volt
         {
             const std::string& Name = Identifier->Value.str();
             size_t ArgsCount = Call->Arguments.size();
-            SmallVec8<QualType> ArgTypes;
+            ArgsVector<QualType> ArgTypes;
             ArgTypes.reserve(ArgsCount);
 
             for (auto Arg : Call->Arguments)
@@ -437,7 +439,7 @@ namespace Volt
                 ArgTypes.push_back(ArgType);
             }
 
-            FunctionSignature Signature(Name, ArgTypes);
+            FunctionSignature Signature(Name, std::move(ArgTypes));
 
             if (auto Iter = TryGetOverload(Signature, Functions); Iter != Functions.end())
             {
@@ -498,7 +500,7 @@ namespace Volt
                 MemberAccess->CompileTimeValue = ExprResult::CreateEmpty(ClassTy, MainArena);
 
                 size_t ArgsCount = Call->Arguments.size();
-                SmallVec8<QualType> ArgTypes;
+                ArgsVector<QualType> ArgTypes;
                 ArgTypes.reserve(ArgsCount + 1);
                 ArgTypes.push_back(CContext.GetPointerType(ClassTy));
 
@@ -515,7 +517,7 @@ namespace Volt
                     ArgTypes.push_back(ArgType);
                 }
 
-                FunctionSignature Signature(FieldName, ArgTypes);
+                FunctionSignature Signature(FieldName, std::move(ArgTypes));
 
                 if (auto Iter = TryGetOverload(Signature, ClassTy->Methods); Iter != ClassTy->Methods.end())
                 {
@@ -590,6 +592,37 @@ namespace Volt
         SendError(TypeErrorKind::IncompatibleTypes, ECast->Line, ECast->Column,
             { SrcType->ToString(), Target->GetType()->ToString() });
         return nullptr;
+    }
+
+    SemaResult *TypeChecker::VisitConstruct(ConstructNode *Construct)
+    {
+        QualType Type = VisitType(Construct->Type);
+        auto ClassTy = Type.CastAs<ClassType>();
+        if (!ClassTy) return nullptr;
+
+        size_t ArgsCount = Construct->Args.size();
+        ArgsVector<QualType> Arguments;
+        Arguments.reserve(ArgsCount + 1);
+        Arguments.emplace_back(CContext.GetPointerType(ClassTy));
+        for (auto ArgNode : Construct->Args)
+        {
+            ExprResult* Arg = VisitToRValue(ArgNode);
+            if (!Arg) return nullptr;
+
+            Arguments.push_back(Arg->GetType());
+        }
+
+        FunctionSignature Signature("Construct", std::move(Arguments));
+        if (auto Iter = TryGetOverload(Signature, ClassTy->Methods); Iter != ClassTy->Methods.end())
+        {
+            Construct->ResolvedCallee = Iter->second;
+
+            for (size_t i = 0; i < ArgsCount; i++)
+                Construct->Args[i]->ExpectedType = Iter->first.Params[i + 1].GetType();
+        }
+
+        Construct->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);
+        return Construct->CompileTimeValue;
     }
 
     SemaResult *TypeChecker::VisitVariable(VariableNode *Variable)

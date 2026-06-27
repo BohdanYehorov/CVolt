@@ -319,6 +319,19 @@ namespace Volt
             : DataTypeNodeBase(Pos, Line, Column), Name(Name) {}
     };
 
+    class ConstructNode : public ASTNode
+    {
+        GENERATED_BODY(ConstructNode, ASTNode)
+    public:
+        CalleeBase* ResolvedCallee = nullptr;
+
+        ClassTypeNode* Type;
+        SmallVec4<ASTNode*> Args;
+
+        ConstructNode(ClassTypeNode* Type, SmallVec4<ASTNode*> Args, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Type(Type), Args(std::move(Args)) {}
+    };
+
     class ExplicitCastNode : public ASTNode
     {
         GENERATED_BODY(ExplicitCastNode, ASTNode)

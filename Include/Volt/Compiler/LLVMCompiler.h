@@ -85,6 +85,7 @@ namespace Volt
         IRValue *CompileMemberAccess(const MemberAccessNode *MemberAccess);
         IRValue *CompileSubscript(const SubscriptNode *Subscript);
         IRValue *CompileExplicitCast(const ExplicitCastNode *ExplicitCast);
+        IRValue *CompileConstruct(const ConstructNode *Construct);
         IRValue *CompileVariable(const VariableNode *Var);
         IRValue *CompileFunction(const FunctionNode *Function);
         IRValue *CompileReturn(const ReturnNode *Return);

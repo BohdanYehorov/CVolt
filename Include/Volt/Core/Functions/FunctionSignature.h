@@ -15,11 +15,11 @@ namespace Volt
     struct FunctionSignature
     {
         std::string Name;
-        SmallVec8<QualType> Params;
+        ArgsVector<QualType> Params;
 
         FunctionSignature() = default;
-        FunctionSignature(const std::string& Name, llvm::ArrayRef<QualType> Params)
-                : Name(Name), Params(Params) {}
+        FunctionSignature(std::string Name, ArgsVector<QualType> Params)
+                : Name(std::move(Name)), Params(std::move(Params)) {}
 
         [[nodiscard]] bool operator==(const FunctionSignature& Other) const
         {

@@ -25,6 +25,9 @@ namespace Volt
 
 	template <typename T>
 	using SmallVec64 = llvm::SmallVector<T, 64>;
+
+	template <typename T>
+	using ArgsVector = SmallVec4<T>;
 }
 
 #endif //CVOLT_TYPEDEFS_H

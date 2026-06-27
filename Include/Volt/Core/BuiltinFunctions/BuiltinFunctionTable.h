@@ -43,11 +43,11 @@ namespace Volt
 
 	private:
 		template <typename T, typename ...Rest>
-		void FillParams(SmallVec8<QualType>& Params);
+		void FillParams(ArgsVector<QualType>& Params);
 	};
 
 	template<typename T, typename ... Rest>
-	void BuiltinFunctionTable::FillParams(SmallVec8<QualType> &Params)
+	void BuiltinFunctionTable::FillParams(ArgsVector<QualType> &Params)
 	{
 		Params.push_back(TypeConv::GetDataType<T>(CContext));
 		if constexpr (sizeof...(Rest) > 0)
@@ -58,9 +58,9 @@ namespace Volt
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)(Args...))
 	{
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
-		SmallVec8<QualType> Params;
+		ArgsVector<QualType> Params;
 		FillParams<Args...>(Params);
-		FunctionSignature Signature{ Name, Params };
+		FunctionSignature Signature{ Name, std::move(Params) };
 		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
 			RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 	}

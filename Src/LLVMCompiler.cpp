@@ -97,6 +97,8 @@ namespace Volt
             return CompileSubscript(Subscript);
         if (const auto ExplicitCast = Cast<const ExplicitCastNode>(Node))
             return CompileExplicitCast(ExplicitCast);
+        if (const auto Construct = Cast<const ConstructNode>(Node))
+            return CompileConstruct(Construct);
         if (const auto Var = Cast<const VariableNode>(Node))
             return CompileVariable(Var);
         if (const auto Function = Cast<const FunctionNode>(Node))
@@ -519,6 +521,34 @@ namespace Volt
 
         return Create<IRValue>(
             Builder.CreateBitCast(Target->GetValue(), CContext.GetLLVMType(DstType)), DstType);
+    }
+
+    IRValue *LLVMCompiler::CompileConstruct(const ConstructNode *Construct)
+    {
+        DataType* ClassTy = Construct->CompileTimeValue->GetType().GetType();
+        auto StructTy = llvm::cast<llvm::StructType>(CContext.GetLLVMType(ClassTy));
+        if (!StructTy)
+            VoltUnreachable("Cannot construct non-struct type");
+        llvm::AllocaInst* ClassAlloca = Builder.CreateAlloca(StructTy);
+
+        ArgsVector<llvm::Value*> LLVMArgs;
+        LLVMArgs.reserve(Construct->Args.size() + 1);
+        LLVMArgs.push_back(ClassAlloca);
+        for (const auto Arg : Construct->Args)
+        {
+            IRValue* ArgValue = CompileNode(Arg)->CastOrBind(Arg->ExpectedType, Builder, CContext);
+            if (!ArgValue)
+                return nullptr;
+
+            LLVMArgs.push_back(ArgValue->GetValue());
+        }
+
+        if (auto Func = Cast<FunctionCallee>(Construct->ResolvedCallee))
+            Builder.CreateCall(Func->Function, LLVMArgs);
+        else
+            VoltUnreachable("Invalid Callee");
+
+        return Create<IRValue>(ClassAlloca, ClassTy, true);
     }
 
     IRValue *LLVMCompiler::CompileVariable(const VariableNode *Var)

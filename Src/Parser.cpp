@@ -1286,6 +1286,34 @@ namespace Volt
             {
                 case TokenType::OP_LPAREN:
                 {
+                    if (auto Type = Cast<ClassTypeNode>(Operand))
+                    {
+                        Consume();
+
+                        SmallVec4<ASTNode*> Arguments;
+                        while (IsValidIndex())
+                        {
+                            if (CurrentToken().Type == TokenType::OP_RPAREN)
+                                break;
+
+                            if (ASTNode* Arg = ParseAssignment())
+                                Arguments.push_back(Arg);
+
+                            if (!ConsumeIf(TokenType::OP_COMMA))
+                                break;
+                        }
+
+                        if (!Expect(TokenType::OP_RPAREN))
+                        {
+                            Synchronize();
+                            return nullptr;
+                        }
+
+                        Operand = NodesArena.Create<ConstructNode>(Type, std::move(Arguments),
+                            Type->Pos, Type->Line, Type->Column);
+                        break;
+                    }
+
                     if (auto Type = Cast<DataTypeNodeBase>(Operand))
                     {
                         Consume();
