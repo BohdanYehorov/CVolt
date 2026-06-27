@@ -4,6 +4,8 @@
 
 #include "Volt/Compiler/LLVMCompiler.h"
 
+#include <complex.h>
+
 namespace Volt
 {
     void LLVMCompiler::Compile()
@@ -206,12 +208,15 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
     {
-        const std::string Value = Identifier->Value.str();
+        llvm::StringRef Value = Identifier->Value;
 
         if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
             return Iter->second;
 
-        VoltUnreachableFmt("Cannot resolve symbol: '{}'", Value);
+        if (auto Iter = GlobalVariables.find(Value); Iter != GlobalVariables.end())
+            return Iter->second;
+
+        VoltUnreachableFmt("Cannot resolve symbol: '{}'", Value.str());
     }
 
     IRValue *LLVMCompiler::CompileRef(const RefNode *Ref)
@@ -525,11 +530,14 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileConstruct(const ConstructNode *Construct)
     {
+        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+        llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
+
         DataType* ClassTy = Construct->CompileTimeValue->GetType().GetType();
         auto StructTy = llvm::cast<llvm::StructType>(CContext.GetLLVMType(ClassTy));
         if (!StructTy)
             VoltUnreachable("Cannot construct non-struct type");
-        llvm::AllocaInst* ClassAlloca = Builder.CreateAlloca(StructTy);
+        llvm::AllocaInst* ClassAlloca = TmpBuilder.CreateAlloca(StructTy);
 
         ArgsVector<llvm::Value*> LLVMArgs;
         LLVMArgs.reserve(Construct->Args.size() + 1);
@@ -554,9 +562,35 @@ namespace Volt
     IRValue *LLVMCompiler::CompileVariable(const VariableNode *Var)
     {
         DataType* VarType = Var->Type->ResolvedType;
+        llvm::Type* Type = CContext.GetLLVMType(VarType);
+
+        if (!InFunction)
+        {
+            llvm::Constant* Constant = nullptr;
+
+            if (Var->Value)
+            {
+                IRValue* Value = CompileToRValue(Var->Value);
+                if (!Value) return nullptr;
+
+                Value = Value->CastTo(VarType, Builder, CContext);
+                if (!Value) return nullptr;
+
+                Constant = llvm::cast<llvm::Constant>(Value->GetValue());
+                if (!Constant)
+                    VoltUnreachable("Cannot init global variable with non-constant value");
+            }
+            else
+                Constant = llvm::Constant::getNullValue(Type);
+
+            auto GlobalVar = new llvm::GlobalVariable(*Module, Type,
+                false, llvm::GlobalVariable::ExternalLinkage, Constant, Var->Name.str());
+
+            GlobalVariables[Var->Name] = Create<IRValue>(GlobalVar, VarType, true);
+            return nullptr;
+        }
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        llvm::Type* Type = CContext.GetLLVMType(VarType);
 
         llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
         llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
@@ -638,8 +672,10 @@ namespace Volt
             VoltUnreachableFmt("Function definition '{}' is unknown", FuncName);
 
         FunctionReturnType = Function->ReturnType->ResolvedType;
+        InFunction = true;
         CompileBlock(Cast<BlockNode>(Function->Body));
         FunctionReturnType = nullptr;
+        InFunction = false;
 
         llvm::BasicBlock* Bb = Builder.GetInsertBlock();
 
@@ -718,8 +754,10 @@ namespace Volt
             VoltUnreachableFmt("Function definition '{}' is unknown", FuncName);
 
         FunctionReturnType = Method->ReturnType->ResolvedType;
+        InFunction = true;
         CompileBlock(Cast<BlockNode>(Method->Body));
         FunctionReturnType = nullptr;
+        InFunction = false;
 
         llvm::BasicBlock* Bb = Builder.GetInsertBlock();
 

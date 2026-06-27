@@ -29,6 +29,7 @@ namespace Volt
         };
 
         using VariableTable = llvm::StringMap<IRValue*>;
+        using GlobalVariableTable = llvm::StringMap<IRValue*>;
 
     private:
         CompilationContext& CContext;
@@ -39,6 +40,9 @@ namespace Volt
         Arena& CompilerArena;
 
         ASTNode* ASTTree;
+
+        GlobalVariableTable GlobalVariables;
+
         BuiltinFunctionTable& BuiltinFuncTable;
         VariableTable SymbolTable;
 
@@ -47,6 +51,7 @@ namespace Volt
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
         DataType* FunctionReturnType = nullptr;
+        bool InFunction = false;
 
     public:
         LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)

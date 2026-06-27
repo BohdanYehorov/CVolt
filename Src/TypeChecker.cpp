@@ -174,14 +174,20 @@ namespace Volt
     SemaResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
         ExprAddress* VarAddr = GetVariable(Identifier->Value.str());
-        if (!VarAddr)
+        if (VarAddr)
         {
-            SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
-            return nullptr;
+            Identifier->CompileTimeValue = VarAddr->GetValue();
+            return VarAddr;
         }
 
-        Identifier->CompileTimeValue = VarAddr->GetValue();
-        return VarAddr;
+        if (auto Iter = GlobalVariables.find(Identifier->Value); Iter != GlobalVariables.end())
+        {
+            Identifier->CompileTimeValue = Iter->second;
+            return Iter->second;
+        }
+
+        SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
+        return nullptr;
     }
 
     SemaResult *TypeChecker::VisitRef(RefNode *Ref)
@@ -632,6 +638,25 @@ namespace Volt
         if (!VarType)
             return nullptr;
 
+        if (!InFunction)
+        {
+            ExprResult* Value = VisitToRValue(Variable->Value);
+
+            if (Value && !Value->GetType().ImplicitCast(VarType))
+            {
+                SendError(TypeErrorKind::AssignmentTypeMismatch,
+                    Variable,{ Variable->Name.str(),
+                    VarType->ToString(), Value->GetType()->ToString() });
+                return nullptr;
+            }
+
+            if (!VarType.HasQualifier(QualType::CONST))
+                Value = ExprResult::CreateEmpty(VarType, MainArena);
+
+            GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+            return nullptr;
+        }
+
         const std::string& Name{ Variable->Name };
         if (auto Iter = std::find_if(
             ScopeStack.Back().Begin(), ScopeStack.Back().End(),
@@ -681,8 +706,10 @@ namespace Volt
         Functions[Signature] = FuncCallee;
 
         FunctionReturnType = FuncCallee->ReturnType;
+        InFunction = true;
         VisitBlock(Cast<BlockNode>(Function->Body));
         FunctionReturnType = {};
+        InFunction = false;
 
         ExitScope();
         return nullptr;
@@ -697,8 +724,10 @@ namespace Volt
         Type->AddMethod(Signature, FuncCallee);
 
         FunctionReturnType = FuncCallee->ReturnType;
+        InFunction = true;
         VisitBlock(Cast<BlockNode>(Method->Body));
         FunctionReturnType = {};
+        InFunction = false;
 
         ExitScope();
     }

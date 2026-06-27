@@ -30,6 +30,7 @@ namespace Volt
         };
 
         using VariableTable = llvm::StringMap<ExprAddress*>;
+        using GlobalVariableTable = llvm::StringMap<ExprAddress*>;
 
     private:
         CompilationContext& CContext;
@@ -41,13 +42,15 @@ namespace Volt
 
         Array<TypeError>& Errors;
 
+        GlobalVariableTable GlobalVariables;
+
         FunctionTable Functions;
         VariableTable Variables;
 
         Array<Array<ScopeEntry>> ScopeStack;
 
-        SmallVec8<std::pair<std::string, QualType>> FunctionParams;
         QualType FunctionReturnType;
+        bool InFunction = false;
 
     public:
         TypeChecker(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
