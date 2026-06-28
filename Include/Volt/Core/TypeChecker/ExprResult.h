@@ -27,7 +27,6 @@ namespace Volt
 		static ExprResult* CreateBool(QualType BoolType, bool Bool, Arena& MainArena);
 		static ExprResult* CreateChar(QualType CharType, char Char, Arena& MainArena);
 		static ExprResult* CreatePointer(QualType PointerType, ExprAddress* Pointer, Arena& MainArena);
-
 		static ExprResult* CreateEmpty(QualType Type, Arena& MainArena);
 
 		template <typename T>

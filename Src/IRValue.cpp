@@ -65,6 +65,8 @@ namespace Volt
 				return CastFloatTo(To, Builder, CContext);
 			case TypeCategory::POINTER:
 				return CastPointerTo(To, Builder, CContext);
+			case TypeCategory::NULL_POINTER:
+				return CastNullPointerTo(To, Builder, CContext);
 			case TypeCategory::REFERENCE:
 				return CastReferenceTo(To, Builder, CContext);
 			default:
@@ -487,6 +489,14 @@ namespace Volt
 			default:
 				return nullptr;
 		}
+	}
+
+	llvm::Value *IRValue::CastNullPointerTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)
+	{
+		if (Type == To || To->IsPointerType())
+			return Value;
+
+		return nullptr;
 	}
 
 	llvm::Value* IRValue::CastReferenceTo(DataType *To, llvm::IRBuilder<> &Builder, CompilationContext &CContext)

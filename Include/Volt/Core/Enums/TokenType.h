@@ -30,6 +30,7 @@ namespace Volt
 		BOOL_TRUE,
 		BOOL_FALSE,
 		CHAR,
+		NULL_POINTER,
 
 		OP_ADD,
 		OP_SUB,

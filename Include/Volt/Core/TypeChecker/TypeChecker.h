@@ -86,6 +86,7 @@ namespace Volt
         SemaResult *VisitChar(CharNode *Char);
         SemaResult *VisitString(StringNode *String);
         SemaResult *VisitArray(ArrayNode *Array);
+        SemaResult *VisitNullPointer(NullPointerNode* NullPtr);
         SemaResult *VisitIdentifier(IdentifierNode *Identifier);
         SemaResult *VisitRef(RefNode *Ref);
         SemaResult *VisitUnref(UnrefNode *Unref);

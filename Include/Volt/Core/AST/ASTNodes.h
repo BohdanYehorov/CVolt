@@ -127,6 +127,14 @@ namespace Volt
         }
     };
 
+    class NullPointerNode : public ASTNode
+    {
+        GENERATED_BODY(NullPointerNode, ASTNode)
+    public:
+        NullPointerNode(size_t Pos, size_t Line, size_t Column)
+            :  ASTNode(Pos, Line, Column) {}
+    };
+
     class RefNode : public ASTNode
     {
         GENERATED_BODY(RefNode, ASTNode)

@@ -73,6 +73,8 @@ namespace Volt
             return CompileString(String);
         if (const auto Array = Cast<const ArrayNode>(Node))
             return CompileArray(Array);
+        if (const auto NullPointer = Cast<const NullPointerNode>(Node))
+            return CompileNullPointer(NullPointer);
         if (const auto Identifier = Cast<const IdentifierNode>(Node))
             return CompileIdentifier(Identifier);
         if (const auto Ref = Cast<const RefNode>(Node))
@@ -204,6 +206,12 @@ namespace Volt
         }
 
         return Create<IRValue>(Arr, Array->CompileTimeValue->GetType().GetType());
+    }
+
+    IRValue *LLVMCompiler::CompileNullPointer(const NullPointerNode *NullPtr)
+    {
+        return Create<IRValue>(llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(CContext.GetLLVMType(
+            NullPtr->CompileTimeValue->GetType().GetType()))), NullPtr->CompileTimeValue->GetType().GetType());
     }
 
     IRValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)

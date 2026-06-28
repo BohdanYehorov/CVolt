@@ -35,6 +35,8 @@ namespace Volt
             return VisitString(String);
         if (auto Array = Cast<ArrayNode>(Node))
             return VisitArray(Array);
+        if (auto NullPtr = Cast<NullPointerNode>(Node))
+            return VisitNullPointer(NullPtr);
         if (auto Identifier = Cast<IdentifierNode>(Node))
             return VisitIdentifier(Identifier);
         if (auto Ref = Cast<RefNode>(Node))
@@ -169,6 +171,12 @@ namespace Volt
         Array->CompileTimeValue = ExprResult::CreateEmpty(QualType(
             CContext.GetArrayType(ElementsType, Elements.size()), QualType::CONST), MainArena);
         return Array->CompileTimeValue;
+    }
+
+    SemaResult *TypeChecker::VisitNullPointer(NullPointerNode *NullPtr)
+    {
+        NullPtr->CompileTimeValue = ExprResult::CreateEmpty(CContext.GetNullPointerType(), MainArena);
+        return NullPtr->CompileTimeValue;
     }
 
     SemaResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)

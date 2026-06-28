@@ -282,6 +282,8 @@ namespace Volt
 			TokenType = TokenType::BOOL_TRUE;
 		else if (Lexeme == "false")
 			TokenType = TokenType::BOOL_FALSE;
+		else if (Lexeme == "null")
+			TokenType = TokenType::NULL_POINTER;
 
 		Tok = Token(
 			TokenType, LexemeRef,

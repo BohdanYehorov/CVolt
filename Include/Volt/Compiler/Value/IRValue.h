@@ -67,6 +67,7 @@ namespace Volt
         [[nodiscard]] llvm::Value* CastIntegerTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
         [[nodiscard]] llvm::Value* CastFloatTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
         [[nodiscard]] llvm::Value* CastPointerTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
+        [[nodiscard]] llvm::Value* CastNullPointerTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
         [[nodiscard]] llvm::Value* CastReferenceTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
     };
 }

@@ -1446,6 +1446,9 @@ namespace Volt
                 Consume();
                 return NodesArena.Create<StringNode>(
                     GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
+            case NULL_POINTER:
+                Consume();
+                return NodesArena.Create<NullPointerNode>(Tok.Pos, Tok.Line, Tok.Column);
             case OP_LPAREN:
             {
                 Consume();

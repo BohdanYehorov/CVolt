@@ -76,6 +76,7 @@ namespace Volt
         IRValue *CompileChar(const CharNode *Char);
         IRValue *CompileString(const StringNode *String);
         IRValue *CompileArray(const ArrayNode *Array);
+        IRValue *CompileNullPointer(const NullPointerNode* NullPtr);
         IRValue *CompileIdentifier(const IdentifierNode *Identifier);
         IRValue *CompileRef(const RefNode *Ref);
         IRValue *CompileUnref(const UnrefNode *Unref);

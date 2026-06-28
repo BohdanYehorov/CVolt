@@ -28,6 +28,7 @@ namespace Volt
 		IntegerType* CachedIntegerTypes[8]  = { nullptr, nullptr, nullptr, nullptr,
 												nullptr, nullptr, nullptr, nullptr };
 		FloatingPointType* CachedFPTypes[4] = { nullptr, nullptr, nullptr, nullptr };
+		NullPointerType* CachedNullPtrType = nullptr;
 
 		llvm::FoldingSet<PointerType> PointerTypes;
 		llvm::FoldingSet<ReferenceType> ReferenceTypes;
@@ -68,6 +69,7 @@ namespace Volt
 		[[nodiscard]] IntegerType* GetIntegerType(size_t BitWidth, bool IsSigned = true);
 		[[nodiscard]] FloatingPointType* GetFPType(size_t BitWidth);
 		[[nodiscard]] PointerType* GetPointerType(QualType BaseType);
+		[[nodiscard]] NullPointerType* GetNullPointerType();
 		[[nodiscard]] ReferenceType* GetReferenceType(QualType BaseType);
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 

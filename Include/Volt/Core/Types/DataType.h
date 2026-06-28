@@ -28,7 +28,8 @@ namespace Volt
         POINTER,
         REFERENCE,
         ARRAY,
-        CLASS
+        CLASS,
+        NULL_POINTER
     };
 
     class alignas(8) DataType : public Object
@@ -59,6 +60,7 @@ namespace Volt
         [[nodiscard]] bool IsIntegerType() const { return Category == TypeCategory::INTEGER; }
         [[nodiscard]] bool IsFloatingPointType() const { return Category == TypeCategory::FLOATING_POINT; }
         [[nodiscard]] bool IsPointerType() const { return Category == TypeCategory::POINTER; }
+        [[nodiscard]] bool IsNullPointerType() const { return Category == TypeCategory::NULL_POINTER; }
         [[nodiscard]] bool IsReferenceType() const { return Category == TypeCategory::REFERENCE; }
         [[nodiscard]] bool IsArrayType() const { return Category == TypeCategory::ARRAY; }
         [[nodiscard]] bool IsClassType() const { return Category == TypeCategory::CLASS; }
@@ -292,6 +294,21 @@ namespace Volt
         }
 
         bool CastTo(DataType *To, bool Explicit) const override;
+    };
+
+    class NullPointerType : public DataType
+    {
+        GENERATED_BODY(NullPointerType, DataType)
+    public:
+        NullPointerType() : DataType(TypeCategory::NULL_POINTER) {}
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            return llvm::PointerType::get(Context, 0);
+        }
+
+        int GetRank() const override { return -1; }
+        std::string ToString() const override { return "null_ty"; }
+        bool CastTo(DataType *To, bool Explicit) const override { return this == To || To->IsPointerType(); }
     };
 
     class ReferenceType : public DataType, public llvm::FoldingSetNode

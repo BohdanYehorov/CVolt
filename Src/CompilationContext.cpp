@@ -82,6 +82,14 @@ namespace Volt
 		return Type;
 	}
 
+	NullPointerType *CompilationContext::GetNullPointerType()
+	{
+		if (CachedNullPtrType)
+			return CachedNullPtrType;
+
+		return MainArena.Create<NullPointerType>();
+	}
+
 	ReferenceType *CompilationContext::GetReferenceType(QualType BaseType)
 	{
 		llvm::FoldingSetNodeID ID;

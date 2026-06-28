@@ -3,18 +3,22 @@ class IntArray
     let:i32* Data;
     let:i32 Size;
 
-    fun:void Init()
+    fun:void Construct()
     {
+        this.Data = null;
         this.Size = 0;
     }
 
     fun:void Add(i32 Num)
     {
         let:i32* NewData = i32*(MemAlloc((this.Size + 1) * 4));
-        MemCpy(NewData, this.Data, this.Size * 4);
-        NewData[this.Size] = Num;
-        if (this.Size != 0)
+        if (this.Data)
+        {
+            MemCpy(NewData, this.Data, this.Size * 4);
             MemFree(this.Data);
+        }
+
+        NewData[this.Size] = Num;
         this.Data = NewData;
         this.Size++;
     }
@@ -36,15 +40,14 @@ class IntArray
 
     fun:void Free()
     {
-        if (this.Size != 0)
+        if (this.Data)
             MemFree(this.Data);
     }
 }
 
 fun:i32 Main()
 {
-    let:IntArray Arr;
-    Arr.Init();
+    let:IntArray Arr = IntArray();
 
     for (let:i32 i = 0; i < 10; i++)
         Arr.PushBack(i);
