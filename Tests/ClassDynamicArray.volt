@@ -43,7 +43,7 @@ class IntArray
         if (this.Data)
             MemFree(this.Data);
     }
-}
+};
 
 fun:i32 Main()
 {

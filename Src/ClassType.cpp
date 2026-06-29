@@ -17,6 +17,40 @@ namespace Volt
         return llvm::StructType::create(Context, Types, Name);
     }
 
+    size_t ClassType::GetSize() const
+    {
+        if (Size == 0)
+            ComputeLayout();
+        return Size;
+    }
+
+    size_t ClassType::GetAlignment() const
+    {
+        if (Alignment == 0)
+            ComputeLayout();
+        return Alignment;
+    }
+
+    void ClassType::ComputeLayout() const
+    {
+        if (Fields.Empty())
+        {
+            Size = 1;
+            Alignment = 1;
+            return;
+        }
+
+        for (const auto& [_, Type] : Fields)
+        {
+            size_t FieldSize = Type->GetSize();
+            size_t FieldAlign = Type->GetAlignment();
+
+            Size = AlignUp(Size, FieldAlign) + FieldSize;
+            Alignment = std::max(Alignment, FieldAlign);
+        }
+        Size = AlignUp(Size, Alignment);
+    }
+
     size_t ClassType::GetFieldIndex(const std::string &Name)
     {
         for (size_t i = 0; i < Fields.Length(); i++)

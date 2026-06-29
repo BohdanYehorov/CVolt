@@ -48,6 +48,8 @@ namespace Volt
         virtual llvm::Type* ToLLVMType(llvm::LLVMContext& Context) const = 0;
         virtual int GetRank() const = 0;
         virtual std::string ToString() const = 0;
+        virtual size_t GetSize() const = 0;
+        virtual size_t GetAlignment() const = 0;
 
         virtual bool CastTo(DataType* To, bool Explicit) const = 0;
 
@@ -79,7 +81,6 @@ namespace Volt
             static_assert((std::same_as<Args_, TypeCategory> && ...));
             return ((Args == Category) || ...);
         }
-
     protected:
         static DataType* GetJointType(DataType* Left, DataType* Right);
 
@@ -188,6 +189,8 @@ namespace Volt
 
         int GetRank() const override { return 0; }
         std::string ToString() const override { return "void"; }
+        size_t GetSize() const override { VoltUnreachable("Void type has not size"); }
+        size_t GetAlignment() const override { VoltUnreachable("Void type has not alignment"); }
 
         bool CastTo(DataType *To, bool Explicit) const override { return false; }
     };
@@ -206,6 +209,8 @@ namespace Volt
 
         int GetRank() const override { return 1; }
         std::string ToString() const override { return "bool"; }
+        size_t GetSize() const override { return 1; }
+        size_t GetAlignment() const override { return 1; }
 
         bool CastTo(DataType* To, bool Explicit) const override;
     };
@@ -224,6 +229,8 @@ namespace Volt
 
         int GetRank() const override { return 2; }
         std::string ToString() const override { return "char"; }
+        size_t GetSize() const override { return 1; }
+        size_t GetAlignment() const override { return 1; }
 
         bool CastTo(DataType *To, bool Explicit) const override;
     };
@@ -245,6 +252,8 @@ namespace Volt
 
         int GetRank() const override { return std::countr_zero(BitWidth); }
         std::string ToString() const override;
+        size_t GetSize() const override { return BitWidth/8; }
+        size_t GetAlignment() const override { return BitWidth/8; }
 
         bool CastTo(DataType *To, bool Explicit) const override;
     };
@@ -261,6 +270,8 @@ namespace Volt
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
         int GetRank() const override { return std::countr_zero(BitWidth) + 3; }
         std::string ToString() const override;
+        size_t GetSize() const override { return BitWidth/8; }
+        size_t GetAlignment() const override { return BitWidth/8; }
 
         bool CastTo(DataType *To, bool Explicit) const override;
     };
@@ -281,6 +292,8 @@ namespace Volt
 
         int GetRank() const override { return 11; }
         std::string ToString() const override;
+        size_t GetSize() const override { return 8; }
+        size_t GetAlignment() const override { return 8; }
 
         void Profile(llvm::FoldingSetNodeID& ID) const
         {
@@ -308,6 +321,9 @@ namespace Volt
 
         int GetRank() const override { return -1; }
         std::string ToString() const override { return "null_ty"; }
+        size_t GetSize() const override { return 8; }
+        size_t GetAlignment() const override { return 8; }
+
         bool CastTo(DataType *To, bool Explicit) const override { return this == To || To->IsPointerType(); }
     };
 
@@ -327,6 +343,8 @@ namespace Volt
 
         int GetRank() const override { return BaseType ? BaseType->GetRank() : -1; }
         std::string ToString() const override { return BaseType ? BaseType.ToString() + "$" : "?"; }
+        size_t GetSize() const override { return BaseType->GetSize(); }
+        size_t GetAlignment() const override { return BaseType->GetAlignment(); }
 
         bool CanBind(QualType Type) const;
 
@@ -366,6 +384,12 @@ namespace Volt
 
         int GetRank() const override { return 12; }
         std::string ToString() const override;
+        size_t GetSize() const override
+        {
+            VoltAssert(LengthInit);
+            return BaseType->GetSize() * Length;
+        }
+        size_t GetAlignment() const override { return BaseType->GetAlignment(); }
 
         void Profile(llvm::FoldingSetNodeID& ID) const
         {
