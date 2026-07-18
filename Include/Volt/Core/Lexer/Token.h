@@ -5,12 +5,21 @@
 #ifndef CVOLT_TOKEN_H
 #define CVOLT_TOKEN_H
 
-#include "Volt/Core/Memory/BufferView.h"
 #include "Volt/Core/Enums/TokenType.h"
 
 namespace Volt
 {
     class CompilationContext;
+
+	struct StringRef
+	{
+		size_t Index = 0;
+		size_t Length = 0;
+
+		StringRef() = default;
+		StringRef(size_t Index, size_t Length)
+			: Index(Index), Length(Length) {}
+	};
 
 	struct Token
     {

@@ -419,7 +419,7 @@ namespace Volt
 				else
 				{
 					SendError(LexErrorType::InvalidNumber, StartLine, StartCol,
-						{ std::string(Code.CStr() + Lexeme.Ptr, Lexeme.Length) });
+						{ std::string(Code.CStr() + Lexeme.Index, Lexeme.Length) });
 					Tok = InvalidToken(StartPos, StartLine, StartCol);
 					return true;
 				}
@@ -458,7 +458,7 @@ namespace Volt
 			OperatorLexeme.Length = Len;
 
 			if (auto Iter = Operators.find(llvm::StringRef(
-				Code.CStr() + OperatorLexeme.Ptr, Len)); Iter != Operators.end())
+				Code.CStr() + OperatorLexeme.Index, Len)); Iter != Operators.end())
 			{
 				Tok = Token(Iter->second, OperatorLexeme, StartPos, StartLine, StartCol);
 				MovePos(Len);

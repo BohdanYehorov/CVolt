@@ -9,10 +9,10 @@ namespace Volt
 {
 	llvm::StringRef CompilationContext::GetTokenLexeme(StringRef Ref) const
 	{
-		if (Ref.Ptr + Ref.Length > Code.Length())
+		if (Ref.Index + Ref.Length > Code.Length())
 			VoltUnreachable("Ref out of code length");
 
-		return { Code.CStr() + Ref.Ptr, Ref.Length };
+		return { Code.CStr() + Ref.Index, Ref.Length };
 	}
 
 	VoidType *CompilationContext::GetVoidType()

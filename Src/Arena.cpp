@@ -8,64 +8,52 @@
 
 namespace Volt
 {
-    void ArenaAllocator::Allocate(size_t InSize)
+    ArenaAllocator & ArenaAllocator::operator=(ArenaAllocator &&Other) noexcept
     {
-        Size = InSize;
-        Data = static_cast<std::byte*>(::operator new(InSize));
+        if (this != &Other)
+        {
+            if (Data)
+                operator delete(Data);
+
+            Data = Other.Data;
+            Size = Other.Size;
+            Pos = Other.Pos;
+
+            Other.Data = nullptr;
+            Other.Size = 0;
+            Other.Pos = 0;
+        }
+
+        return *this;
     }
 
-    void ArenaAllocator::Deallocate()
+    void * ArenaAllocator::Alloc(size_t AllocSize, size_t Align)
     {
-        if (!Data) return;
-        ::operator delete(Data);
-        Data = nullptr;
-        Size = 0;
-    }
+        size_t Padding = CalculatePadding(Align);
+        assert(Pos + Padding + AllocSize <= Size);
 
-    void* ArenaAllocator::Write(UIntPtrTy Ptr, const void* InData, size_t InSize, size_t Align)
-    {
-        size_t Padding = CalculatePadding(Align, Ptr);
-        if (Padding != 0)
-            VoltUnreachable("Ref is not aligned");
-
-        std::memcpy(Data + Ptr, InData, InSize);
-
-        UsedSize = std::max(UsedSize, Ptr + InSize);
-        return Data + Ptr;
-    }
-
-    size_t ArenaAllocator::CalculatePadding(size_t Align, size_t Pos)
-    {
-        return (Align - (Pos % Align)) % Align;
-    }
-
-    void ArenaStream::Deallocate()
-    {
-        Alloc.Deallocate();
-        WritePtr = 0;
-        ReadPtr = 0;
-    }
-
-    void* ArenaStream::Write(const void *InData, size_t InSize, size_t Align)
-    {
-        WritePtr += ArenaAllocator::CalculatePadding(Align, WritePtr);
-        void* Ptr = Alloc.Write(WritePtr, InData, InSize, Align);
-        WritePtr += InSize;
+        Pos += Padding;
+        void *Ptr = Data + Pos;
+        Pos += AllocSize;
         return Ptr;
     }
 
-    StringRef ArenaStream::Write(const std::string &Str)
+    bool ArenaAllocator::CanFit(size_t AllocSize, size_t Align) const
     {
-        StringRef Ref = Alloc.Write(WritePtr, Str);
-        WritePtr += Str.size();
-        return Ref;
+        return Pos + CalculatePadding(Align) + AllocSize <= Size;
     }
 
-    BufferStringView ArenaStream::Read(size_t Count) const
+    Arena::~Arena()
     {
-        ReadPtr += ArenaAllocator::CalculatePadding(alignof(char), ReadPtr);
-        BufferStringView Ptr = Alloc.Read(ReadPtr, Count);
-        ReadPtr += sizeof(char) * Count;
-        return Ptr;
+        for (auto& D : Destructors)
+            D.first(D.second);
+    }
+
+    void * Arena::Alloc(size_t Size, size_t Align)
+    {
+        if (Blocks.empty() || !Blocks.back().CanFit(Size, Align))
+            Blocks.emplace_back(BlockSize);
+
+        return Blocks.back().Alloc(Size, Align);
     }
 }

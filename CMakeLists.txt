@@ -10,7 +10,6 @@ set(SOURCES
         Src/Arena.cpp
         Src/Parser.cpp
         Src/Operator.cpp
-        Src/BufferView.cpp
         Src/LLVMCompiler.cpp
         Src/ParserFuzzer.cpp
         Src/TypeChecker.cpp
