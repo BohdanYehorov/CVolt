@@ -655,6 +655,9 @@ namespace Volt
                 SendError(TypeErrorKind::AssignmentTypeMismatch,
                     Variable,{ Variable->Name.str(),
                     VarType->ToString(), Value->GetType()->ToString() });
+
+                Value = ExprResult::CreateEmpty(VarType, MainArena);
+                GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
                 return nullptr;
             }
 
@@ -694,6 +697,8 @@ namespace Volt
             SendError(TypeErrorKind::AssignmentTypeMismatch,
                 Variable,{ Variable->Name.str(),
                 VarType->ToString(), Value->GetType()->ToString() });
+            Value = ExprResult::CreateEmpty(VarType, MainArena);
+            DeclareVariable(Variable->Name.str(), MainArena.Create<ExprAddress>(Value));
             return nullptr;
         }
 

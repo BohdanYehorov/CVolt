@@ -118,13 +118,8 @@ namespace Volt
         GENERATED_BODY(ArrayNode, ASTNode)
     public:
         SmallVec16<ASTNode*> Elements;
-        ArrayNode(size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column) {}
-
-        void AddItem(ASTNode* El)
-        {
-            Elements.push_back(El);
-        }
+        ArrayNode(SmallVec16<ASTNode*>&& Elements, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Elements(std::move(Elements)) {}
     };
 
     class NullPointerNode : public ASTNode
@@ -231,13 +226,9 @@ namespace Volt
         CalleeBase* ResolvedCallee = nullptr;
 
         ASTNode* Callee;
-        llvm::TinyPtrVector<ASTNode*> Arguments;
-        CallNode(ASTNode* Callee, size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Callee(Callee) {}
-        void AddArgument(ASTNode* Arg)
-        {
-            Arguments.push_back(Arg);
-        }
+        ArgsVector<ASTNode*> Arguments;
+        CallNode(ASTNode* Callee, ArgsVector<ASTNode*>&& Arguments, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Callee(Callee), Arguments(std::move(Arguments)) {}
     };
 
     class SubscriptNode : public ASTNode
@@ -383,36 +374,13 @@ namespace Volt
 
         DataTypeNodeBase* ReturnType;
         llvm::StringRef Name;
-        llvm::TinyPtrVector<ParamNode*> Params;
-        ASTNode* Body = nullptr;
+        ArgsVector<ParamNode*> Params;
+        BlockNode* Body;
         FunctionNode(DataTypeNodeBase* Type, llvm::StringRef Name,
+            ArgsVector<ParamNode*>&& Params, BlockNode* Body,
             size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), ReturnType(Type), Name(Name) {}
-
-        bool AddParam(ParamNode* Prm)
-        {
-            if (std::find_if(
-            Params.begin(), Params.end(),
-            [&Prm](const ParamNode* Value)
-                {
-                    return Prm->Name == Value->Name;
-                }) != Params.end())
-                    return false;
-
-            if (!Prm->DefaultValue)
-            {
-                if (std::find_if(
-            Params.begin(), Params.end(),
-            [&Prm](const ParamNode* Value)
-                {
-                    return Value->DefaultValue;
-                }) != Params.end())
-                    return false;
-            }
-
-            Params.push_back(Prm);
-            return true;
-        }
+            : ASTNode(Pos, Line, Column), ReturnType(Type), Name(Name),
+            Params(std::move(Params)), Body(Body) {}
     };
 
     class ReturnNode : public ASTNode

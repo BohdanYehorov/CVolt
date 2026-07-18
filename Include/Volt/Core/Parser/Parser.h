@@ -16,22 +16,6 @@ namespace Volt
     class Parser
     {
     private:
-        struct DepthIncScope
-        {
-            size_t& Depth;
-            DepthIncScope(size_t& Depth) : Depth(Depth)
-            {
-                if (++Depth > 10000)
-                    VoltUnreachable("Big depth");
-            }
-
-            ~DepthIncScope()
-            {
-                --Depth;
-            }
-        };
-
-    private:
         CompilationContext& CContext;
         Arena& NodesArena;
 
@@ -48,9 +32,7 @@ namespace Volt
         bool InLoop = false;
 
         llvm::StringSet<> CustomTypes;
-
         size_t Depth = 0;
-
     public:
         Parser(CompilationContext& CContext)
             : CContext(CContext), NodesArena(CContext.MainArena),
@@ -60,10 +42,25 @@ namespace Volt
 
     private:
         [[nodiscard]] bool IsValidIndex() const { return Index < Tokens.Length(); }
-        [[nodiscard]] const Token& CurrentToken() const { return Tokens[Index]; }
-        [[nodiscard]] const Token& PrevToken() const { return Tokens[Index - 1]; }
+        [[nodiscard]] const Token& CurrentToken() const
+        {
+            VoltAssert(Index < Tokens.Length() && "Out of array range");
+            return Tokens[Index];
+        }
+        [[nodiscard]] const Token& PrevToken() const
+        {
+            VoltAssert(Index - 1 < Tokens.Length() && "Out of array range");
+            return Tokens[Index - 1];
+        }
+        [[nodiscard]] const Token& CurrentOrEndToken() const
+        {
+            VoltAssert(!Tokens.Empty() && "Tokens list is empty");
+            return Index < Tokens.Length() ? Tokens[Index] : Tokens.Back();
+        }
+
         bool Consume();
         void SkipSemicolons();
+        void SkipExpressionInBrackets(TokenType OpenBracket, TokenType CloseBracket, int ConsumedBrackets = 0);
         void Synchronize();
         void JumpToNextGlobalDeclaration();
         bool GetTokenIf(size_t Index, TokenType Type, const Token*& TokPtr) const;
@@ -73,6 +70,8 @@ namespace Volt
         bool ConsumeIf(TokenType Type, const Token*& TokPtr);
         bool ConsumeIf(TokenType Type);
         bool Expect(TokenType Type);
+
+        bool ExpectAndConsume(TokenType Type);
 
         [[nodiscard]] llvm::StringRef GetTokenLexeme(const Token& Tok) const
         {
@@ -86,22 +85,25 @@ namespace Volt
         ASTNode* ParseSequence();
         ASTNode* ParseBlock();
 
-        DataTypeNodeBase* ParseDataType() { return ParseReferenceType(); }
-        DataTypeNodeBase* ParseReferenceType();
-        DataTypeNodeBase* ParseQualType();
-        DataTypeNodeBase* ParseWrappedType();
-        DataTypeNodeBase* ParsePrimitiveType();
+        ASTNode* ParseDataType() { return ParseReferenceType(); }
+        ASTNode* ParseReferenceType();
+        ASTNode* ParseQualType();
+        ASTNode* ParseWrappedType();
+        ASTNode* ParsePrimitiveType();
 
-        ParamNode* ParseParameter();
-        FunctionNode* ParseFunction();
-        VariableNode* ParseVariable();
-        ClassNode* ParseClass();
-        IfNode* ParseIf();
-        WhileNode* ParseWhile();
-        ForNode* ParseFor();
-        ReturnNode* ParseReturn();
-        BreakNode* ParseBreak();
-        ContinueNode* ParseContinue();
+        ASTNode* ParseParameter();
+        ASTNode* ParseFunction();
+        ASTNode* ParseVariable();
+        ASTNode* ParseClass();
+        ASTNode* ParseIf();
+        ASTNode* ParseWhile();
+        ASTNode* ParseFor();
+        ASTNode* ParseForInitialization();
+        ASTNode* ParseForCondition();
+        ASTNode* ParseFotIteration();
+        ASTNode* ParseReturn();
+        ASTNode* ParseBreak();
+        ASTNode* ParseContinue();
 
         ASTNode* ParseExpression();
         ASTNode* ParseStatement();
@@ -122,7 +124,56 @@ namespace Volt
 
         [[nodiscard]] ASTNode* CreateInteger(const Token& Tok) const;
         [[nodiscard]] ASTNode* CreateFloatingPoint(const Token& Tok) const;
+
+        bool ParseExpressionsSeparatedByComma(ArgsVector<ASTNode*>& Nodes, TokenType StopToken);
+        bool SkipToToken(TokenType Type);
+
+        template <typename ...Args_>
+        TokenType JumpToOneOfTokens(Args_... Types);
+
+        [[nodiscard]] ErrorNode* CreateErrorNode(size_t Pos, size_t Line, size_t Column) const
+        {
+            return NodesArena.Create<ErrorNode>(Pos, Line, Column);
+        }
+        [[nodiscard]] ErrorNode* CreateErrorNodeOnCurrentOrEndToken() const
+        {
+            const Token& Tok = CurrentOrEndToken();
+            return NodesArena.Create<ErrorNode>(Tok.Pos, Tok.Line, Tok.Column);
+        }
+
+        [[nodiscard]] static bool IsErrorNode(ASTNode* Node) { return IsA<ErrorNode>(Node); }
+        [[nodiscard]] static bool IsValidNode(ASTNode* Node) { return Node && !IsErrorNode(Node); }
     };
+
+    template<typename ... Args_>
+    TokenType Parser::JumpToOneOfTokens(Args_... Types)
+    {
+        using enum TokenType;
+
+        while (IsValidIndex())
+        {
+            const Token& Tok = CurrentToken();
+            if (Tok.IsOneOf(Types...))
+                return Tok.Type;
+
+            switch (Tok.Type)
+            {
+                case OP_LPAREN:
+                    SkipExpressionInBrackets(OP_LPAREN, OP_RPAREN);
+                    break;
+                case OP_LBRACKET:
+                    SkipExpressionInBrackets(OP_LBRACKET, OP_RBRACKET);
+                    break;
+                case OP_LBRACE:
+                    SkipExpressionInBrackets(OP_LBRACE, OP_RBRACE);
+                    break;
+                default:
+                    Consume();
+            }
+        }
+
+        return UNKNOWN;
+    }
 }
 
 #endif //CVOLT_PARSER_H

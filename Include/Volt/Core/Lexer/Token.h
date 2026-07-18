@@ -23,6 +23,13 @@ namespace Volt
             : Type(Type), Lexeme(Lexeme), Pos(Pos), Line(Line), Column(Column) {}
 
         [[nodiscard]] std::string ToString(const CompilationContext& Context) const;
+
+	    template <typename ...Args_>
+	    [[nodiscard]] bool IsOneOf(Args_... Types) const
+	    {
+	    	static_assert((std::same_as<Args_, TokenType> && ...));
+	    	return ((Types == Type) || ...);
+	    }
     };
 }
 
