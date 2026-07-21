@@ -14,6 +14,7 @@ namespace Volt
     {
         std::string Name;
         QualType Type;
+        size_t Offset = 0;
 
         Field(std::string Name, QualType Type)
             : Name(std::move(Name)), Type(Type) {}
@@ -32,7 +33,7 @@ namespace Volt
     public:
         ClassType(std::string Name, Array<Field> Fields)
             : DataType(TypeCategory::CLASS), Name(std::move(Name)),
-            Fields(std::move(Fields)) {}
+            Fields(std::move(Fields)) { ComputeLayout(); }
 
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
         int GetRank() const override { return -1; }

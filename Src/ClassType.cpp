@@ -4,6 +4,7 @@
 
 #include "Volt/Core/Types/ClassType.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
+#include <iostream>
 
 namespace Volt
 {
@@ -40,12 +41,14 @@ namespace Volt
             return;
         }
 
-        for (const auto& [_, Type] : Fields)
+        for (const auto& [_, Type, Offset] : Fields)
         {
             size_t FieldSize = Type->GetSize();
             size_t FieldAlign = Type->GetAlignment();
 
-            Size = AlignUp(Size, FieldAlign) + FieldSize;
+            size_t FieldOffset = AlignUp(Size, FieldAlign);
+            const_cast<size_t&>(Offset) = FieldOffset;
+            Size = FieldOffset + FieldSize;
             Alignment = std::max(Alignment, FieldAlign);
         }
         Size = AlignUp(Size, Alignment);

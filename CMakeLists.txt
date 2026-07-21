@@ -26,6 +26,7 @@ set(SOURCES
         Src/ExprAddress.cpp
         Src/DebugOutput.cpp
         Src/ClassType.cpp
+        Src/ClassInst.cpp
 )
 
 if (COMPILE_TO_LIB)

@@ -67,8 +67,6 @@ namespace Volt
 
         template <typename T, typename ...Args_>
         T *Create(Args_&&... Args);
-
-    private:
         void *Alloc(size_t Size, size_t Align);
     };
 
