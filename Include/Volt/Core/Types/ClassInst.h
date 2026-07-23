@@ -28,6 +28,7 @@ namespace Volt
         }
 
     public:
+        [[nodiscard]] ClassType* GetType() const { return Type; }
         [[nodiscard]] void *GetData() const { return Data; }
 
         [[nodiscard]] void *GetField(llvm::StringRef FieldName, size_t Size) const;
