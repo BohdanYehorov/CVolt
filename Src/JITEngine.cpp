@@ -21,7 +21,7 @@ namespace Volt
 
 	JITEngine::JITEngine(CompilationContext &CContext, BuiltinFunctionTable &Table)
 		: Module(std::move(CContext.Module)), BuiltinFuncTable(Table),
-		Jit(llvm::orc::LLJITBuilder().create())
+		Jit(llvm::orc::LLJITBuilder().create()), CContext(CContext)
 	{
 		if (!Jit)
 		{

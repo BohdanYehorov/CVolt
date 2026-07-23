@@ -7,6 +7,7 @@
 
 #include "DataType.h"
 #include "Volt/Core/TypeDefs/UMap.h"
+#include "Volt/ADT/Array.h"
 
 namespace Volt
 {
@@ -40,6 +41,7 @@ namespace Volt
         std::string ToString() const override { return Name; }
         size_t GetSize() const override;
         size_t GetAlignment() const override;
+        std::string GetIRName() const override { return std::to_string(Name.size()) + Name; }
 
         void ComputeLayout() const;
 

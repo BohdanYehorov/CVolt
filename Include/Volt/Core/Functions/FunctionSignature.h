@@ -32,6 +32,14 @@ namespace Volt
 
             return true;
         }
+
+        [[nodiscard]] std::string GetIRName() const
+        {
+            std::string IRName = std::to_string(Name.size()) + Name;
+            for (const auto& Param : Params)
+                IRName += Param.GetIRName();
+            return IRName;
+        }
     };
 }
 

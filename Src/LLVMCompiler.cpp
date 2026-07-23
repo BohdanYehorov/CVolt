@@ -3,6 +3,7 @@
 //
 
 #include "Volt/Compiler/LLVMCompiler.h"
+#include "Volt/Utils/IRNameBuilder.h"
 
 #include <complex.h>
 
@@ -645,9 +646,13 @@ namespace Volt
         SmallVec8<llvm::Type*> Params;
         Params.reserve(Function->Params.size());
 
+        IRNameBuilder NameBuilder(IRNameKind::Function);
+
+        NameBuilder.AddName(Function->Name.str());
         for (const auto Param : Function->Params)
         {
             DataType* ParamType = Param->Type->ResolvedType;
+            NameBuilder.AddParam(ParamType);
             Params.push_back(CContext.GetLLVMType(ParamType));
         }
 
@@ -657,7 +662,7 @@ namespace Volt
 
         const std::string& FuncName = Function->Name.str();
         llvm::Function* Func = llvm::Function::Create(
-            FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
+            FuncType, llvm::Function::ExternalLinkage, NameBuilder.GetIRName(), Module.get());
 
         const auto& FuncParams = Function->Params;
 
@@ -726,9 +731,14 @@ namespace Volt
         Params.reserve(Method->Params.size() + 1);
         Params.push_back(CContext.GetLLVMType(ThisType));
 
+        IRNameBuilder NameBuilder(IRNameKind::Method);
+        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Method->Name.str());
+
         for (const auto Param : Method->Params)
         {
             DataType* ParamType = Param->Type->ResolvedType;
+            NameBuilder.AddParam(ParamType);
             Params.push_back(CContext.GetLLVMType(ParamType));
         }
 
@@ -736,9 +746,8 @@ namespace Volt
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
 
-        std::string FuncName = std::format("{}.{}", Type->Name, Method->Name.str());
         llvm::Function* Func = llvm::Function::Create(
-            FuncType, llvm::Function::ExternalLinkage, FuncName, Module.get());
+            FuncType, llvm::Function::ExternalLinkage, NameBuilder.GetIRName(), Module.get());
 
         const auto& FuncParams = Method->Params;
 
@@ -756,6 +765,7 @@ namespace Volt
                 Create<IRValue>(Arg, ParamType, Builder));
         }
 
+        std::string FuncName = std::format("{}.{}", Type->Name, Method->Name.str());
         if (auto FuncCallee = Cast<FunctionCallee>(Method->ResolvedCallee))
             FuncCallee->Function = Func;
         else

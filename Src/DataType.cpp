@@ -62,6 +62,11 @@ namespace Volt
 		return Quals + GetType()->ToString();
 	}
 
+	std::string QualType::GetIRName() const
+	{
+		return HasQualifier(CONST) ? "C" + GetType()->GetIRName() : GetType()->GetIRName();
+	}
+
 	bool BoolType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
@@ -106,6 +111,30 @@ namespace Volt
 		return (IsSigned ? "i" : "u") + std::to_string(BitWidth);
 	}
 
+	std::string IntegerType::GetIRName() const
+	{
+		if (IsSigned)
+		{
+			switch (BitWidth)
+			{
+				case 8:  return "b";
+				case 16: return "s";
+				case 32: return "i";
+				case 64: return "l";
+				default: VoltUnreachableFmt("Invalid integer bit width: {}", BitWidth);
+			}
+		}
+
+		switch (BitWidth)
+		{
+			case 8:  return "r";
+			case 16: return "t";
+			case 32: return "u";
+			case 64: return "m";
+			default: VoltUnreachableFmt("Invalid integer bit width: {}", BitWidth);
+		}
+	}
+
 	bool IntegerType::CastTo(DataType *To, bool Explicit) const
 	{
 		if (this == To)
@@ -133,13 +162,25 @@ namespace Volt
 			case 32: return llvm::Type::getFloatTy(Context);
 			case 64: return llvm::Type::getDoubleTy(Context);
 			case 128: return llvm::Type::getFP128Ty(Context);
-			default: VoltUnreachable("Invalid floating point bit width");
+			default: VoltUnreachableFmt("Invalid floating point bit width: {}", BitWidth);
 		}
 	}
 
 	std::string FloatingPointType::ToString() const
 	{
 		return "f" + std::to_string(BitWidth);
+	}
+
+	std::string FloatingPointType::GetIRName() const
+	{
+		switch (BitWidth)
+		{
+			case 16: return "h";
+			case 32: return "f";
+			case 64: return "d";
+			case 128: return "q";
+			default: VoltUnreachableFmt("Invalid floating point bit width: {}", BitWidth);
+		}
 	}
 
 	bool FloatingPointType::CastTo(DataType *To, bool Explicit) const
