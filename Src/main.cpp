@@ -47,13 +47,25 @@ int main(int Argc, char* Argv[])
     Volt::BuiltinFunctionTable FuncTable(CContext);
 
     FuncTable.AddFunctionOverloads("Out",
-        OutBool, OutChar, OutI8, OutI16,
-        OutI32, OutI64, OutU8, OutU16,
-        OutU32, OutU64, OutStr, OutFloat,
-        OutDouble, OutPtr
+        Out<bool>, Out<char>, Out<Volt::Int8>, Out<Volt::Int16>,
+        Out<Volt::Int32>, Out<Volt::Int64>, Out<Volt::UInt8>, Out<Volt::UInt16>,
+        Out<Volt::UInt32>, Out<Volt::UInt64>, Out<const char*>, Out<float>,
+        Out<double>, Out<void*>
     );
 
-    FuncTable.AddFunctionOverloads("In", InInt, InIntWithLabel);
+    FuncTable.AddFunctionOverloads("OutLine",
+        OutLine<bool>, OutLine<char>, OutLine<Volt::Int8>, OutLine<Volt::Int16>,
+        OutLine<Volt::Int32>, OutLine<Volt::Int64>, OutLine<Volt::UInt8>, OutLine<Volt::UInt16>,
+        OutLine<Volt::UInt32>, OutLine<Volt::UInt64>, OutLine<const char*>, OutLine<float>,
+        OutLine<double>, OutLine<void*>
+    );
+
+    FuncTable.AddFunctionOverloads("In",
+        In<bool>, In<char>, In<Volt::Int8>, In<Volt::Int16>,
+        In<Volt::Int32>, In<Volt::Int64>, In<Volt::UInt8>, In<Volt::UInt16>,
+        In<Volt::UInt32>, In<Volt::UInt64>, In<float>, In<double>
+    );
+
     FuncTable.AddFunction("Time", Time);
     FuncTable.AddFunction("Sqrt", Sqrt);
     FuncTable.AddFunction("Sin", Sin);
