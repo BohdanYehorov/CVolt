@@ -9,6 +9,7 @@
 #include "Volt/Core/Hash/Hash.h"
 #include "Volt/Core/Types/TypeConv.h"
 #include "Volt/Core/Functions/BuiltinFuncCallee.h"
+#include "Volt/Utils/IRNameBuilder.h"
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
@@ -29,10 +30,13 @@ namespace Volt
 			: CContext(CContext), MainArena(CContext.MainArena) {}
 
 		template <typename Ret, typename ...Args>
-		void AddFunction(const std::string& Name, const std::string& BaseName, Ret(*FuncPtr)(Args...));
+		void AddFunction(const std::string& Name, Ret(*FuncPtr)(Args...));
 
 		template <typename Ret>
-		void AddFunction(const std::string& Name, const std::string& BaseName, Ret(*FuncPtr)());
+		void AddFunction(const std::string& Name, Ret(*FuncPtr)());
+
+		template <typename T, typename ...ArgsTy>
+		void AddFunctionOverloads(const std::string& Name, T Fun, ArgsTy... Args);
 
 		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
@@ -55,23 +59,37 @@ namespace Volt
 	}
 
 	template<typename Ret, typename ... Args>
-	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)(Args...))
+	void BuiltinFunctionTable::AddFunction(const std::string &Name, Ret(*FuncPtr)(Args...))
 	{
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
 		ArgsVector<QualType> Params;
 		FillParams<Args...>(Params);
 		FunctionSignature Signature{ Name, std::move(Params) };
+		IRNameBuilder NameBuilder(Signature);
+
 		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
-			RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 	}
 
 	template<typename Ret>
-	void BuiltinFunctionTable::AddFunction(const std::string &Name, const std::string &BaseName, Ret(*FuncPtr)())
+	void BuiltinFunctionTable::AddFunction(const std::string &Name, Ret(*FuncPtr)())
 	{
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
 		FunctionSignature Signature{ Name, {} };
+		IRNameBuilder NameBuilder(Signature);
+
 		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
-			RetType, BaseName, llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+	}
+
+	template<typename T, typename ... ArgsTy>
+	void BuiltinFunctionTable::AddFunctionOverloads(const std::string &Name, T Fun, ArgsTy... Args)
+	{
+		static_assert(std::is_pointer_v<T>);
+		static_assert(std::is_function_v<std::remove_pointer_t<T>>);
+		AddFunction(Name, Fun);
+		if constexpr (sizeof...(ArgsTy) > 0)
+			AddFunctionOverloads(Name, Args...);
 	}
 }
 

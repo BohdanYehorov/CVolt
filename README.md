@@ -82,8 +82,7 @@ Volt::CompilationContext CContext(Code /*Source Code*/, "test.volt" /*File Name*
 Volt::DebugOutput DebugOutput(llvm::outs(), CContext);
 
 Volt::BuiltinFunctionTable FuncTable(CContext);
-FuncTable.AddFunction("Out", "OutInt", &OutInt);
-FuncTable.AddFunction("Out", "OutFloat", &OutFloat); // Builtin function overload
+FuncTable.AddFunctionOverloads("Out", OutInt, OutFloat); // Builtin function overload
 
 // Lexing
 Volt::Lexer MyLexer(CContext);

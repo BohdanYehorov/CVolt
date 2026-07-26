@@ -117,7 +117,7 @@ namespace Volt
 		{
 			switch (BitWidth)
 			{
-				case 8:  return "b";
+				case 8:  return "k";
 				case 16: return "s";
 				case 32: return "i";
 				case 64: return "l";
