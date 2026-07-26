@@ -42,7 +42,7 @@ int main(int Argc, char* Argv[])
 #endif
 
     Volt::CompilationContext CContext(SStr.str().c_str(), "test.volt");
-    Volt::DebugOutput DebugOutput(llvm::outs(), CContext);
+    Volt::DebugOutput DebugOutput(llvm::outs(), llvm::errs(), CContext);
 
     Volt::BuiltinFunctionTable FuncTable(CContext);
 
@@ -115,11 +115,11 @@ int main(int Argc, char* Argv[])
 #endif
 
     Volt::JITEngine Engine(CContext, FuncTable);
-    Engine.CallFunction<Volt::UInt32>("Main");
+    auto Res = Engine.CallFunction<Volt::Int32>("Main");
 
 #ifdef _DEBUG
     std::cout << "\n====================================================\n";
 #endif
 
-    return 0; //Res;
+    return Res;
 }

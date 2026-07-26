@@ -12,12 +12,13 @@ namespace Volt
 	class DebugOutput
 	{
 	private:
-		llvm::raw_ostream&Os;
+		llvm::raw_ostream& Os;
+		llvm::raw_ostream& ErrOs;
 		CompilationContext& CContext;
 
 	public:
-		DebugOutput(llvm::raw_ostream& Os, CompilationContext& CContext)
-			: Os(Os), CContext(CContext) {}
+		DebugOutput(llvm::raw_ostream& Os, llvm::raw_ostream& ErrOs, CompilationContext& CContext)
+			: Os(Os), ErrOs(ErrOs), CContext(CContext) {}
 
 		void WriteTokens() const;
 		void WriteAST() const { WriteAST(CContext.ASTTree, 0); }

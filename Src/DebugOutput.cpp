@@ -19,21 +19,21 @@ namespace Volt
     void DebugOutput::WriteLexErrors() const
     {
         for (const LexError& Error : CContext.LexErrors)
-            Os << "LexError: " << Error.ToString() <<
+            ErrOs << "LexError: " << Error.ToString() <<
                 " At position: [" << Error.Line << ":" << Error.Column << "]\n";
     }
 
     void DebugOutput::WriteParseErrors() const
     {
         for (const auto& Err : CContext.ParseErrors)
-            Os << "ParseError: " << Err.ToString() <<
+            ErrOs << "ParseError: " << Err.ToString() <<
                 " At position: [" << Err.Line << ":" << Err.Column << "]\n";
     }
 
     void DebugOutput::WriteTypeErrors() const
     {
         for (const TypeError& Error : CContext.TypeErrors)
-            Os << "TypeError: " << Error.ToString() <<
+            ErrOs << "TypeError: " << Error.ToString() <<
                 " At position: [" << Error.Line << ":" << Error.Column << "]\n";
     }
 
