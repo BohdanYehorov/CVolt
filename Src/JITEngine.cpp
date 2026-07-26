@@ -3,6 +3,10 @@
 //
 
 #include "Volt/Runtime/JITEngine/JITEngine.h"
+
+#include <ranges>
+
+#include "Volt/Core/Types/ClassInst.h"
 #include <llvm/Support/TargetSelect.h>
 
 namespace Volt
@@ -43,5 +47,29 @@ namespace Volt
 
 		if (auto Err = Jit->get()->addIRModule(std::move(TSM)))
 			llvm::errs() << Err;
+	}
+
+	void JITEngine::FillClassMethods(ClassInst& Inst)
+	{
+		ClassType* Type = Inst.GetType();
+
+		for (const auto& MethodSignature : Type->Methods | std::views::keys)
+		{
+			IRNameBuilder NameBuilder(Type, MethodSignature);
+			if (void* Method = GetRawFuncAddr(NameBuilder.GetIRName()))
+				Inst.Methods[NameBuilder.GetIRName()] = Method;
+		}
+	}
+
+	void* JITEngine::GetRawFuncAddr(const std::string &IRName)
+	{
+		auto SymOrErr = Jit->get()->lookup(IRName);
+		if (!SymOrErr)
+		{
+			llvm::logAllUnhandledErrors(SymOrErr.takeError(), llvm::errs(), "Error: ");
+			return nullptr;
+		}
+
+		return SymOrErr->toPtr<void*>();
 	}
 }

@@ -44,6 +44,15 @@ namespace Volt
         void AddName(const std::string& Name) { IRName += std::to_string(Name.size()) + Name; }
         void AddParam(QualType Param) { IRName += Param.GetIRName(); }
 
+        template <typename T>
+        void AddParam(CompilationContext& CContext)
+        {
+            AddParam(TypeConv::GetDataType<T>(CContext));
+        }
+
+        template <typename T, typename ...ArgsTy>
+        void AddParams(CompilationContext& CContext);
+
         [[nodiscard]] const std::string& GetIRName() const { return IRName; }
 
     private:
@@ -54,6 +63,14 @@ namespace Volt
                 AddParam(Param);
         }
     };
+
+    template<typename T, typename ... ArgsTy>
+    void IRNameBuilder::AddParams(CompilationContext &CContext)
+    {
+        AddParam<T>(CContext);
+        if constexpr (sizeof...(ArgsTy) > 0)
+            AddParams<ArgsTy...>(CContext);
+    }
 }
 
 #endif //CVOLT_IRNAMEBUILDER_H

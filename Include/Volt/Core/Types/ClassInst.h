@@ -8,14 +8,45 @@
 #include "ClassType.h"
 #include "TypeConv.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
+#include "Volt/Utils/IRNameBuilder.h"
 
 namespace Volt
 {
+    template <typename RetTy, typename ...ArgsTy>
+    using MethodTy = RetTy(*)(void*, ArgsTy...);
+
+    template <typename RetTy, typename ...ArgsTy>
+    class ClassMethod
+    {
+    private:
+        using MethodTy = MethodTy<RetTy, ArgsTy...>;
+
+    private:
+        void* Data = nullptr;
+        MethodTy Method = nullptr;
+
+        ClassMethod(void* Data, MethodTy Method)
+            : Data(Data), Method(Method) {}
+
+    public:
+        ClassMethod() = default;
+
+        RetTy operator()(ArgsTy... Args)
+        {
+            VoltAssert(Data != nullptr && Method != nullptr);
+            return Method(Data, Args...);
+        }
+
+        friend class ClassInstBase;
+    };
+
     class ClassInstBase
     {
     protected:
         ClassType* Type = nullptr;
         char* Data = nullptr;
+        llvm::StringMap<void*> Methods;
+
         CompilationContext& CContext;
 
         ClassInstBase(ClassType* Type, CompilationContext& CContext)
@@ -36,6 +67,14 @@ namespace Volt
         T& GetField(llvm::StringRef FieldName);
 
         [[nodiscard]] class ClassInstView GetField(llvm::StringRef FieldName) const;
+
+        template <typename RetTy, typename ...ArgsTy>
+        ClassMethod<RetTy, ArgsTy...> GetMethodAddr(const std::string& Name);
+
+        template <typename RetTy, typename ...ArgsTy>
+        RetTy CallMethod(const std::string& Name, ArgsTy... Args);
+
+        friend class JITEngine;
     };
 
     class ClassInst : public ClassInstBase
@@ -79,6 +118,30 @@ namespace Volt
         if (Ty != F.Type)
             VoltUnreachableFmt("Cannot get field with type '{}' as '{}'", F.Type.ToString(), Ty.ToString());
         return *reinterpret_cast<T*>(Data + F.Offset);
+    }
+
+    template<typename RetTy, typename ... ArgsTy>
+    ClassMethod<RetTy, ArgsTy...> ClassInstBase::GetMethodAddr(const std::string &Name)
+    {
+        IRNameBuilder NameBuilder(IRNameKind::Method);
+        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Name);
+
+        NameBuilder.AddParam(CContext.GetPointerType(Type));
+        if constexpr (sizeof...(ArgsTy) > 0)
+            NameBuilder.AddParams<ArgsTy...>(CContext);
+
+        if (auto Iter = Methods.find(NameBuilder.GetIRName()); Iter != Methods.end())
+            return ClassMethod<RetTy, ArgsTy...>(
+                Data, reinterpret_cast<MethodTy<RetTy, ArgsTy...>>(Iter->second));
+
+        VoltUnreachableFmt("Cannot find method '{}'", NameBuilder.GetIRName());
+    }
+
+    template<typename RetTy, typename ... ArgsTy>
+    RetTy ClassInstBase::CallMethod(const std::string &Name, ArgsTy... Args)
+    {
+        return GetMethodAddr<RetTy, ArgsTy...>(Name)(Args...);
     }
 }
 

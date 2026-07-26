@@ -7,6 +7,7 @@
 #include "Volt/Runtime/JITEngine/JITEngine.h"
 #include "Volt/ADT/String.h"
 #include "Volt/Debug/DebugOutput/DebugOutput.h"
+#include "Volt/Core/Types/ClassInst.h"
 #include <fstream>
 #include <sstream>
 #include <Volt/Tests/Fuzzer/ParserFuzzer.h>
@@ -109,11 +110,11 @@ int main(int Argc, char* Argv[])
 #endif
 
     Volt::JITEngine Engine(CContext, FuncTable);
-    Volt::Int32 Res = Engine.CallFunction<Volt::Int32>("Main");
+    Engine.CallFunction<Volt::UInt32>("Main");
 
 #ifdef _DEBUG
     std::cout << "\n====================================================\n";
 #endif
 
-    return Res;
+    return 0; //Res;
 }

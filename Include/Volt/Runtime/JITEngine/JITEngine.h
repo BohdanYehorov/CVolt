@@ -8,7 +8,6 @@
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Utils/IRNameBuilder.h"
-#include "Volt/Core/Types/ClassInst.h"
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
@@ -16,6 +15,8 @@
 
 namespace Volt
 {
+	class ClassInst;
+
 	class JITEngine
 	{
 		std::unique_ptr<llvm::Module> Module;
@@ -26,86 +27,60 @@ namespace Volt
 		llvm::StringMap<void*> CachedMethods;
 
 	public:
+		template <typename RetT, typename ... ArgsT>
+		using FuncT = RetT(*)(ArgsT...);
+
+	public:
 		static void Init();
 
 	public:
 		JITEngine(CompilationContext &CContext, BuiltinFunctionTable& Table);
 
 		template <typename RetT, typename ... ArgsT>
-		RetT CallFunction(const std::string& Name, ArgsT... Args);
+		FuncT<RetT, ArgsT...> GetFunctionAddr(const std::string& Name);
 
 		template <typename RetT, typename ... ArgsT>
-		RetT CallMethod(ClassInst& Inst, const std::string& Name, ArgsT ... Args);
+		RetT CallFunction(const std::string& Name, ArgsT... Args);
+
+		void FillClassMethods(ClassInst& Inst);
 
 	private:
-		template <typename T, typename ... ArgsT>
-		void AddParams(IRNameBuilder& NameBuilder);
+		void* GetRawFuncAddr(const std::string& IRName);
 	};
 
 	template<typename RetT, typename ... ArgsT>
-	RetT JITEngine::CallFunction(const std::string& Name, ArgsT...Args)
+	JITEngine::FuncT<RetT, ArgsT...> JITEngine::GetFunctionAddr(const std::string &Name)
 	{
 		IRNameBuilder NameBuilder(IRNameKind::Function);
 		NameBuilder.AddName(Name);
-		
+
 		if constexpr (sizeof...(ArgsT) > 0)
-			AddParams<ArgsT...>(NameBuilder);
+			NameBuilder.AddParams<ArgsT...>(NameBuilder);
 
 		const std::string& IRName = NameBuilder.GetIRName();
-
-		using FuncT = RetT(*)(ArgsT...);
 
 		if (auto Iter = CachedFunctions.find(IRName);
 			Iter != CachedFunctions.end())
-			return reinterpret_cast<FuncT>(Iter->getValue())(Args...);
-
-        auto SymOrErr = Jit->get()->lookup(IRName);
-        if (!SymOrErr)
-        {
-            llvm::logAllUnhandledErrors(SymOrErr.takeError(), llvm::errs(), "Error: ");
-            return RetT();
-        }
-
-		const auto Func = SymOrErr->toPtr<FuncT>();
-		CachedFunctions[IRName] = reinterpret_cast<void*>(Func);
-        return Func(Args...);
-	}
-
-	template<typename RetT, typename ... ArgsT>
-	RetT JITEngine::CallMethod(ClassInst &Inst, const std::string &Name, ArgsT... Args)
-	{
-		IRNameBuilder NameBuilder(IRNameKind::Method);
-		NameBuilder.AddName(Inst.GetType()->Name);
-		NameBuilder.AddName(Name);
-
-		if constexpr (sizeof...(ArgsT) > 0)
-			AddParams<ArgsT...>(NameBuilder);
-
-		const std::string& IRName = NameBuilder.GetIRName();
-
-		using MethodT = RetT(*)(void*, ArgsT...);
-		if (auto Iter = CachedMethods.find(IRName);
-			Iter != CachedMethods.end())
-			return reinterpret_cast<MethodT>(Iter->getValue())(Inst.GetData(), Args...);
+			return reinterpret_cast<FuncT<RetT, ArgsT...>>(Iter->getValue());
 
 		auto SymOrErr = Jit->get()->lookup(IRName);
 		if (!SymOrErr)
 		{
 			llvm::logAllUnhandledErrors(SymOrErr.takeError(), llvm::errs(), "Error: ");
-			return RetT();
+			return nullptr;
 		}
 
-		const auto Func = SymOrErr->toPtr<MethodT>();
-		CachedMethods[IRName] = reinterpret_cast<void*>(Func);
-		return Func(Inst.GetData(), Args...);
+		const auto Func = SymOrErr->toPtr<FuncT<RetT, ArgsT...>>();
+		CachedFunctions[IRName] = reinterpret_cast<void*>(Func);
+		return Func;
 	}
 
-	template<typename T, typename ... ArgsT>
-	void JITEngine::AddParams(IRNameBuilder &NameBuilder)
+	template<typename RetT, typename ... ArgsT>
+	RetT JITEngine::CallFunction(const std::string& Name, ArgsT...Args)
 	{
-		NameBuilder.AddParam(TypeConv::GetDataType<T>(CContext));
-		if constexpr (sizeof...(ArgsT) > 0)
-			AddParams<ArgsT...>(NameBuilder);
+		FuncT<RetT, ArgsT...> Func = GetFunctionAddr<RetT, ArgsT...>(Name);
+		if (!Func) return RetT();
+        return Func(Args...);
 	}
 }
 

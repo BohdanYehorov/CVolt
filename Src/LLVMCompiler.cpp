@@ -735,6 +735,8 @@ namespace Volt
         NameBuilder.AddName(Type->Name);
         NameBuilder.AddName(Method->Name.str());
 
+        NameBuilder.AddParam(ThisType);
+
         for (const auto Param : Method->Params)
         {
             DataType* ParamType = Param->Type->ResolvedType;
