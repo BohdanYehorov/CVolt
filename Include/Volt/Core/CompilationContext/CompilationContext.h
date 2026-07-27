@@ -76,6 +76,8 @@ namespace Volt
 		ClassType* CreateClassType(const std::string& Name, const Array<Field>& Fields);
 		[[nodiscard]] ClassType* GetClassType(const std::string& Name);
 
+		ClassType* GetOrCreateClassType(const std::string& Name, const Array<Field> &Fields);
+
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);
 
 		[[nodiscard]] bool HasErrors() const { return !LexErrors.Empty() ||

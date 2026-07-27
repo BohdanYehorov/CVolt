@@ -11,7 +11,7 @@ namespace Volt
 {
     class ExprAddress : public SemaResult
     {
-        GENERATED_BODY(EmptyAddress, SemaResult)
+        GENERATED_BODY(ExprAddress, SemaResult)
     private:
         ExprResult* Value;
 

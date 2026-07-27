@@ -161,7 +161,7 @@ namespace Volt
 
     class PrefixOpNode : public UnaryOpNode
     {
-        GENERATED_BODY(PreffixOpNode, UnaryOpNode)
+        GENERATED_BODY(PrefixOpNode, UnaryOpNode)
     public:
         PrefixOpNode(OperatorType Type, ASTNode* Operand,
             size_t Pos, size_t Line, size_t Column)
@@ -194,7 +194,7 @@ namespace Volt
 
     class ComparisonNode : public BinaryOpNode
     {
-        GENERATED_BODY(EqualityNode, BinaryOpNode)
+        GENERATED_BODY(ComparisonNode, BinaryOpNode)
     public:
         ComparisonNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)

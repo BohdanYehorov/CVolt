@@ -8,6 +8,12 @@
 #include "DataType.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 
+namespace Volt
+{
+	template <typename>
+	class VoltClass;
+}
+
 namespace Volt::TypeConv
 {
 	template <typename T>
@@ -98,6 +104,9 @@ namespace Volt::TypeConv
 			using BaseType = std::remove_reference_t<T>;
 			return { CContext.GetReferenceType(GetDataType<BaseType>(CContext)), 0 };
 		}
+
+		if constexpr (std::is_base_of_v<VoltClass<T>, T>)
+			return  { T::GetClassType(), 0 };
 
 		return { GetBaseType<T>(CContext), 0 };
 	}

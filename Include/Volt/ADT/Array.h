@@ -164,6 +164,8 @@ namespace Volt
 					Copy(Data + i, Fill);
 		}
 
+		void Clear() { RawResize(0); }
+
 		void ShrinkToFit()
 		{
 			if (Len == Cap) return;
