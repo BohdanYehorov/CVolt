@@ -7,12 +7,12 @@ fun:i32 Main()
     let:f64 e = 58.4f32;
     let:i32 f = a + e;
 
-    Out(a);
-    Out(b);
-    Out(c);
-    Out(d);
-    Out(e);
-    Out(f);
+    OutLine(a);
+    OutLine(b);
+    OutLine(c);
+    OutLine(d);
+    OutLine(e);
+    OutLine(f);
 
     return 0;
 }

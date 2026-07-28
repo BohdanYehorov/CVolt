@@ -11,7 +11,7 @@ fun:i32 Main()
         if (i > 1000)
             break;
 
-        Out(i);
+        OutLine(i);
     }
 
     return 0;

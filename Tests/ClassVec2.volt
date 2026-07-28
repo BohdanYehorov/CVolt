@@ -39,11 +39,11 @@ fun:i32 Main()
     Vec1.x = 5;
     Vec1.y = 10;
 
-    Out(Vec.LengthSquared());
-    Out(Vec.Length());
-    Out(Vec.Dot(Vec1));
-    Out(Vec.Cross(Vec1));
-    Out(Vec.CosBetween(Vec1));
+    OutLine(Vec.LengthSquared());
+    OutLine(Vec.Length());
+    OutLine(Vec.Dot(Vec1));
+    OutLine(Vec.Cross(Vec1));
+    OutLine(Vec.CosBetween(Vec1));
 
     return 0;
 }

@@ -1,11 +1,11 @@
 fun:void f(i32 a)
 {
-    Out(1);
+    OutLine(1);
 }
 
 fun:void f(f32 a)
 {
-    Out(2);
+    OutLine(2);
 }
 
 fun:i32 Main()

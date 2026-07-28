@@ -4,10 +4,10 @@ fun:i32 Main()
     Arr[2] = 10;
     Arr[3] = 8;
 
-    Out(Arr[0]);
-    Out(Arr[1]);
-    Out(Arr[2]);
-    Out(Arr[3]);
-    Out(Arr[4]);
+    OutLine(Arr[0]);
+    OutLine(Arr[1]);
+    OutLine(Arr[2]);
+    OutLine(Arr[3]);
+    OutLine(Arr[4]);
     return 0;
 }

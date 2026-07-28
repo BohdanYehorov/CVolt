@@ -25,6 +25,18 @@ inline void Out<bool>(bool Value)
 	llvm::outs() << Outputs[Value];
 }
 
+template <>
+inline void Out<Volt::Int8>(Volt::Int8 Value)
+{
+	llvm::outs() << static_cast<int>(Value);
+}
+
+template <>
+inline void Out<Volt::UInt8>(Volt::UInt8 Value)
+{
+	llvm::outs() << static_cast<int>(Value);
+}
+
 template <typename T>
 void OutLine(T Value)
 {
@@ -63,19 +75,19 @@ inline double Tan(double Angle)
 	return std::tan(Angle);
 }
 
-inline int RandomInt(int Min, int Max)
+inline int RandomInt(Volt::Int64 Min, Volt::Int64 Max)
 {
 	static std::mt19937 Gen{ std::random_device{}() };
-	std::uniform_int_distribution<int> Dist(Min, Max);
+	std::uniform_int_distribution<Volt::Int64> Dist(Min, Max);
 	return Dist(Gen);
 }
 
-inline int System(char* Cmd)
+inline Volt::Int32 System(char* Cmd)
 {
 	return system(Cmd);
 }
 
-inline void* MemAlloc(long Size)
+inline void* MemAlloc(Volt::UInt64 Size)
 {
 	return std::malloc(Size);
 }
@@ -85,12 +97,12 @@ inline void MemFree(void* Data)
 	std::free(Data);
 }
 
-inline void* Realloc(void* Data, long NewSize)
+inline void* Realloc(void* Data, Volt::UInt64 NewSize)
 {
 	return std::realloc(Data, NewSize);
 }
 
-inline void MemCpy(void* Dst, void* Src, long Size)
+inline void MemCpy(void* Dst, void* Src, Volt::UInt64 Size)
 {
 	std::memcpy(Dst, Src, Size);
 }

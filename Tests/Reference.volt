@@ -3,10 +3,10 @@ fun:i32 Main()
     let:i32 Num = 5;
     let:i32$ Ref = Num;
     Ref = 10;
-    Out(Ref);
-    Out(Num);
+    OutLine(Ref);
+    OutLine(Num);
     Num = 15;
-    Out(Num);
-    Out(Ref);
+    OutLine(Num);
+    OutLine(Ref);
     return 0;
 }

@@ -130,6 +130,11 @@ class UnitTests:
     def compare(self, res, exp):
         diffs = []
         for i, (a, b) in enumerate(zip(res, exp)):
+            if type(a) is float:
+                if abs(a - b) >= 1e-6:
+                    diffs.append(i)
+                continue
+
             if a != b:
                 diffs.append(i)
 

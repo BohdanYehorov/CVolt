@@ -2,37 +2,37 @@ fun:i32 Main()
 {
     let:i32 a = 5;
     a = 8;
-    Out(a);
+    OutLine(a);
     a += 10;
-    Out(a);
+    OutLine(a);
     a -= 2;
-    Out(a);
+    OutLine(a);
     a *= 10;
-    Out(a);
+    OutLine(a);
     a /= 5;
-    Out(a);
+    OutLine(a);
     a |= 2;
-    Out(a);
+    OutLine(a);
     a &= 1 << 1;
-    Out(a);
+    OutLine(a);
     a ^= 1;
-    Out(a);
+    OutLine(a);
     a >>= 1;
-    Out(a);
+    OutLine(a);
     a <<= 2;
-    Out(a);
+    OutLine(a);
     a %= 3;
-    Out(a);
+    OutLine(a);
 
     let:f64 b = 5.0;
     b = 8.0;
-    Out(b);
+    OutLine(b);
     b -= 2.2;
-    Out(b);
+    OutLine(b);
     b *= 5.2;
-    Out(b);
+    OutLine(b);
     b /= b / 2;
-    Out(b);
+    OutLine(b);
 
     return 0;
 }

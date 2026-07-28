@@ -22,8 +22,9 @@ namespace Volt
         ClassField(const std::string& Name, ArgsTy&&... Args)
             : Value(std::forward<ArgsTy...>(Args)...)
         {
-            ClassTy::Fields.Emplace(
-                Name, TypeConv::GetBaseType<FieldTy>(*ClassTy::CContext));
+            if (!ClassTy::ClassRegistered)
+                ClassTy::Fields.Emplace(
+                   Name, TypeConv::GetBaseType<FieldTy>(*ClassTy::CContext));
         }
 
         template <typename T>
@@ -54,6 +55,7 @@ namespace Volt
     protected:
         static Array<Field> Fields;
         static UMap<FunctionSignature, void*> Methods;
+        static bool ClassRegistered;
 
     public:
         static void RegisterClass()
@@ -67,6 +69,9 @@ namespace Volt
         {
             VoltUnreachable("Cannot get ClassType in VoltClass");
         }
+
+    public:
+        VoltClass() { ClassRegistered = true; }
     };
 
     template <typename Derived>
@@ -75,10 +80,13 @@ namespace Volt
     template <typename Derived>
     UMap<FunctionSignature, void*> VoltClass<Derived>::Methods;
 
+    template <typename Derived>
+    bool VoltClass<Derived>::ClassRegistered = false;
+
 #define GENERATED_VOLT_CLASS_BODY(ClassName)                           \
         static_assert(std::is_class_v<ClassName>);                     \
     public:                                                            \
-        static ClassType* GetClassType()                               \
+        static Volt::ClassType* GetClassType()                               \
         { return CContext->GetOrCreateClassType(#ClassName, Fields); } \
         static void CreateClassType()                                  \
         { CContext->CreateClassType(#ClassName, Fields); }

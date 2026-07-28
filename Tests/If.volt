@@ -2,13 +2,13 @@ fun:i32 Main()
 {
     if (true)
     {
-        Out(1);
+        OutLine(1);
     }
 
     if (false)
-        Out(0);
+        OutLine(0);
     else
-        Out(2);
+        OutLine(2);
 
     return 0;
 }

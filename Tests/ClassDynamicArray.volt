@@ -1,24 +1,24 @@
 class IntArray
 {
     let:i32* Data;
-    let:i32 Size;
+    let:u64 Size;
 
     fun:void Construct()
     {
         this.Data = null;
-        this.Size = 0;
+        this.Size = 0u64;
     }
 
     fun:void Add(i32 Num)
     {
-        let:i32* NewData = i32*(MemAlloc((this.Size + 1) * 4));
+        let:i32* NewData = i32*(MemAlloc((this.Size + 1u64) * 4u64));
         if (this.Data)
         {
-            MemCpy(NewData, this.Data, this.Size * 4);
+            MemCpy(NewData, this.Data, this.Size * 4u64);
             MemFree(this.Data);
         }
 
-        NewData[this.Size] = Num;
+        NewData[i32(this.Size)] = Num;
         this.Data = NewData;
         this.Size++;
     }
@@ -53,13 +53,13 @@ fun:i32 Main()
         Arr.PushBack(i);
 
     for (let:i32 i = 0; i < 10; i++)
-        Out(Arr.GetEl(i));
+        OutLine(Arr.GetEl(i));
 
     for (let:i32 i = 0; i < 10; i++)
         Arr.SetEl(i, i + 10);
 
     for (let:i32 i = 0; i < 10; i++)
-        Out(Arr.GetEl(i));
+        OutLine(Arr.GetEl(i));
 
     Arr.Free();
 
