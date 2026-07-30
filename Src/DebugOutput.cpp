@@ -182,6 +182,22 @@ namespace Volt
             Os << "Value:\n";
             WriteAST(Variable->Value, Indent + 1);
         }
+        else if (auto VariableConstruct = Cast<VariableConstructNode>(Node))
+        {
+            Os << '\n';
+            WriteIndent(++Indent);
+            Os << "DataType:\n";
+            WriteAST(VariableConstruct->Type, Indent + 1);
+            WriteIndent(Indent);
+            Os << "Name: " << VariableConstruct->Name.str() << '\n';
+            if (VariableConstruct->Arguments.empty())
+                return;
+
+            WriteIndent(Indent);
+            Os << "Args:\n";
+            for (ASTNode* Arg : VariableConstruct->Arguments)
+                WriteAST(Arg, Indent + 1);
+        }
         else if (auto Param = Cast<ParamNode>(Node))
         {
             Os << '\n';
@@ -204,12 +220,22 @@ namespace Volt
             Os << "Name: " << Function->Name.str() << '\n';
             WriteIndent(Indent);
             Os << "Parameters:\n";
-
             for (auto Parameter : Function->Params)
                 WriteAST(Parameter, Indent + 1);
             WriteIndent(Indent);
             Os << "Body:\n";
             WriteAST(Function->Body, Indent + 1);
+        }
+        else if (auto Constructor = Cast<ConstructorNode>(Node))
+        {
+            WriteIndent(Indent);
+            Os << "Parameters:\n";
+
+            for (auto Parameter : Constructor->Params)
+                WriteAST(Parameter, Indent + 1);
+            WriteIndent(Indent);
+            Os << "Body:\n";
+            WriteAST(Constructor->Body, Indent + 1);
         }
         else if (auto Return = Cast<ReturnNode>(Node))
         {
@@ -226,6 +252,11 @@ namespace Volt
             Os << "Methods:\n";
             for (auto Method : Class->Methods)
                 WriteAST(Method, Indent + 1);
+
+            WriteIndent(Indent);
+            Os << "Constructors:\n";
+            for (auto Constructor : Class->Constructors)
+                WriteAST(Constructor, Indent + 1);
         }
         else if (auto MemberAccess = Cast<MemberAccessNode>(Node))
         {

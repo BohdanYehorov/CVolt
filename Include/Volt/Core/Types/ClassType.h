@@ -25,9 +25,13 @@ namespace Volt
     {
         GENERATED_BODY(ClassType, DataType)
     public:
+        using ConstructorTable = SmallVec8<std::pair<SmallVec4<QualType>, FunctionCallee*>>;
+
+    public:
         std::string Name;
         Array<Field> Fields;
         FunctionTable Methods;
+        ConstructorTable Constructors;
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;
 

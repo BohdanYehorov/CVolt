@@ -474,52 +474,8 @@ namespace Volt
             CanBuildNode = false;
         }
 
-        ExpectAndConsume(TokenType::OP_LPAREN);
-
         ArgsVector<ParamNode*> Params;
-        while (IsValidIndex())
-        {
-            if (CurrentToken().Type == TokenType::OP_RPAREN)
-                break;
-            if (auto Node = ParseParameter())
-            {
-                if (IsErrorNode(Node))
-                {
-                    TokenType TokenTy = JumpToOneOfTokens(TokenType::OP_COLON, TokenType::OP_RPAREN,
-                        TokenType::OP_LBRACE, TokenType::KW_LET, TokenType::KW_FUN, TokenType::KW_CLASS);
-                    if (TokenTy == TokenType::OP_COLON || TokenTy == TokenType::OP_RPAREN)
-                        continue;
-                    break;
-                }
-
-                auto Parameter = Cast<ParamNode>(Node);
-
-                if (std::find_if(Params.begin(), Params.end(),
-                    [Parameter](const ParamNode* Value) {
-                        return Parameter->Name == Value->Name;
-                    }) != Params.end())
-                {
-                    // SendError
-                }
-
-                if (!Parameter->DefaultValue)
-                {
-                    if (std::find_if(Params.begin(), Params.end(),
-                        [](const ParamNode* Value) -> bool {
-                            return Value->DefaultValue;
-                        }) != Params.end())
-                    {
-                        // SendError
-                    }
-                }
-
-                Params.push_back(Parameter);
-            }
-            else if (!ConsumeIf(TokenType::OP_COMMA))
-                break;
-        }
-
-        ExpectAndConsume(TokenType::OP_RPAREN);
+        ParseParametersInParens(Params);
 
         InFunction = true;
         ASTNode* Body = ParseBlock();
@@ -586,6 +542,17 @@ namespace Volt
                FirstTokPtr->Pos, FirstTokPtr->Line, FirstTokPtr->Column);
         }
 
+        if (ConsumeIf(TokenType::OP_LPAREN))
+        {
+            ArgsVector<ASTNode*> Args;
+            ParseExpressionsSeparatedByComma(Args, TokenType::OP_RPAREN);
+            Consume();
+
+            return NodesArena.Create<VariableConstructNode>(
+                DataTypeNode, Name, std::move(Args),
+                FirstTokPtr->Pos, FirstTokPtr->Line, FirstTokPtr->Column);
+        }
+
         return NodesArena.Create<VariableNode>(
             DataTypeNode, Name, nullptr,
             FirstTokPtr->Pos, FirstTokPtr->Line, FirstTokPtr->Column);
@@ -609,11 +576,14 @@ namespace Volt
 
         Expect(TokenType::OP_LBRACE);
 
-        llvm::TinyPtrVector<VariableNode*> Fields;
-        llvm::TinyPtrVector<FunctionNode*> Methods;
+        SmallVec4<VariableNode*> Fields;
+        SmallVec4<FunctionNode*> Methods;
+        SmallVec4<ConstructorNode*> Constructors;
+
         while (IsValidIndex())
         {
-            TokenType TokType = CurrentToken().Type;
+            const Token& Tok = CurrentToken();
+            TokenType TokType = Tok.Type;
             if (TokType == TokenType::OP_RBRACE)
                 break;
 
@@ -639,6 +609,33 @@ namespace Volt
                     }
                     return nullptr;
                 }
+                case TokenType::IDENTIFIER:
+                {
+                    if (GetTokenLexeme(Tok) != Name)
+                    {
+                        SendError(ParseErrorType::ExpectedDeclaration);
+                        Synchronize();
+                        return CreateErrorNodeOnCurrentOrEndToken();
+                    }
+
+                    Consume();
+
+                    ArgsVector<ParamNode*> Params;
+                    ParseParametersInParens(Params);
+
+                    InFunction = true;
+                    ASTNode* Body = ParseBlock();
+                    InFunction = false;
+                    if (!Body)
+                    {
+                        SendError(ParseErrorType::ExpectedFunctionBody);
+                        return CreateErrorNodeOnCurrentOrEndToken();
+                    }
+
+                    Constructors.push_back(NodesArena.Create<ConstructorNode>(std::move(Params),
+                                           Cast<BlockNode>(Body), Tok.Pos, Tok.Line, Tok.Column));
+                    break;
+                }
                 default:
                     SendError(ParseErrorType::ExpectedDeclaration);
                     Synchronize();
@@ -649,7 +646,8 @@ namespace Volt
         Expect(TokenType::OP_RBRACE);
 
         return NodesArena.Create<ClassNode>(Name, std::move(Fields), std::move(Methods),
-            FirstTokPtr->Pos, FirstTokPtr->Line, FirstTokPtr->Column);
+                                            std::move(Constructors), FirstTokPtr->Pos,
+                                            FirstTokPtr->Line, FirstTokPtr->Column);
     }
 
     ASTNode* Parser::ParseIf()
@@ -1545,6 +1543,55 @@ namespace Volt
         }
 
         return true;
+    }
+
+    void Parser::ParseParametersInParens(ArgsVector<ParamNode *> &Params)
+    {
+        Expect(TokenType::OP_LPAREN);
+
+        while (IsValidIndex())
+        {
+            if (CurrentToken().Type == TokenType::OP_RPAREN)
+                break;
+            if (auto Node = ParseParameter())
+            {
+                if (IsErrorNode(Node))
+                {
+                    TokenType TokenTy = JumpToOneOfTokens(TokenType::OP_COLON, TokenType::OP_RPAREN,
+                        TokenType::OP_LBRACE, TokenType::KW_LET, TokenType::KW_FUN, TokenType::KW_CLASS);
+                    if (TokenTy == TokenType::OP_COLON || TokenTy == TokenType::OP_RPAREN)
+                        continue;
+                    break;
+                }
+
+                auto Parameter = Cast<ParamNode>(Node);
+
+                if (std::find_if(Params.begin(), Params.end(),
+                    [Parameter](const ParamNode* Value) {
+                        return Parameter->Name == Value->Name;
+                    }) != Params.end())
+                {
+                    // SendError
+                }
+
+                if (!Parameter->DefaultValue)
+                {
+                    if (std::find_if(Params.begin(), Params.end(),
+                        [](const ParamNode* Value) -> bool {
+                            return Value->DefaultValue;
+                        }) != Params.end())
+                    {
+                        // SendError
+                    }
+                }
+
+                Params.push_back(Parameter);
+            }
+            else if (!ConsumeIf(TokenType::OP_COMMA))
+                break;
+        }
+
+        Expect(TokenType::OP_RPAREN);
     }
 
     bool Parser::SkipToToken(TokenType Type)

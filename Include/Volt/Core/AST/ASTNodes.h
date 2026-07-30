@@ -354,6 +354,18 @@ namespace Volt
             : ASTNode(Pos, Line, Column), Type(Type), Name(Name), Value(Value) {}
     };
 
+    class VariableConstructNode : public ASTNode
+    {
+        GENERATED_BODY(VariableConstructNode, ASTNode)
+    public:
+        DataTypeNodeBase* Type;
+        llvm::StringRef Name;
+        ArgsVector<ASTNode*> Arguments;
+        VariableConstructNode(DataTypeNodeBase* Type, llvm::StringRef Name,
+            ArgsVector<ASTNode*>&& Args, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Type(Type), Name(Name), Arguments(std::move(Args)) {}
+    };
+
     class ParamNode : public ASTNode
     {
         GENERATED_BODY(ParamNode, ASTNode)
@@ -383,6 +395,20 @@ namespace Volt
             Params(std::move(Params)), Body(Body) {}
     };
 
+    class ConstructorNode : public ASTNode
+    {
+        GENERATED_BODY(ConstructorNode, ASTNode)
+    public:
+        CalleeBase* ResolvedCallee = nullptr;
+
+        ArgsVector<ParamNode*> Params;
+        BlockNode* Body;
+        ConstructorNode(ArgsVector<ParamNode*>&& Params,
+            BlockNode* Body, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column),
+            Params(std::move(Params)), Body(Body) {}
+    };
+
     class ReturnNode : public ASTNode
     {
         GENERATED_BODY(ReturnNode, ASTNode)
@@ -397,12 +423,17 @@ namespace Volt
         GENERATED_BODY(ClassNode, ASTNode)
     public:
         llvm::StringRef Name;
-        llvm::TinyPtrVector<VariableNode*> Fields;
-        llvm::TinyPtrVector<FunctionNode*> Methods;
+        SmallVec4<VariableNode*> Fields;
+        SmallVec4<FunctionNode*> Methods;
+        SmallVec4<ConstructorNode*> Constructors;
 
-        ClassNode(llvm::StringRef Name, llvm::TinyPtrVector<VariableNode*>&& Fields,
-            llvm::TinyPtrVector<FunctionNode*>&& Methods, size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Name(Name), Fields(std::move(Fields)), Methods(std::move(Methods)) {}
+        ClassNode(llvm::StringRef Name, SmallVec4<VariableNode*>&& Fields,
+            SmallVec4<FunctionNode*>&& Methods,
+            SmallVec4<ConstructorNode*>&& Constructors
+            , size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Name(Name),
+            Fields(std::move(Fields)), Methods(std::move(Methods)),
+            Constructors(std::move(Constructors)) {}
     };
 
     class MemberAccessNode : public ASTNode

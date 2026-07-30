@@ -126,6 +126,7 @@ namespace Volt
         [[nodiscard]] ASTNode* CreateFloatingPoint(const Token& Tok) const;
 
         bool ParseExpressionsSeparatedByComma(ArgsVector<ASTNode*>& Nodes, TokenType StopToken);
+        void ParseParametersInParens(ArgsVector<ParamNode*>& Params);
         bool SkipToToken(TokenType Type);
 
         template <typename ...Args_>
