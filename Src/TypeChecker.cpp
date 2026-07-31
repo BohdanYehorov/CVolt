@@ -453,9 +453,7 @@ namespace Volt
                 ArgTypes.push_back(ArgType);
             }
 
-            FunctionSignature Signature(Name, std::move(ArgTypes));
-
-            if (auto Overload = TryGetFunction(Signature, Functions))
+            if (auto Overload = TryGetFunction(Name, ArgTypes, Functions))
             {
                 Call->ResolvedCallee = Overload->Callee;
 
@@ -465,7 +463,7 @@ namespace Volt
                 return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
             }
 
-            if (auto Overload = TryGetFunction(Signature, BuiltinFuncTable.GetMap()))
+            if (auto Overload = TryGetFunction(Name, ArgTypes, BuiltinFuncTable.GetMap()))
             {
                 Call->ResolvedCallee = Overload->Callee;
 
@@ -478,7 +476,7 @@ namespace Volt
             Array<std::string> ErrorContext = { Name };
             ErrorContext.Reserve(ArgsCount);
 
-            for (auto Arg : Signature.Params)
+            for (auto Arg : ArgTypes)
                 ErrorContext.Add(Arg->ToString());
 
             SendError(TypeErrorKind::NoFunctionOverload, Call->Callee, std::move(ErrorContext));
@@ -530,9 +528,7 @@ namespace Volt
                     ArgTypes.push_back(ArgType);
                 }
 
-                FunctionSignature Signature(FieldName, std::move(ArgTypes));
-
-                if (auto Overload = TryGetFunction(Signature, ClassTy->Methods))
+                if (auto Overload = TryGetFunction(FieldName, ArgTypes, ClassTy->Methods))
                 {
                     Call->ResolvedCallee = Overload->Callee;
 
@@ -625,8 +621,7 @@ namespace Volt
             Arguments.push_back(Arg->GetType());
         }
 
-        FunctionSignature Signature("Construct", std::move(Arguments));
-        if (const FunctionOverload* Overload = TryGetFunction(Signature, ClassTy->Methods))
+        if (const FunctionOverload* Overload = TryGetFunction("Construct", Arguments, ClassTy->Methods))
         {
             Construct->ResolvedCallee = Overload->Callee;
 
@@ -1022,15 +1017,16 @@ namespace Volt
         return FuncCallee;
     }
 
-    const FunctionOverload * TypeChecker::TryGetFunction(const FunctionSignature &Signature, const FunctionTable &FuncTable)
+    const FunctionOverload *TypeChecker::TryGetFunction(llvm::StringRef Name, llvm::ArrayRef<QualType> Args,
+                                                        const FunctionTable &FuncTable)
     {
-        auto Iter = FuncTable.find(Signature.Name);
+        auto Iter = FuncTable.find(Name);
         if (Iter == FuncTable.end()) return nullptr;
-        return TryGetOverload(Signature.Params, Iter->second);
+        return TryGetOverload(Args, Iter->second);
     }
 
-    const FunctionOverload * TypeChecker::TryGetOverload(llvm::ArrayRef<QualType> Args,
-        const FuncOverloadVector &Overloads)
+    const FunctionOverload *TypeChecker::TryGetOverload(llvm::ArrayRef<QualType> Args,
+                                                        const FuncOverloadVector &Overloads)
     {
         size_t ArgsCount = Args.size();
         size_t MinCasts = ArgsCount;

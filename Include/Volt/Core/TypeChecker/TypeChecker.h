@@ -128,8 +128,10 @@ namespace Volt
         FunctionCallee* CreateFunction(FunctionNode* Function, llvm::StringRef& Name,
                                        ArgsVector<QualType>& Params, QualType ThisType = {});
 
-        const FunctionOverload* TryGetFunction(const FunctionSignature& Signature, const FunctionTable& FuncTable);
-        static const FunctionOverload* TryGetOverload(llvm::ArrayRef<QualType> Args, const FuncOverloadVector& Overloads);
+        static const FunctionOverload* TryGetFunction(llvm::StringRef Name, llvm::ArrayRef<QualType> Args,
+                                               const FunctionTable& FuncTable);
+        static const FunctionOverload* TryGetOverload(llvm::ArrayRef<QualType> Args,
+                                                      const FuncOverloadVector& Overloads);
 
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
