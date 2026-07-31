@@ -455,31 +455,30 @@ namespace Volt
 
             FunctionSignature Signature(Name, std::move(ArgTypes));
 
-            if (auto Iter = TryGetOverload(Signature, Functions); Iter != Functions.end())
+            if (auto Overload = TryGetFunction(Signature, Functions))
             {
-                Call->ResolvedCallee = Iter->second;
+                Call->ResolvedCallee = Overload->Callee;
 
                 for (size_t i = 0; i < ArgsCount; i++)
-                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i].GetType();
+                    Call->Arguments[i]->ExpectedType = Overload->Args[i].GetType();
 
-                return ExprResult::CreateEmpty(Iter->second->ReturnType, MainArena);
+                return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
             }
 
-            if (auto Iter = TryGetOverload(Signature, BuiltinFuncTable.GetMap());
-                Iter != BuiltinFuncTable.GetMap().end())
+            if (auto Overload = TryGetFunction(Signature, BuiltinFuncTable.GetMap()))
             {
-                Call->ResolvedCallee = Iter->second;
+                Call->ResolvedCallee = Overload->Callee;
 
                 for (size_t i = 0; i < ArgsCount; i++)
-                    Call->Arguments[i]->ExpectedType = Iter->first.Params[i].GetType();
+                    Call->Arguments[i]->ExpectedType = Overload->Args[i].GetType();
 
-                return ExprResult::CreateEmpty(Iter->second->ReturnType, MainArena);
+                return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
             }
 
             Array<std::string> ErrorContext = { Name };
             ErrorContext.Reserve(ArgsCount);
 
-            for (auto Arg : ArgTypes)
+            for (auto Arg : Signature.Params)
                 ErrorContext.Add(Arg->ToString());
 
             SendError(TypeErrorKind::NoFunctionOverload, Call->Callee, std::move(ErrorContext));
@@ -533,14 +532,14 @@ namespace Volt
 
                 FunctionSignature Signature(FieldName, std::move(ArgTypes));
 
-                if (auto Iter = TryGetOverload(Signature, ClassTy->Methods); Iter != ClassTy->Methods.end())
+                if (auto Overload = TryGetFunction(Signature, ClassTy->Methods))
                 {
-                    Call->ResolvedCallee = Iter->second;
+                    Call->ResolvedCallee = Overload->Callee;
 
                     for (size_t i = 0; i < ArgsCount; i++)
-                        Call->Arguments[i]->ExpectedType = Iter->first.Params[i + 1].GetType();
+                        Call->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
 
-                    return ExprResult::CreateEmpty(Iter->second->ReturnType, MainArena);
+                    return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
                 }
 
                 Array<std::string> ErrorContext = { ClassTy->Name + "." + FieldName };
@@ -627,12 +626,12 @@ namespace Volt
         }
 
         FunctionSignature Signature("Construct", std::move(Arguments));
-        if (auto Iter = TryGetOverload(Signature, ClassTy->Methods); Iter != ClassTy->Methods.end())
+        if (const FunctionOverload* Overload = TryGetFunction(Signature, ClassTy->Methods))
         {
-            Construct->ResolvedCallee = Iter->second;
+            Construct->ResolvedCallee = Overload->Callee;
 
             for (size_t i = 0; i < ArgsCount; i++)
-                Construct->Args[i]->ExpectedType = Iter->first.Params[i + 1].GetType();
+                Construct->Args[i]->ExpectedType = Overload->Args[i + 1].GetType();
         }
 
         Construct->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);
@@ -713,10 +712,11 @@ namespace Volt
     {
         EnterScope();
 
-        FunctionSignature Signature;
-        FunctionCallee* FuncCallee = CreateFunction(Function, Signature);
+        llvm::StringRef Name;
+        ArgsVector<QualType> Params;
+        FunctionCallee* FuncCallee = CreateFunction(Function, Name, Params);
 
-        Functions[Signature] = FuncCallee;
+        Functions[Name].emplace_back(std::move(Params), FuncCallee);
 
         FunctionReturnType = FuncCallee->ReturnType;
         InFunction = true;
@@ -732,9 +732,12 @@ namespace Volt
     {
         EnterScope();
 
-        FunctionSignature Signature;
-        FunctionCallee* FuncCallee = CreateFunction(Method, Signature, CContext.GetPointerType(Type));
-        Type->AddMethod(Signature, FuncCallee);
+        llvm::StringRef Name;
+        ArgsVector<QualType> Params;
+
+        FunctionCallee* FuncCallee = CreateFunction(Method, Name, Params,
+                                                 CContext.GetPointerType(Type));
+        Type->AddMethod(Name, std::move(Params), FuncCallee);
 
         FunctionReturnType = FuncCallee->ReturnType;
         InFunction = true;
@@ -988,25 +991,25 @@ namespace Volt
         return Addr;
     }
 
-    FunctionCallee* TypeChecker::CreateFunction(FunctionNode *Function, FunctionSignature &Signature,
-        QualType ThisType)
+    FunctionCallee* TypeChecker::CreateFunction(FunctionNode *Function, llvm::StringRef& Name,
+                                                ArgsVector<QualType>& Params, QualType ThisType)
     {
-        Signature.Name = Function->Name;
+        Name = Function->Name;
 
         if (ThisType)
         {
-            Signature.Params.reserve(Function->Params.size() + 1);
-            Signature.Params.push_back(ThisType);
+            Params.reserve(Function->Params.size() + 1);
+            Params.push_back(ThisType);
             DeclareVariable("this", MainArena.Create<ExprAddress>(
             ExprResult::CreateEmpty(ThisType, MainArena)));
         }
         else
-            Signature.Params.reserve(Function->Params.size());
+            Params.reserve(Function->Params.size());
 
         for (const auto& Param : Function->Params)
         {
             QualType ParamType = VisitType(Param->Type);
-            Signature.Params.push_back(ParamType);
+            Params.push_back(ParamType);
             DeclareVariable(std::string(Param->Name), MainArena.Create<ExprAddress>(
                 ExprResult::CreateEmpty(ParamType, MainArena)));
         }
@@ -1017,6 +1020,68 @@ namespace Volt
         Function->ResolvedCallee = FuncCallee;
 
         return FuncCallee;
+    }
+
+    const FunctionOverload * TypeChecker::TryGetFunction(const FunctionSignature &Signature, const FunctionTable &FuncTable)
+    {
+        auto Iter = FuncTable.find(Signature.Name);
+        if (Iter == FuncTable.end()) return nullptr;
+        return TryGetOverload(Signature.Params, Iter->second);
+    }
+
+    const FunctionOverload * TypeChecker::TryGetOverload(llvm::ArrayRef<QualType> Args,
+        const FuncOverloadVector &Overloads)
+    {
+        size_t ArgsCount = Args.size();
+        size_t MinCasts = ArgsCount;
+        int BestRank = std::numeric_limits<int>::max();
+        const FunctionOverload* BestOverload = nullptr;
+
+        for (const FunctionOverload& Overload : Overloads)
+        {
+            if (Overload.Args.size() != ArgsCount) continue;
+
+            int RankDiff = 0;
+            size_t Casts = 0;
+            bool Valid = true;
+            for (size_t i = 0; i < ArgsCount; i++)
+            {
+                QualType CandidateArgType = Overload.Args[i];
+                QualType ArgType = Args[i];
+
+                if (auto RefType = CandidateArgType.CastAs<ReferenceType>())
+                {
+                    if (RefType->CanBind(ArgType))
+                        continue;
+
+                    Valid = false;
+                    break;
+                }
+
+                if (!ArgType.ImplicitCast(CandidateArgType))
+                {
+                    Valid = false;
+                    break;
+                }
+
+                if (ArgType != CandidateArgType)
+                    Casts++;
+
+                RankDiff += std::abs(
+                    CandidateArgType->GetRank() - ArgType->GetRank());
+            }
+
+            if (!Valid) continue;
+
+            if (!BestOverload || Casts < MinCasts || (Casts == MinCasts && RankDiff < BestRank))
+            {
+                MinCasts = Casts;
+                BestRank = RankDiff;
+                BestOverload = &Overload;
+            }
+        }
+
+        return BestOverload;
     }
 
     bool TypeChecker::ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column)

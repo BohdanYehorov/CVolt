@@ -10,12 +10,14 @@
 #include "Volt/Core/Hash/Hash.h"
 #include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/Functions/FunctionCallee.h"
+#include "Volt/Core/Functions/FunctionOverload.h"
 
 namespace Volt
 {
     template <typename Key, typename Value>
     using UMap = std::unordered_map<Key, Value, Hash<Key>>;
-    using FunctionTable = UMap<FunctionSignature, FunctionCallee*>;
+    using FuncOverloadVector = SmallVec8<FunctionOverload>;
+    using FunctionTable = llvm::StringMap<FuncOverloadVector>;
 }
 
 #endif //CVOLT_UMAP_H

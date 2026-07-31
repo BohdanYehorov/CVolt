@@ -125,10 +125,11 @@ namespace Volt
         ExprAddress* VisitToLValue(ASTNode* Node);
         ExprAddress* VisitToLValueAndCheckConst(ASTNode* Node);
 
-        FunctionCallee* CreateFunction(FunctionNode* Function, FunctionSignature& Signature, QualType ThisType = {});
+        FunctionCallee* CreateFunction(FunctionNode* Function, llvm::StringRef& Name,
+                                       ArgsVector<QualType>& Params, QualType ThisType = {});
 
-        template <typename MapT>
-        MapT::const_iterator TryGetOverload(const FunctionSignature& Signature, const MapT& Map);
+        const FunctionOverload* TryGetFunction(const FunctionSignature& Signature, const FunctionTable& FuncTable);
+        static const FunctionOverload* TryGetOverload(llvm::ArrayRef<QualType> Args, const FuncOverloadVector& Overloads);
 
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
@@ -140,68 +141,6 @@ namespace Volt
 
         friend class LLVMCompiler;
     };
-
-    template<typename MapT>
-    MapT::const_iterator TypeChecker::TryGetOverload(const FunctionSignature &Signature, const MapT &Map)
-    {
-        if (auto Iter = Map.find(Signature); Iter != Map.end())
-            return Iter;
-
-        size_t ArgsCount = Signature.Params.size();
-        llvm::ArrayRef<QualType> ArgTypes = Signature.Params;
-
-        size_t MinCasts = ArgsCount;
-        int BestRank = std::numeric_limits<int>::max();
-        auto BestIt = Map.end();
-        for (auto Iter = Map.begin(); Iter != Map.end(); ++Iter)
-        {
-            const FunctionSignature& CandidateSignature = Iter->first;
-
-            if (CandidateSignature.Name != Signature.Name ||
-                CandidateSignature.Params.size() != ArgTypes.size()) continue;
-
-            int RankDiff = 0;
-            size_t Casts = 0;
-            bool Valid = true;
-            for (size_t i = 0; i < ArgsCount; i++)
-            {
-                QualType CandidateArgType = CandidateSignature.Params[i];
-                QualType ArgType = ArgTypes[i];
-
-                if (auto RefType = CandidateArgType.CastAs<ReferenceType>())
-                {
-                    if (RefType->CanBind(ArgType))
-                        continue;
-
-                    Valid = false;
-                    break;
-                }
-
-                if (!ArgType.ImplicitCast(CandidateArgType))
-                {
-                    Valid = false;
-                    break;
-                }
-
-                if (ArgType != CandidateArgType)
-                    Casts++;
-
-                RankDiff += std::abs(
-                    CandidateArgType->GetRank() - ArgType->GetRank());
-            }
-
-            if (!Valid) continue;
-
-            if (BestIt == Map.end() || Casts < MinCasts || (Casts == MinCasts && RankDiff < BestRank))
-            {
-                MinCasts = Casts;
-                BestRank = RankDiff;
-                BestIt = Iter;
-            }
-        }
-
-        return BestIt;
-    }
 }
 
 #endif //CVOLT_TYPECHECKER_H

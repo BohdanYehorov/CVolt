@@ -1,16 +1,7 @@
-class MyClass
-{
-    MyClass()
-    {
-    }
-
-    MyClass(i32 a, i32 b)
-    {
-    }
-};
+fun:void Hello(i32 a) {}
 
 fun:i32 Main()
 {
-    let:MyClass myClass(5, 41, hello);
+    OutLine(4);
     return 0;
 }

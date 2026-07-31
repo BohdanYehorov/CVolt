@@ -18,10 +18,10 @@ namespace Volt
 	class BuiltinFunctionTable
 	{
 	public:
-		using Map = std::unordered_map<FunctionSignature, BuiltinFuncCallee*, Hash<FunctionSignature>>;
+		// using Map = std::unordered_map<FunctionSignature, BuiltinFuncCallee*, Hash<FunctionSignature>>;
 
 	private:
-		Map Functions;
+		FunctionTable Functions;
 		CompilationContext& CContext;
 		Arena& MainArena;
 
@@ -41,9 +41,7 @@ namespace Volt
 		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
 
-		[[nodiscard]] BuiltinFuncCallee* Get(const FunctionSignature& Signature);
-
-		[[nodiscard]] const Map& GetMap() const { return Functions; }
+		[[nodiscard]] const FunctionTable& GetMap() const { return Functions; }
 
 	private:
 		template <typename T, typename ...Rest>
@@ -64,22 +62,29 @@ namespace Volt
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
 		ArgsVector<QualType> Params;
 		FillParams<Args...>(Params);
-		FunctionSignature Signature{ Name, std::move(Params) };
-		IRNameBuilder NameBuilder(Signature);
+		//FunctionSignature Signature{ Name, std::move(Params) };
+		IRNameBuilder NameBuilder(IRNameKind::Function);
+		NameBuilder.AddName(Name);
+		for (const auto& Param : Params)
+			NameBuilder.AddParam(Param);
 
-		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
+		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
 			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+
+		Functions[Name].emplace_back(std::move(Params), Callee);
 	}
 
 	template<typename Ret>
 	void BuiltinFunctionTable::AddFunction(const std::string &Name, Ret(*FuncPtr)())
 	{
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
-		FunctionSignature Signature{ Name, {} };
-		IRNameBuilder NameBuilder(Signature);
+		IRNameBuilder NameBuilder(IRNameKind::Function);
+		NameBuilder.AddName(Name);
 
-		Functions[Signature] = MainArena.Create<BuiltinFuncCallee>(
+		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
 			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+
+		Functions[Name].emplace_back(ArgsVector<QualType>(), Callee);
 	}
 
 	template<typename T, typename ... ArgsTy>

@@ -5,8 +5,6 @@
 #include "Volt/Compiler/LLVMCompiler.h"
 #include "Volt/Utils/IRNameBuilder.h"
 
-#include <complex.h>
-
 namespace Volt
 {
     void LLVMCompiler::Compile()

@@ -3,9 +3,6 @@
 //
 
 #include "Volt/Core/TypeChecker/ExprResult.h"
-
-#include <complex.h>
-
 #include "Volt/Core/TypeChecker/ExprAddress.h"
 
 namespace Volt

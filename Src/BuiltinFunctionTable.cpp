@@ -8,32 +8,38 @@ namespace Volt
 {
 	void BuiltinFunctionTable::CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context)
 	{
-		for (auto& [Signature, Data] : Functions)
+		for (auto& [Name, Overloads] : Functions)
 		{
-			llvm::Type* RetType = CContext.GetLLVMType(Data->ReturnType.GetType());
-			SmallVec8<llvm::Type*> LLVMParams;
-			LLVMParams.reserve(Signature.Params.size());
-			for (const auto& Param : Signature.Params)
-				LLVMParams.push_back(CContext.GetLLVMType(Param.GetType()));
+			for (auto& [Args, Callee] : Overloads)
+			{
+				auto BuiltinCallee = Cast<BuiltinFuncCallee>(Callee);
+				VoltAssert(BuiltinCallee != nullptr);
 
-			llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, LLVMParams, false);
-			llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, Data->BaseName, Module);
+				llvm::Type* RetType = CContext.GetLLVMType(BuiltinCallee->ReturnType.GetType());
+				SmallVec8<llvm::Type*> LLVMParams;
+				LLVMParams.reserve(Args.size());
+				for (const auto& Param : Args)
+					LLVMParams.push_back(CContext.GetLLVMType(Param.GetType()));
 
-			Data->SymbolDef = llvm::orc::ExecutorSymbolDef(
-			    Data->ExeAddr, llvm::JITSymbolFlags::Exported);
+				llvm::FunctionType* FuncType = llvm::FunctionType::get(RetType, LLVMParams, false);
+				llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, BuiltinCallee->BaseName, Module);
+
+				BuiltinCallee->SymbolDef = llvm::orc::ExecutorSymbolDef(
+					BuiltinCallee->ExeAddr, llvm::JITSymbolFlags::Exported);
+			}
 		}
 	}
 
 	void BuiltinFunctionTable::GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap &SymbolMap)
 	{
-		for (const auto& [Signature, Data] : Functions)
-			SymbolMap[Jit->mangleAndIntern(Data->BaseName)] = Data->SymbolDef;
-	}
-
-	BuiltinFuncCallee * BuiltinFunctionTable::Get(const FunctionSignature &Signature)
-	{
-		if (auto Iter = Functions.find(Signature); Iter != Functions.end())
-			return Iter->second;
-		return nullptr;
+		for (const auto& [Name, Overloads] : Functions)
+		{
+			for (const auto& [Args, Callee] : Overloads)
+			{
+				const auto& BuiltinCallee = Cast<BuiltinFuncCallee>(Callee);
+				VoltAssert(BuiltinCallee != nullptr);
+				SymbolMap[Jit->mangleAndIntern(BuiltinCallee->BaseName)] = BuiltinCallee->SymbolDef;
+			}
+		}
 	}
 }

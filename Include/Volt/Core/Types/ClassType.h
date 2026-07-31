@@ -53,9 +53,9 @@ namespace Volt
 
         size_t GetFieldIndex(const std::string& Name);
 
-        void AddMethod(FunctionSignature Signature, FunctionCallee* Callee)
+        void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
         {
-            Methods[std::move(Signature)] = Callee;
+            Methods[Name].emplace_back(std::move(Params), Callee);
         }
 
     private:

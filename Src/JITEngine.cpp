@@ -53,12 +53,12 @@ namespace Volt
 	{
 		ClassType* Type = Inst.GetType();
 
-		for (const auto& MethodSignature : Type->Methods | std::views::keys)
-		{
-			IRNameBuilder NameBuilder(Type, MethodSignature);
-			if (void* Method = GetRawFuncAddr(NameBuilder.GetIRName()))
-				Inst.Methods[NameBuilder.GetIRName()] = Method;
-		}
+		// for (const auto& MethodSignature : Type->Methods)
+		// {
+		// 	IRNameBuilder NameBuilder(Type, MethodSignature);
+		// 	if (void* Method = GetRawFuncAddr(NameBuilder.GetIRName()))
+		// 		Inst.Methods[NameBuilder.GetIRName()] = Method;
+		// }
 	}
 
 	void* JITEngine::GetRawFuncAddr(const std::string &IRName)
