@@ -65,6 +65,8 @@ namespace Volt
             return VisitConstruct(Construct);
         if (auto Variable = Cast<VariableNode>(Node))
             return VisitVariable(Variable);
+        if (auto VarConstruct = Cast<VariableConstructNode>(Node))
+            return VisitVariableConstruct(VarConstruct);
         if (auto Function = Cast<FunctionNode>(Node))
             return VisitFunction(Function);
         if (auto Class = Cast<ClassNode>(Node))
@@ -621,7 +623,7 @@ namespace Volt
             Arguments.push_back(Arg->GetType());
         }
 
-        if (const FunctionOverload* Overload = TryGetFunction("Construct", Arguments, ClassTy->Methods))
+        if (const FunctionOverload* Overload = TryGetOverload(Arguments, ClassTy->Constructors))
         {
             Construct->ResolvedCallee = Overload->Callee;
 
@@ -685,6 +687,13 @@ namespace Volt
         }
 
         ExprResult* Value = VisitToRValue(Variable->Value);
+        if (!Value && VarType->IsClassType())
+        {
+            auto* ClassTy = StaticCast<ClassType>(VarType.GetType());
+            if (auto* Constructor = TryGetOverload(
+                { CContext.GetPointerType(ClassTy) }, ClassTy->Constructors))
+                Variable->ResolvedConstructor = StaticCast<FunctionCallee>(Constructor->Callee);
+        }
 
         if (Value && !Value->GetType().ImplicitCast(VarType))
         {
@@ -700,6 +709,45 @@ namespace Volt
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
         DeclareVariable(Variable->Name.str(), MainArena.Create<ExprAddress>(Value));
+        return nullptr;
+    }
+
+    SemaResult *TypeChecker::VisitVariableConstruct(VariableConstructNode *Construct)
+    {
+        QualType VarType = VisitType(Construct->Type);
+        if (!VarType) return nullptr;
+
+        auto* ClassTy = VarType.CastAs<ClassType>();
+
+        if (!ClassTy)
+        {
+            // SendError
+            return nullptr;
+        }
+
+        ArgsVector<QualType> Args;
+        Args.reserve(Construct->Arguments.size() + 1);
+        Args.push_back(CContext.GetPointerType(VarType));
+
+        for (auto* Arg : Construct->Arguments)
+        {
+            SemaResult* Res = VisitNode(Arg);
+            if (!Res) continue;
+
+            Args.push_back(Res->GetType());
+        }
+
+        if (auto* Overload = TryGetOverload(Args, ClassTy->Constructors))
+        {
+            Construct->ResolvedCallee = StaticCast<FunctionCallee>(Overload->Callee);
+
+            for (size_t i = 0; i < Construct->Arguments.size(); i++)
+                Construct->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
+        }
+
+        DeclareVariable(Construct->Name.str(), MainArena.Create<ExprAddress>(
+            ExprResult::CreateEmpty(VarType, MainArena)));
+
         return nullptr;
     }
 
@@ -743,6 +791,43 @@ namespace Volt
         ExitScope();
     }
 
+    void TypeChecker::VisitConstructor(ConstructorNode *Constructor, ClassType *Type)
+    {
+        EnterScope();
+
+        QualType ThisType = CContext.GetPointerType(Type);
+
+        ArgsVector<QualType> Params;
+        size_t ParamsCount = Constructor->Params.size() + 1;
+        Params.reserve(ParamsCount);
+        Params.push_back(ThisType);
+        DeclareVariable("this", MainArena.Create<ExprAddress>(
+                        ExprResult::CreateEmpty(ThisType, MainArena)));
+
+        for (auto* Param : Constructor->Params)
+        {
+            QualType ParamType = VisitType(Param->Type);
+            Params.push_back(ParamType);
+            DeclareVariable(Param->Name.str(), MainArena.Create<ExprAddress>(
+                            ExprResult::CreateEmpty(ParamType, MainArena)));
+        }
+
+        QualType ReturnType = CContext.GetVoidType();
+
+        auto ConstructorCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
+        Constructor->ResolvedCallee = ConstructorCallee;
+
+        Type->AddConstructor(std::move(Params), ConstructorCallee);
+
+        FunctionReturnType = ReturnType;
+        InFunction = true;
+        VisitBlock(Cast<BlockNode>(Constructor->Body));
+        FunctionReturnType = {};
+        InFunction = false;
+
+        ExitScope();
+    }
+
     SemaResult *TypeChecker::VisitClass(ClassNode *Class)
     {
         Array<Field> Fields;
@@ -757,8 +842,11 @@ namespace Volt
             return nullptr;
         }
 
-        for (auto Method : Class->Methods)
+        for (auto* Method : Class->Methods)
             VisitMethod(Method, Type);
+
+        for (auto* Constructor : Class->Constructors)
+            VisitConstructor(Constructor, Type);
 
         return nullptr;
     }
@@ -996,17 +1084,17 @@ namespace Volt
             Params.reserve(Function->Params.size() + 1);
             Params.push_back(ThisType);
             DeclareVariable("this", MainArena.Create<ExprAddress>(
-            ExprResult::CreateEmpty(ThisType, MainArena)));
+                            ExprResult::CreateEmpty(ThisType, MainArena)));
         }
         else
             Params.reserve(Function->Params.size());
 
-        for (const auto& Param : Function->Params)
+        for (auto* Param : Function->Params)
         {
             QualType ParamType = VisitType(Param->Type);
             Params.push_back(ParamType);
-            DeclareVariable(std::string(Param->Name), MainArena.Create<ExprAddress>(
-                ExprResult::CreateEmpty(ParamType, MainArena)));
+            DeclareVariable(Param->Name.str(), MainArena.Create<ExprAddress>(
+                            ExprResult::CreateEmpty(ParamType, MainArena)));
         }
 
         QualType ReturnType = VisitType(Function->ReturnType);

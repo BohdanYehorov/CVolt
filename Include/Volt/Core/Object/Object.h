@@ -6,6 +6,8 @@
 #define CVOLT_OBJECT_H
 #include <string>
 
+#include "Volt/Support/ErrorHandling.h"
+
 namespace Volt
 {
     class Object
@@ -36,6 +38,14 @@ namespace Volt
         if (Obj && Obj->Object_IsA(To::Object_StaticType()))
             return static_cast<To*>(Obj);
         return nullptr;
+    }
+
+    template <typename To, typename From>
+    To* StaticCast(From* Obj)
+    {
+        if (Obj && Obj->Object_IsA(To::Object_StaticType()))
+            return static_cast<To*>(Obj);
+        VoltUnreachable("Invalid cast");
     }
 
     template<typename Base, typename T>

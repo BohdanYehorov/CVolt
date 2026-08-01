@@ -93,9 +93,11 @@ namespace Volt
         IRValue *CompileExplicitCast(const ExplicitCastNode *ExplicitCast);
         IRValue *CompileConstruct(const ConstructNode *Construct);
         IRValue *CompileVariable(const VariableNode *Var);
+        IRValue *CompileVariableConstruct(const VariableConstructNode *Construct);
         IRValue *CompileFunction(const FunctionNode *Function);
         IRValue *CompileReturn(const ReturnNode *Return);
-        IRValue *CompileMethod(const FunctionNode *Method, ClassType* Type);
+        IRValue *CompileMethod(const FunctionNode *Method, ClassType *Type);
+        IRValue *CompileConstructor(const ConstructorNode *Constructor, ClassType *Type);
         IRValue *CompileClass(const ClassNode *Class);
         IRValue *CompileIf(const IfNode *If);
         IRValue *CompileWhile(const WhileNode *While);

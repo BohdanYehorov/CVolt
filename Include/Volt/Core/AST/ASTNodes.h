@@ -346,6 +346,8 @@ namespace Volt
     {
         GENERATED_BODY(VariableNode, ASTNode)
     public:
+        class FunctionCallee* ResolvedConstructor = nullptr;
+
         DataTypeNodeBase* Type;
         llvm::StringRef Name;
         ASTNode* Value;
@@ -358,6 +360,8 @@ namespace Volt
     {
         GENERATED_BODY(VariableConstructNode, ASTNode)
     public:
+        class FunctionCallee* ResolvedCallee = nullptr;
+
         DataTypeNodeBase* Type;
         llvm::StringRef Name;
         ArgsVector<ASTNode*> Arguments;

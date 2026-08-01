@@ -3,7 +3,7 @@ class IntArray
     let:i32* Data;
     let:u64 Size;
 
-    fun:void Construct()
+    IntArray()
     {
         this.Data = null;
         this.Size = 0u64;
@@ -47,7 +47,7 @@ class IntArray
 
 fun:i32 Main()
 {
-    let:IntArray Arr = IntArray();
+    let:IntArray Arr();
 
     for (let:i32 i = 0; i < 10; i++)
         Arr.PushBack(i);

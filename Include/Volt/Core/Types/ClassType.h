@@ -25,13 +25,10 @@ namespace Volt
     {
         GENERATED_BODY(ClassType, DataType)
     public:
-        using ConstructorTable = SmallVec8<std::pair<SmallVec4<QualType>, FunctionCallee*>>;
-
-    public:
         std::string Name;
         Array<Field> Fields;
         FunctionTable Methods;
-        ConstructorTable Constructors;
+        FuncOverloadVector Constructors;
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;
 
@@ -56,6 +53,11 @@ namespace Volt
         void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
         {
             Methods[Name].emplace_back(std::move(Params), Callee);
+        }
+
+        void AddConstructor(ArgsVector<QualType> Params, FunctionCallee* Callee)
+        {
+            Constructors.emplace_back(std::move(Params), Callee);
         }
 
     private:
