@@ -28,7 +28,6 @@ set(SOURCES
         Src/ClassType.cpp
         Src/ClassInst.cpp
         Src/VoltClass.cpp
-        Include/Volt/Core/Functions/FunctionOverload.h
 )
 
 if (COMPILE_TO_LIB)

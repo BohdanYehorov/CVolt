@@ -140,8 +140,12 @@ namespace Volt
         void EnterScope();
         void ExitScope();
 
+        void DeclareGlobalVariable(VariableNode* Variable);
+
         void DeclareVariable(const std::string& Name, ExprAddress* Addr);
         ExprAddress* GetVariable(const std::string& Name);
+
+        void DeclareAndAddParams(llvm::ArrayRef<ParamNode*> ParamNodes, ArgsVector<QualType>& ParamTypes);
 
         friend class LLVMCompiler;
     };

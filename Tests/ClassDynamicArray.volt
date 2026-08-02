@@ -18,7 +18,7 @@ class IntArray
             MemFree(this.Data);
         }
 
-        NewData[i32(this.Size)] = Num;
+        NewData[this.Size] = Num;
         this.Data = NewData;
         this.Size++;
     }
@@ -28,12 +28,12 @@ class IntArray
         this.Add(Value);
     }
 
-    fun:i32 GetEl(i32 Index)
+    fun:i32 GetEl(u64 Index)
     {
         return this.Data[Index];
     }
 
-    fun:void SetEl(i32 Index, i32 Value)
+    fun:void SetEl(u64 Index, i32 Value)
     {
         this.Data[Index] = Value;
     }
@@ -52,13 +52,13 @@ fun:i32 Main()
     for (let:i32 i = 0; i < 10; i++)
         Arr.PushBack(i);
 
-    for (let:i32 i = 0; i < 10; i++)
+    for (let:u64 i = 0u64; i < 10u64; i++)
         OutLine(Arr.GetEl(i));
 
-    for (let:i32 i = 0; i < 10; i++)
-        Arr.SetEl(i, i + 10);
+    for (let:u64 i = 0u64; i < 10u64; i++)
+        Arr.SetEl(i, i32(i + 10u64));
 
-    for (let:i32 i = 0; i < 10; i++)
+    for (let:u64 i = 0u64; i < 10u64; i++)
         OutLine(Arr.GetEl(i));
 
     Arr.Free();

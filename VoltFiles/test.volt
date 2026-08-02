@@ -1,18 +1,5 @@
-class MyClass
-{
-    let:i32 a;
-
-    MyClass()
-    {
-        this.a = 5;
-        Out("MyClass()\n");
-    }
-}
-
 fun:i32 Main()
 {
-    let:MyClass myClass;
-
-    OutLine(myClass.a);
+    let:i32[5u32] Arr = [1, 2, 3, 4, 5];
     return 0;
 }

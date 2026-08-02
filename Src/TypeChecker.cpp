@@ -565,9 +565,11 @@ namespace Volt
         DataType* TargetType = TargetValue->GetType().GetType();
         DataType* IndexType = IndexValue->GetType().GetType();
 
-        DataType* Int32Type = CContext.GetIntegerType(32);
+        DataType* Int64Type = CContext.GetIntegerType(64);
+        DataType* UInt64Type = CContext.GetIntegerType(64, false);
 
-        if (!ImplicitCastOrError(IndexType, Int32Type, Subscript->Index->Line, Subscript->Index->Column))
+        if (!IndexType->ImplicitCast(Int64Type) &&
+            !IndexType->ImplicitCast(UInt64Type))
             return nullptr;
 
 
@@ -609,7 +611,11 @@ namespace Volt
     {
         QualType Type = VisitType(Construct->Type);
         auto ClassTy = Type.CastAs<ClassType>();
-        if (!ClassTy) return nullptr;
+        if (!ClassTy)
+        {
+            // SendError
+            return nullptr;
+        }
 
         size_t ArgsCount = Construct->Args.size();
         ArgsVector<QualType> Arguments;
@@ -637,34 +643,16 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitVariable(VariableNode *Variable)
     {
-        QualType VarType = VisitType(Variable->Type);
-
-        if (!VarType)
-            return nullptr;
-
         if (!InFunction)
         {
-            ExprResult* Value = VisitToRValue(Variable->Value);
-
-            if (Value && !Value->GetType().ImplicitCast(VarType))
-            {
-                SendError(TypeErrorKind::AssignmentTypeMismatch,
-                    Variable,{ Variable->Name.str(),
-                    VarType->ToString(), Value->GetType()->ToString() });
-
-                Value = ExprResult::CreateEmpty(VarType, MainArena);
-                GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
-                return nullptr;
-            }
-
-            if (!VarType.HasQualifier(QualType::CONST))
-                Value = ExprResult::CreateEmpty(VarType, MainArena);
-
-            GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+            DeclareGlobalVariable(Variable);
             return nullptr;
         }
 
-        const std::string& Name{ Variable->Name };
+        QualType VarType = VisitType(Variable->Type);
+        if (!VarType) return nullptr;
+
+        std::string Name{ Variable->Name };
         if (auto Iter = std::find_if(
             ScopeStack.Back().Begin(), ScopeStack.Back().End(),
             [&Name](const ScopeEntry& Entry) -> bool
@@ -804,13 +792,7 @@ namespace Volt
         DeclareVariable("this", MainArena.Create<ExprAddress>(
                         ExprResult::CreateEmpty(ThisType, MainArena)));
 
-        for (auto* Param : Constructor->Params)
-        {
-            QualType ParamType = VisitType(Param->Type);
-            Params.push_back(ParamType);
-            DeclareVariable(Param->Name.str(), MainArena.Create<ExprAddress>(
-                            ExprResult::CreateEmpty(ParamType, MainArena)));
-        }
+        DeclareAndAddParams(Constructor->Params, Params);
 
         QualType ReturnType = CContext.GetVoidType();
 
@@ -1007,7 +989,9 @@ namespace Volt
             ExprResult* Length = VisitToRValue(Array->Length);
             if (Length && Length->GetType()->IsIntegerType())
             {
-                Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Length->GetInt());
+                UInt64 Len = Length->GetType()->IsSignedIntegerType() ?
+                    static_cast<UInt64>(Length->GetInt()) : Length->GetUInt();
+                Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Len);
                 return { Array->ResolvedType, 0 };
             }
 
@@ -1089,13 +1073,7 @@ namespace Volt
         else
             Params.reserve(Function->Params.size());
 
-        for (auto* Param : Function->Params)
-        {
-            QualType ParamType = VisitType(Param->Type);
-            Params.push_back(ParamType);
-            DeclareVariable(Param->Name.str(), MainArena.Create<ExprAddress>(
-                            ExprResult::CreateEmpty(ParamType, MainArena)));
-        }
+        DeclareAndAddParams(Function->Params, Params);
 
         QualType ReturnType = VisitType(Function->ReturnType);
 
@@ -1196,6 +1174,30 @@ namespace Volt
         ScopeStack.Pop();
     }
 
+    void TypeChecker::DeclareGlobalVariable(VariableNode *Variable)
+    {
+        QualType VarType = VisitType(Variable->Type);
+        if (!VarType) return;
+
+        ExprResult* Value = VisitToRValue(Variable->Value);
+
+        if (Value && !Value->GetType().ImplicitCast(VarType))
+        {
+            SendError(TypeErrorKind::AssignmentTypeMismatch,
+                Variable,{ Variable->Name.str(),
+                VarType->ToString(), Value->GetType()->ToString() });
+
+            Value = ExprResult::CreateEmpty(VarType, MainArena);
+            GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+            return;
+        }
+
+        if (!VarType.HasQualifier(QualType::CONST))
+            Value = ExprResult::CreateEmpty(VarType, MainArena);
+
+        GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+    }
+
     void TypeChecker::DeclareVariable(const std::string &Name, ExprAddress* Addr)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
@@ -1212,5 +1214,16 @@ namespace Volt
             return Iter->second;
 
         return nullptr;
+    }
+
+    void TypeChecker::DeclareAndAddParams(llvm::ArrayRef<ParamNode *> ParamNodes, ArgsVector<QualType> &ParamTypes)
+    {
+        for (auto* Param : ParamNodes)
+        {
+            QualType ParamType = VisitType(Param->Type);
+            ParamTypes.push_back(ParamType);
+            DeclareVariable(Param->Name.str(), MainArena.Create<ExprAddress>(
+                            ExprResult::CreateEmpty(ParamType, MainArena)));
+        }
     }
 }
