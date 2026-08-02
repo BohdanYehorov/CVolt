@@ -247,8 +247,8 @@ namespace Volt
         OperatorType AssignmentType;
         switch (Suffix->Type)
         {
-            case OperatorType::INC: AssignmentType = OperatorType::ADD_ASSIGN; break;
-            case OperatorType::DEC: AssignmentType = OperatorType::SUB_ASSIGN; break;
+            case OperatorType::Inc: AssignmentType = OperatorType::AddAssign; break;
+            case OperatorType::Dec: AssignmentType = OperatorType::SubAssign; break;
             default: VoltUnreachable("Unknown suffix operator");
         }
 
@@ -266,8 +266,8 @@ namespace Volt
         OperatorType AssignmentType;
         switch (Prefix->Type)
         {
-            case OperatorType::INC: AssignmentType = OperatorType::ADD_ASSIGN; break;
-            case OperatorType::DEC: AssignmentType = OperatorType::SUB_ASSIGN; break;
+            case OperatorType::Inc: AssignmentType = OperatorType::AddAssign; break;
+            case OperatorType::Dec: AssignmentType = OperatorType::SubAssign; break;
             default: VoltUnreachable("Unknown prefix operator");
         }
 
@@ -301,10 +301,10 @@ namespace Volt
 
         switch (Unary->Type)
         {
-            case ADD: break;
-            case SUB: Operand = Operand->CreateNeg(CContext); break;
-            case BIT_NOT: Operand = Operand->CreateBitNot(CContext); break;
-            case LOGICAL_NOT: Operand = Operand->CreateNot(CContext); break;
+            case UnPlus:     break;
+            case UnMinus:    Operand = Operand->CreateNeg(CContext); break;
+            case BitNot:     Operand = Operand->CreateBitNot(CContext); break;
+            case LogicalNot: Operand = Operand->CreateNot(CContext); break;
             default: VoltUnreachable("Unknown unary operator");
         }
 
@@ -404,16 +404,16 @@ namespace Volt
         ExprResult* Result;
         switch (Binary->Type)
         {
-            case ADD:     Result = Left->CreateAdd(Right, CContext); break;
-            case SUB:     Result = Left->CreateSub(Right, CContext); break;
-            case MUL:     Result = Left->CreateMul(Right, CContext); break;
-            case DIV:     Result = Left->CreateDiv(Right, CContext); break;
-            case MOD:     Result = Left->CreateMod(Right, CContext); break;
-            case BIT_AND: Result = Left->CreateBitAnd(Right, CContext); break;
-            case BIT_OR:  Result = Left->CreateBitOr(Right, CContext); break;
-            case BIT_XOR: Result = Left->CreateBitXor(Right, CContext); break;
-            case RSHIFT:  Result = Left->CreateBitRShift(Right, CContext); break;
-            case LSHIFT:  Result = Left->CreateBitLShift(Right, CContext); break;
+            case Add:     Result = Left->CreateAdd(Right, CContext); break;
+            case Sub:     Result = Left->CreateSub(Right, CContext); break;
+            case Mul:     Result = Left->CreateMul(Right, CContext); break;
+            case Div:     Result = Left->CreateDiv(Right, CContext); break;
+            case Mod:     Result = Left->CreateMod(Right, CContext); break;
+            case BitAnd:  Result = Left->CreateBitAnd(Right, CContext); break;
+            case BitOr:   Result = Left->CreateBitOr(Right, CContext); break;
+            case BitXor:  Result = Left->CreateBitXor(Right, CContext); break;
+            case RShift:  Result = Left->CreateBitRShift(Right, CContext); break;
+            case LShift:  Result = Left->CreateBitLShift(Right, CContext); break;
             default: VoltUnreachable("Unknown binary operator");
         }
 

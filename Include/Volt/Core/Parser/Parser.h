@@ -159,21 +159,21 @@ namespace Volt
 
             switch (Tok.Type)
             {
-                case OP_LPAREN:
-                    SkipExpressionInBrackets(OP_LPAREN, OP_RPAREN);
+                case LParen:
+                    SkipExpressionInBrackets(LParen, RParen);
                     break;
-                case OP_LBRACKET:
-                    SkipExpressionInBrackets(OP_LBRACKET, OP_RBRACKET);
+                case LSquare:
+                    SkipExpressionInBrackets(LSquare, RSquare);
                     break;
-                case OP_LBRACE:
-                    SkipExpressionInBrackets(OP_LBRACE, OP_RBRACE);
+                case LBrace:
+                    SkipExpressionInBrackets(LBrace, RBrace);
                     break;
                 default:
                     Consume();
             }
         }
 
-        return UNKNOWN;
+        return Unknown;
     }
 }
 

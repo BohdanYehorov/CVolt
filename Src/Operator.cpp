@@ -6,7 +6,7 @@
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Support/ErrorHandling.h"
 
-#define GEN_CASE(Op) case TokenType::OP_##Op: return OperatorType::Op;
+#define GEN_CASE(Tok, Op) case TokenType::Tok: return OperatorType::Op;
 #define GEN_CASE_TO_STRING(Op) case OperatorType::Op: return #Op;
 
 namespace Volt
@@ -15,18 +15,18 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(ASSIGN)
-            GEN_CASE(ADD_ASSIGN)
-            GEN_CASE(SUB_ASSIGN)
-            GEN_CASE(MUL_ASSIGN)
-            GEN_CASE(DIV_ASSIGN)
-            GEN_CASE(MOD_ASSIGN)
-            GEN_CASE(AND_ASSIGN)
-            GEN_CASE(OR_ASSIGN)
-            GEN_CASE(XOR_ASSIGN)
-            GEN_CASE(LSHIFT_ASSIGN)
-            GEN_CASE(RSHIFT_ASSIGN)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(Equal, Assign)
+            GEN_CASE(PlusEqual, AddAssign)
+            GEN_CASE(MinusEqual, SubAssign)
+            GEN_CASE(StarEqual, MulAssign)
+            GEN_CASE(SlashEqual, DivAssign)
+            GEN_CASE(PercentEqual, ModAssign)
+            GEN_CASE(AmpEqual, AndAssign)
+            GEN_CASE(PipeEqual, OrAssign)
+            GEN_CASE(CaretEqual, XorAssign)
+            GEN_CASE(LessLessEqual, LShiftAssign)
+            GEN_CASE(GraterGraterEqual, RShiftAssign)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -34,9 +34,9 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(LOGICAL_AND)
-            GEN_CASE(LOGICAL_OR)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(AmpAmp, LogicalAnd)
+            GEN_CASE(PipePipe, LogicalOr)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -44,10 +44,10 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(BIT_AND)
-            GEN_CASE(BIT_OR)
-            GEN_CASE(BIT_XOR)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(Amp, BitAnd)
+            GEN_CASE(Pipe, BitOr)
+            GEN_CASE(Caret, BitXor)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -55,9 +55,9 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(EQ)
-            GEN_CASE(NEQ)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(EqualEqual, Equal)
+            GEN_CASE(ExclaimEqual, NotEqual)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -65,11 +65,11 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(GT)
-            GEN_CASE(GTE)
-            GEN_CASE(LT)
-            GEN_CASE(LTE)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(Grater, Grater)
+            GEN_CASE(GraterEqual, GraterEqual)
+            GEN_CASE(Less, Less)
+            GEN_CASE(LessEqual, LessEqual)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -77,9 +77,9 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(LSHIFT)
-            GEN_CASE(RSHIFT)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(LessLess, LShift)
+            GEN_CASE(GraterGrater, RShift)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -87,9 +87,9 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(ADD)
-            GEN_CASE(SUB)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(Plus, Add)
+            GEN_CASE(Minus, Sub)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -97,10 +97,10 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(MUL)
-            GEN_CASE(DIV)
-            GEN_CASE(MOD)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(Star, Mul)
+            GEN_CASE(Slash, Div)
+            GEN_CASE(Percent, Mod)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -108,14 +108,14 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(ADD)
-            GEN_CASE(SUB)
-            GEN_CASE(LOGICAL_NOT)
-            GEN_CASE(BIT_NOT)
-            GEN_CASE(INC)
-            GEN_CASE(DEC)
-            GEN_CASE(MUL)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(Plus, UnPlus)
+            GEN_CASE(Minus, UnMinus)
+            GEN_CASE(Exclaim, LogicalNot)
+            GEN_CASE(Tilde, BitNot)
+            GEN_CASE(PlusPlus, Inc)
+            GEN_CASE(MinusMinus, Dec)
+            GEN_CASE(Star, Unref)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -123,9 +123,9 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE(INC)
-            GEN_CASE(DEC)
-            default: return OperatorType::UNKNOWN;
+            GEN_CASE(PlusPlus, Inc)
+            GEN_CASE(MinusMinus, Dec)
+            default: return OperatorType::Unknown;
         }
     }
 
@@ -133,40 +133,43 @@ namespace Volt
     {
         switch (Op)
         {
-            GEN_CASE_TO_STRING(UNKNOWN)
-            GEN_CASE_TO_STRING(ADD)
-            GEN_CASE_TO_STRING(SUB)
-            GEN_CASE_TO_STRING(MUL)
-            GEN_CASE_TO_STRING(DIV)
-            GEN_CASE_TO_STRING(MOD)
-            GEN_CASE_TO_STRING(INC)
-            GEN_CASE_TO_STRING(DEC)
-            GEN_CASE_TO_STRING(ASSIGN)
-            GEN_CASE_TO_STRING(ADD_ASSIGN)
-            GEN_CASE_TO_STRING(SUB_ASSIGN)
-            GEN_CASE_TO_STRING(MUL_ASSIGN)
-            GEN_CASE_TO_STRING(DIV_ASSIGN)
-            GEN_CASE_TO_STRING(MOD_ASSIGN)
-            GEN_CASE_TO_STRING(AND_ASSIGN)
-            GEN_CASE_TO_STRING(OR_ASSIGN)
-            GEN_CASE_TO_STRING(XOR_ASSIGN)
-            GEN_CASE_TO_STRING(LSHIFT_ASSIGN)
-            GEN_CASE_TO_STRING(RSHIFT_ASSIGN)
-            GEN_CASE_TO_STRING(EQ)
-            GEN_CASE_TO_STRING(NEQ)
-            GEN_CASE_TO_STRING(GT)
-            GEN_CASE_TO_STRING(GTE)
-            GEN_CASE_TO_STRING(LT)
-            GEN_CASE_TO_STRING(LTE)
-            GEN_CASE_TO_STRING(LOGICAL_AND)
-            GEN_CASE_TO_STRING(LOGICAL_OR)
-            GEN_CASE_TO_STRING(LOGICAL_NOT)
-            GEN_CASE_TO_STRING(BIT_AND)
-            GEN_CASE_TO_STRING(BIT_OR)
-            GEN_CASE_TO_STRING(BIT_XOR)
-            GEN_CASE_TO_STRING(BIT_NOT)
-            GEN_CASE_TO_STRING(LSHIFT)
-            GEN_CASE_TO_STRING(RSHIFT)
+            GEN_CASE_TO_STRING(Add)
+            GEN_CASE_TO_STRING(Sub)
+            GEN_CASE_TO_STRING(Mul)
+            GEN_CASE_TO_STRING(Div)
+            GEN_CASE_TO_STRING(Mod)
+            GEN_CASE_TO_STRING(Inc)
+            GEN_CASE_TO_STRING(Dec)
+            GEN_CASE_TO_STRING(Assign)
+            GEN_CASE_TO_STRING(AddAssign)
+            GEN_CASE_TO_STRING(SubAssign)
+            GEN_CASE_TO_STRING(MulAssign)
+            GEN_CASE_TO_STRING(DivAssign)
+            GEN_CASE_TO_STRING(ModAssign)
+            GEN_CASE_TO_STRING(AndAssign)
+            GEN_CASE_TO_STRING(OrAssign)
+            GEN_CASE_TO_STRING(XorAssign)
+            GEN_CASE_TO_STRING(LShiftAssign)
+            GEN_CASE_TO_STRING(RShiftAssign)
+            GEN_CASE_TO_STRING(Equal)
+            GEN_CASE_TO_STRING(NotEqual)
+            GEN_CASE_TO_STRING(Grater)
+            GEN_CASE_TO_STRING(GraterEqual)
+            GEN_CASE_TO_STRING(Less)
+            GEN_CASE_TO_STRING(LessEqual)
+            GEN_CASE_TO_STRING(LogicalAnd)
+            GEN_CASE_TO_STRING(LogicalOr)
+            GEN_CASE_TO_STRING(LogicalNot)
+            GEN_CASE_TO_STRING(BitAnd)
+            GEN_CASE_TO_STRING(BitOr)
+            GEN_CASE_TO_STRING(BitXor)
+            GEN_CASE_TO_STRING(BitNot)
+            GEN_CASE_TO_STRING(LShift)
+            GEN_CASE_TO_STRING(RShift)
+            GEN_CASE_TO_STRING(UnPlus)
+            GEN_CASE_TO_STRING(UnMinus)
+            GEN_CASE_TO_STRING(Unref)
+            GEN_CASE_TO_STRING(Unknown)
             default: return "?";
         }
     }
@@ -187,8 +190,8 @@ namespace Volt
 
         switch (Op)
         {
-            case ADD: case SUB:
-            case MUL: case DIV:
+            case Add: case Sub:
+            case Mul: case Div:
             {
                 if (JointType->IsOneOf(INTEGER, FLOATING_POINT))
                     return Normalize(Left, Right, JointType);
@@ -198,9 +201,9 @@ namespace Volt
                 return {};
             }
 
-            case MOD:    case BIT_AND:
-            case BIT_OR: case BIT_XOR:
-            case LSHIFT: case RSHIFT:
+            case Mod:    case BitAnd:
+            case BitOr: case BitXor:
+            case LShift: case RShift:
             {
                 if (JointType->IsIntegerType())
                     return Normalize(Left, Right, JointType);
@@ -230,7 +233,7 @@ namespace Volt
 
         switch (Op)
         {
-            case EQ: case NEQ:
+            case Equal: case NotEqual:
             {
                 if (JointType->IsOneOf(BOOLEAN, CHAR, INTEGER, FLOATING_POINT, POINTER))
                 {
@@ -243,8 +246,8 @@ namespace Volt
                 return {};
             }
 
-            case GT: case GTE:
-            case LT: case LTE:
+            case Grater: case GraterEqual:
+            case Less:   case LessEqual:
             {
                 if (JointType->IsOneOf(INTEGER, FLOATING_POINT))
                 {
@@ -285,8 +288,8 @@ namespace Volt
 
         switch (Op)
         {
-            case LOGICAL_AND:
-            case LOGICAL_OR:
+            case LogicalAnd:
+            case LogicalOr:
                 return Normalize(Left, Right, QualType(BoolTy, 0));
 
             default:
@@ -309,7 +312,7 @@ namespace Volt
 
         switch (Op)
         {
-            case ASSIGN:
+            case Assign:
             {
                 if (!Left->IsVoidType())
                 {
@@ -324,7 +327,7 @@ namespace Volt
             default:
             {
                 OperatorType SecondOp = GetSecondOpCompoundAssignment(Op);
-                if (SecondOp == UNKNOWN)
+                if (SecondOp == Unknown)
                     VoltUnreachable("Unknown assignment operator");
 
                 QualType TmpLeft = Left, TmpRight = Right;
@@ -354,7 +357,7 @@ namespace Volt
 
         if (LeftCategory == POINTER && RightCategory == INTEGER)
         {
-            if (Op == ADD || Op == SUB)
+            if (Op == Add || Op == Sub)
                 return Left;
 
             Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
@@ -364,7 +367,7 @@ namespace Volt
 
         if (LeftCategory == INTEGER && RightCategory == POINTER)
         {
-            if (Op == ADD)
+            if (Op == Add)
                 return Right;
 
             Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
@@ -401,26 +404,26 @@ namespace Volt
 
         switch (Op)
         {
-            case ADD:     case SUB:    case MUL:
-            case DIV:     case MOD:
-            case BIT_AND: case BIT_OR: case BIT_XOR:
-            case LSHIFT:  case RSHIFT:
+            case Add:     case Sub:    case Mul:
+            case Div:     case Mod:
+            case BitAnd:  case BitOr:  case BitXor:
+            case LShift:  case RShift:
                 return BinaryOperatorKind::Arithmetic;
 
-            case EQ: case NEQ:
-            case GT: case GTE:
-            case LT: case LTE:
+            case Equal:  case NotEqual:
+            case Grater: case GraterEqual:
+            case Less:   case LessEqual:
                 return BinaryOperatorKind::Comparison;
 
-            case LOGICAL_AND: case LOGICAL_OR:
+            case LogicalAnd: case LogicalOr:
                 return BinaryOperatorKind::Logical;
 
-            case ASSIGN:
-            case ADD_ASSIGN:    case SUB_ASSIGN:
-            case MUL_ASSIGN:    case DIV_ASSIGN:
-            case MOD_ASSIGN:    case AND_ASSIGN:
-            case OR_ASSIGN:     case XOR_ASSIGN:
-            case LSHIFT_ASSIGN: case RSHIFT_ASSIGN:
+            case Assign:
+            case AddAssign:    case SubAssign:
+            case MulAssign:    case DivAssign:
+            case ModAssign:    case AndAssign:
+            case OrAssign:     case XorAssign:
+            case LShiftAssign: case RShiftAssign:
                 return BinaryOperatorKind::Assignment;
 
             default:
@@ -435,8 +438,8 @@ namespace Volt
 
         switch (Op)
         {
-            case ADD:
-            case INC: case DEC:
+            case UnPlus:
+            case Inc: case Dec:
             {
                 if (Operand->IsOneOf(INTEGER, FLOATING_POINT))
                     return Operand;
@@ -446,7 +449,7 @@ namespace Volt
                 return {};
             }
 
-            case SUB:
+            case UnMinus:
             {
                 if (Operand->IsSignedIntegerType() || Operand->IsFloatingPointType())
                     return Operand;
@@ -456,7 +459,7 @@ namespace Volt
                 return {};
             }
 
-            case BIT_NOT:
+            case BitNot:
             {
                 if (Operand->IsIntegerType())
                     return Operand;
@@ -466,7 +469,7 @@ namespace Volt
                 return {};
             }
 
-            case LOGICAL_NOT:
+            case LogicalNot:
             {
                 if (Operand->IsBoolType())
                     return Operand;
@@ -519,17 +522,17 @@ namespace Volt
 
         switch (Op)
         {
-            case ADD_ASSIGN:    return ADD;
-            case SUB_ASSIGN:    return SUB;
-            case MUL_ASSIGN:    return MUL;
-            case DIV_ASSIGN:    return DIV;
-            case MOD_ASSIGN:    return MOD;
-            case AND_ASSIGN:    return BIT_AND;
-            case OR_ASSIGN:     return BIT_OR;
-            case XOR_ASSIGN:    return BIT_XOR;
-            case LSHIFT_ASSIGN: return LSHIFT;
-            case RSHIFT_ASSIGN: return RSHIFT;
-            default:            return UNKNOWN;
+            case AddAssign:    return Add;
+            case SubAssign:    return Sub;
+            case MulAssign:    return Mul;
+            case DivAssign:    return Div;
+            case ModAssign:    return Mod;
+            case AndAssign:    return BitAnd;
+            case OrAssign:     return BitOr;
+            case XorAssign:    return BitXor;
+            case LShiftAssign: return LShift;
+            case RShiftAssign: return RShift;
+            default:           return Unknown;
         }
     }
 }

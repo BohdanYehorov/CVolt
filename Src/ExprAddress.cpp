@@ -21,17 +21,17 @@ namespace Volt
 
         switch (Op)
         {
-            case ASSIGN:        Value = Right; break;
-            case ADD_ASSIGN:    Value = Value->CreateAdd(Right, CContext); break;
-            case SUB_ASSIGN:    Value = Value->CreateSub(Right, CContext); break;
-            case MUL_ASSIGN:    Value = Value->CreateMul(Right, CContext); break;
-            case DIV_ASSIGN:    Value = Value->CreateDiv(Right, CContext); break;
-            case MOD_ASSIGN:    Value = Value->CreateMod(Right, CContext); break;
-            case AND_ASSIGN:    Value = Value->CreateBitAnd(Right, CContext); break;
-            case OR_ASSIGN:     Value = Value->CreateBitOr(Right, CContext); break;
-            case XOR_ASSIGN:    Value = Value->CreateBitXor(Right, CContext); break;
-            case RSHIFT_ASSIGN: Value = Value->CreateBitRShift(Right, CContext); break;
-            case LSHIFT_ASSIGN: Value = Value->CreateBitLShift(Right, CContext); break;
+            case Assign:        Value = Right; break;
+            case AddAssign:    Value = Value->CreateAdd(Right, CContext); break;
+            case SubAssign:    Value = Value->CreateSub(Right, CContext); break;
+            case MulAssign:    Value = Value->CreateMul(Right, CContext); break;
+            case DivAssign:    Value = Value->CreateDiv(Right, CContext); break;
+            case ModAssign:    Value = Value->CreateMod(Right, CContext); break;
+            case AndAssign:    Value = Value->CreateBitAnd(Right, CContext); break;
+            case OrAssign:     Value = Value->CreateBitOr(Right, CContext); break;
+            case XorAssign:    Value = Value->CreateBitXor(Right, CContext); break;
+            case RShiftAssign: Value = Value->CreateBitRShift(Right, CContext); break;
+            case LShiftAssign: Value = Value->CreateBitLShift(Right, CContext); break;
             default: VoltUnreachable("Unknown assignment operator");
         }
 

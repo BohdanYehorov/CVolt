@@ -115,12 +115,12 @@ namespace Volt
 
 			switch (Op)
 			{
-				case EQ:  Result = LeftVal == RightVal; break;
-				case NEQ: Result = LeftVal != RightVal; break;
-				case LT:  Result = LeftVal < RightVal;  break;
-				case LTE: Result = LeftVal <= RightVal; break;
-				case GT:  Result = LeftVal > RightVal;  break;
-				case GTE: Result = LeftVal >= RightVal; break;
+				case Equal:       Result = LeftVal == RightVal; break;
+				case NotEqual:    Result = LeftVal != RightVal; break;
+				case Less:        Result = LeftVal < RightVal;  break;
+				case LessEqual:   Result = LeftVal <= RightVal; break;
+				case Grater:      Result = LeftVal > RightVal;  break;
+				case GraterEqual: Result = LeftVal >= RightVal; break;
 				default: VoltUnreachable("Unknown comparison operator");
 			}
 
@@ -135,12 +135,12 @@ namespace Volt
 
 			switch (Op)
 			{
-				case EQ:  Result = LeftVal == RightVal; break;
-				case NEQ: Result = LeftVal != RightVal; break;
-				case LT:  Result = LeftVal < RightVal;  break;
-				case LTE: Result = LeftVal <= RightVal; break;
-				case GT:  Result = LeftVal > RightVal;  break;
-				case GTE: Result = LeftVal >= RightVal; break;
+				case Equal:       Result = LeftVal == RightVal; break;
+				case NotEqual:    Result = LeftVal != RightVal; break;
+				case Less:        Result = LeftVal < RightVal;  break;
+				case LessEqual:   Result = LeftVal <= RightVal; break;
+				case Grater:      Result = LeftVal > RightVal;  break;
+				case GraterEqual: Result = LeftVal >= RightVal; break;
 				default: VoltUnreachable("Unknown comparison operator");
 			}
 
@@ -155,8 +155,8 @@ namespace Volt
 
 			switch (Op)
 			{
-				case EQ:  Result = LeftVal == RightVal; break;
-				case NEQ: Result = LeftVal != RightVal; break;
+				case Equal:    Result = LeftVal == RightVal; break;
+				case NotEqual: Result = LeftVal != RightVal; break;
 				default:  VoltUnreachable("Invalid comparison operator for this type");
 			}
 

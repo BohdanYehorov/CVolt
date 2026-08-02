@@ -122,12 +122,12 @@ namespace Volt
 			llvm::ICmpInst::Predicate Pred;
 			switch (Op)
 			{
-				case EQ:  Pred = llvm::ICmpInst::ICMP_EQ; break;
-				case NEQ: Pred = llvm::ICmpInst::ICMP_NE; break;
-				case LT:  Pred = IsSigned ? llvm::ICmpInst::ICMP_SLT : llvm::ICmpInst::ICMP_ULT; break;
-				case LTE: Pred = IsSigned ? llvm::ICmpInst::ICMP_SLE : llvm::ICmpInst::ICMP_ULE; break;
-				case GT:  Pred = IsSigned ? llvm::ICmpInst::ICMP_SGT : llvm::ICmpInst::ICMP_UGT; break;
-				case GTE: Pred = IsSigned ? llvm::ICmpInst::ICMP_SGE : llvm::ICmpInst::ICMP_UGE; break;
+				case Equal:       Pred = llvm::ICmpInst::ICMP_EQ; break;
+				case NotEqual:    Pred = llvm::ICmpInst::ICMP_NE; break;
+				case Less:        Pred = IsSigned ? llvm::ICmpInst::ICMP_SLT : llvm::ICmpInst::ICMP_ULT; break;
+				case LessEqual:   Pred = IsSigned ? llvm::ICmpInst::ICMP_SLE : llvm::ICmpInst::ICMP_ULE; break;
+				case Grater:      Pred = IsSigned ? llvm::ICmpInst::ICMP_SGT : llvm::ICmpInst::ICMP_UGT; break;
+				case GraterEqual: Pred = IsSigned ? llvm::ICmpInst::ICMP_SGE : llvm::ICmpInst::ICMP_UGE; break;
 				default: return nullptr;
 			}
 
@@ -140,12 +140,12 @@ namespace Volt
 			llvm::FCmpInst::Predicate Pred;
 			switch (Op)
 			{
-				case EQ:  Pred = llvm::FCmpInst::FCMP_OEQ; break;
-				case NEQ: Pred = llvm::FCmpInst::FCMP_ONE; break;
-				case LT:  Pred = llvm::FCmpInst::FCMP_OLT; break;
-				case LTE: Pred = llvm::FCmpInst::FCMP_OLE; break;
-				case GT:  Pred = llvm::FCmpInst::FCMP_OGT; break;
-				case GTE: Pred = llvm::FCmpInst::FCMP_OGE; break;
+				case Equal:       Pred = llvm::FCmpInst::FCMP_OEQ; break;
+				case NotEqual:    Pred = llvm::FCmpInst::FCMP_ONE; break;
+				case Less:        Pred = llvm::FCmpInst::FCMP_OLT; break;
+				case LessEqual:   Pred = llvm::FCmpInst::FCMP_OLE; break;
+				case Grater:      Pred = llvm::FCmpInst::FCMP_OGT; break;
+				case GraterEqual: Pred = llvm::FCmpInst::FCMP_OGE; break;
 				default: return nullptr;
 			}
 
@@ -305,7 +305,7 @@ namespace Volt
 		if (Type != Right->Type)
 			VoltUnreachable("Cannot assign value with another type");
 
-		if (Op == ASSIGN)
+		if (Op == Assign)
 		{
 			Builder.CreateStore(Right->Value, Value);
 			return Right;
@@ -314,43 +314,43 @@ namespace Volt
 		IRValue* NewValue = GetRValue(Builder, CContext);
 		switch (Op)
 		{
-			case ADD_ASSIGN:
+			case AddAssign:
 				NewValue = NewValue->CreateAdd(Right, Builder, CContext);
 				break;
 
-			case SUB_ASSIGN:
+			case SubAssign:
 				NewValue = NewValue->CreateSub(Right, Builder, CContext);
 				break;
 
-			case MUL_ASSIGN:
+			case MulAssign:
 				NewValue = NewValue->CreateMul(Right, Builder, CContext);
 				break;
 
-			case DIV_ASSIGN:
+			case DivAssign:
 				NewValue = NewValue->CreateDiv(Right, Builder, CContext);
 				break;
 
-			case MOD_ASSIGN:
+			case ModAssign:
 				NewValue = NewValue->CreateMod(Right, Builder, CContext);
 				break;
 
-			case AND_ASSIGN:
+			case AndAssign:
 				NewValue = NewValue->CreateBitAnd(Right, Builder, CContext);
 				break;
 
-			case OR_ASSIGN:
+			case OrAssign:
 				NewValue = NewValue->CreateBitOr(Right, Builder, CContext);
 				break;
 
-			case XOR_ASSIGN:
+			case XorAssign:
 				NewValue = NewValue->CreateBitXor(Right, Builder, CContext);
 				break;
 
-			case RSHIFT_ASSIGN:
+			case RShiftAssign:
 				NewValue = NewValue->CreateRShift(Right, Builder, CContext);
 				break;
 
-			case LSHIFT_ASSIGN:
+			case LShiftAssign:
 				NewValue = NewValue->CreateLShift(Right, Builder, CContext);
 				break;
 

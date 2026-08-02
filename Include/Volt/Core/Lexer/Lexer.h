@@ -83,7 +83,7 @@ namespace Volt
         bool GetNumberSuffixLiteral(llvm::StringRef& Lit);
 
         [[nodiscard]] static Token InvalidToken(StringRef Lexeme, size_t Pos, size_t Line, size_t Col)
-        { return { TokenType::INVALID, Lexeme, Pos, Line, Col };  }
+        { return { TokenType::Invalid, Lexeme, Pos, Line, Col };  }
 
         [[nodiscard]] Token InvalidToken(size_t StartPos, size_t StartLine, size_t StartCol) const
         { return InvalidToken(StringRef(StartPos, Pos - StartPos),

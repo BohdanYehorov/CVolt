@@ -23,7 +23,7 @@ namespace Volt
 
 	struct Token
     {
-        TokenType Type = TokenType::UNKNOWN;
+        TokenType Type = TokenType::Unknown;
         StringRef Lexeme;
         size_t Pos = 0, Line = 1, Column = 1;
 

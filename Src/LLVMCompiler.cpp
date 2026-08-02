@@ -254,10 +254,10 @@ namespace Volt
 
         switch (Prefix->Type)
         {
-            case OperatorType::INC:
-                return Operand->CreateAssignment(Value, OperatorType::ADD_ASSIGN, Builder, CContext);
-            case OperatorType::DEC:
-                return Operand->CreateAssignment(Value, OperatorType::SUB_ASSIGN, Builder, CContext);
+            case OperatorType::Inc:
+                return Operand->CreateAssignment(Value, OperatorType::AddAssign, Builder, CContext);
+            case OperatorType::Dec:
+                return Operand->CreateAssignment(Value, OperatorType::SubAssign, Builder, CContext);
             default:
                 VoltUnreachable("Invalid prefix operator");
         }
@@ -273,11 +273,11 @@ namespace Volt
         IRValue* Temp = Operand->GetRValue(Builder, CContext);
         switch (Suffix->Type)
         {
-            case OperatorType::INC:
-                Operand->CreateAssignment(Value, OperatorType::ADD_ASSIGN, Builder, CContext);
+            case OperatorType::Inc:
+                Operand->CreateAssignment(Value, OperatorType::AddAssign, Builder, CContext);
                 return Temp;
-            case OperatorType::DEC:
-                Operand->CreateAssignment(Value, OperatorType::SUB_ASSIGN, Builder, CContext);
+            case OperatorType::Dec:
+                Operand->CreateAssignment(Value, OperatorType::SubAssign, Builder, CContext);
                 return Temp;
             default:
                 VoltUnreachable("Invalid prefix operator");
@@ -294,10 +294,10 @@ namespace Volt
 
         switch (Unary->Type)
         {
-            case ADD:         return Operand;
-            case SUB:         return Operand->CreateNeg(Builder, CContext);
-            case BIT_NOT:     return Operand->CreateNot(Builder, CContext);
-            case LOGICAL_NOT: return Operand->CreateLogicalNot(Builder, CContext);
+            case UnPlus:     return Operand;
+            case UnMinus:    return Operand->CreateNeg(Builder, CContext);
+            case BitNot:     return Operand->CreateNot(Builder, CContext);
+            case LogicalNot: return Operand->CreateLogicalNot(Builder, CContext);
             default: VoltUnreachable("Unknown unary operator");
         }
     }
@@ -331,7 +331,7 @@ namespace Volt
 
         switch (Logical->Type)
         {
-            case OperatorType::LOGICAL_OR:
+            case OperatorType::LogicalOr:
             {
                 llvm::AllocaInst* Alloca = Builder.CreateAlloca(Builder.getInt1Ty());
                 llvm::BasicBlock* OrFalseBlock = llvm::BasicBlock::Create(Context, "or.false", Func);
@@ -354,7 +354,7 @@ namespace Volt
                 return Create<IRValue>(Builder.CreateLoad(
                     Alloca->getAllocatedType(), Alloca), Logical->CompileTimeValue->GetType().GetType());
             }
-            case OperatorType::LOGICAL_AND:
+            case OperatorType::LogicalAnd:
             {
                 llvm::AllocaInst* Alloca = Builder.CreateAlloca(Builder.getInt1Ty());
                 llvm::BasicBlock* AndTrueBlock = llvm::BasicBlock::Create(Context, "and.true", Func);
@@ -415,16 +415,16 @@ namespace Volt
 
         switch (BinaryOp->Type)
         {
-            case ADD:     return Left->CreateAdd(Right, Builder, CContext);
-            case SUB:     return Left->CreateSub(Right, Builder, CContext);
-            case MUL:     return Left->CreateMul(Right, Builder, CContext);
-            case DIV:     return Left->CreateDiv(Right, Builder, CContext);
-            case MOD:     return Left->CreateMod(Right, Builder, CContext);
-            case BIT_AND: return Left->CreateBitAnd(Right, Builder, CContext);
-            case BIT_OR:  return Left->CreateBitOr(Right, Builder, CContext);
-            case BIT_XOR: return Left->CreateBitXor(Right, Builder, CContext);
-            case RSHIFT:  return Left->CreateRShift(Right, Builder, CContext);
-            case LSHIFT:  return Left->CreateLShift(Right, Builder, CContext);
+            case Add:     return Left->CreateAdd(Right, Builder, CContext);
+            case Sub:     return Left->CreateSub(Right, Builder, CContext);
+            case Mul:     return Left->CreateMul(Right, Builder, CContext);
+            case Div:     return Left->CreateDiv(Right, Builder, CContext);
+            case Mod:     return Left->CreateMod(Right, Builder, CContext);
+            case BitAnd:  return Left->CreateBitAnd(Right, Builder, CContext);
+            case BitOr:   return Left->CreateBitOr(Right, Builder, CContext);
+            case BitXor:  return Left->CreateBitXor(Right, Builder, CContext);
+            case RShift:  return Left->CreateRShift(Right, Builder, CContext);
+            case LShift:  return Left->CreateLShift(Right, Builder, CContext);
             default: VoltUnreachable("Unknown binary operator");
         }
     }
