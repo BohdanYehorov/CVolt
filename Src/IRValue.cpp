@@ -55,19 +55,19 @@ namespace Volt
 	{
 		switch (Type->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return CastBooleanTo(To, Builder, CContext);
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return CastCharTo(To, Builder, CContext);
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return CastIntegerTo(To, Builder, CContext);
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return CastFloatTo(To, Builder, CContext);
-			case TypeCategory::POINTER:
+			case TypeCategory::Pointer:
 				return CastPointerTo(To, Builder, CContext);
-			case TypeCategory::NULL_POINTER:
+			case TypeCategory::NullPointer:
 				return CastNullPointerTo(To, Builder, CContext);
-			case TypeCategory::REFERENCE:
+			case TypeCategory::Reference:
 				return CastReferenceTo(To, Builder, CContext);
 			default:
 				return nullptr;
@@ -369,11 +369,11 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::CHAR:
-			case TypeCategory::INTEGER:
+			case TypeCategory::Char:
+			case TypeCategory::Integer:
 				return Builder.CreateZExt(Value, CContext.GetLLVMType(To));
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
 			default:
 				return nullptr;
@@ -387,14 +387,14 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Builder.CreateICmpNE(Value, Builder.getInt8(0));
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return To->IsSignedIntegerType() ? Builder.CreateSExt(Value, CContext.GetLLVMType(To)) :
 				                                   Builder.CreateZExt(Value, CContext.GetLLVMType(To));
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return Builder.CreateSIToFP(Value, CContext.GetLLVMType(To));
 			default:
 				return nullptr;
@@ -408,14 +408,14 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Builder.CreateICmpNE(Value,
 				llvm::ConstantInt::get(CContext.GetLLVMType(To), 0));
 
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return Builder.CreateTrunc(Value, CContext.GetLLVMType(To));
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 			{
 				auto FromIntType = Cast<IntegerType>(Type);
 				auto ToIntType = Cast<IntegerType>(To);
@@ -429,7 +429,7 @@ namespace Volt
 					Builder.CreateTrunc(Value, CContext.GetLLVMType(To));
 			}
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return Type->IsSignedIntegerType() ? Builder.CreateSIToFP(Value, CContext.GetLLVMType(To)) :
 													 Builder.CreateUIToFP(Value, CContext.GetLLVMType(To));
 
@@ -445,18 +445,18 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Builder.CreateFCmpONE(Value,
 				 	llvm::ConstantFP::get(CContext.GetLLVMType(To), 0.0));
 
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return Builder.CreateFPToSI(Value, CContext.GetLLVMType(To));
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return To->IsSignedIntegerType() ? Builder.CreateFPToSI(Value, CContext.GetLLVMType(To)) :
 				                                   Builder.CreateFPToUI(Value, CContext.GetLLVMType(To));
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 			{
 				auto FromFloatType = Cast<FloatingPointType>(Type);
 				auto ToFloatType = Cast<FloatingPointType>(To);
@@ -481,10 +481,10 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Builder.CreateICmpNE(
 					Value, llvm::ConstantPointerNull::get(Builder.getPtrTy(0)));
-			case TypeCategory::POINTER:
+			case TypeCategory::Pointer:
 				return Value;
 			default:
 				return nullptr;

@@ -34,8 +34,6 @@ namespace Volt
     private:
         size_t Pos = 0, Line = 1, Column = 1;
 
-        // ArenaStream TokensArena;
-
         CompilationContext& Context;
         String& Code;
 
@@ -56,8 +54,6 @@ namespace Volt
         Lexer& operator=(Lexer&&) noexcept = delete;
 
         void Lex();
-
-        //[[nodiscard]] const ArenaStream& GetTokensArena() const { return TokensArena; }
 
     private:
         [[nodiscard]] char CurrentChar() const { return Code[Pos]; }

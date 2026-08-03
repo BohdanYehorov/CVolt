@@ -17,17 +17,17 @@ namespace Volt
 {
     enum class TypeCategory : UInt8
     {
-        INVALID,
-        VOID,
-        CHAR,
-        BOOLEAN,
-        INTEGER,
-        FLOATING_POINT,
-        POINTER,
-        REFERENCE,
-        ARRAY,
-        CLASS,
-        NULL_POINTER
+        Invalid,
+        Void,
+        Char,
+        Boolean,
+        Integer,
+        FloatingPoint,
+        Pointer,
+        Reference,
+        Array,
+        Class,
+        NullPointer
     };
 
     class alignas(8) DataType : public Object
@@ -55,21 +55,21 @@ namespace Volt
         [[nodiscard]] bool ImplicitCast(DataType* To) const { return CastTo(To, false); }
         [[nodiscard]] bool ExplicitCast(DataType* To) const { return CastTo(To, true); }
 
-        [[nodiscard]] bool IsVoidType() const { return Category == TypeCategory::VOID; }
-        [[nodiscard]] bool IsBoolType() const { return Category == TypeCategory::BOOLEAN; }
-        [[nodiscard]] bool IsCharType() const { return Category == TypeCategory::CHAR; }
-        [[nodiscard]] bool IsIntegerType() const { return Category == TypeCategory::INTEGER; }
-        [[nodiscard]] bool IsFloatingPointType() const { return Category == TypeCategory::FLOATING_POINT; }
-        [[nodiscard]] bool IsPointerType() const { return Category == TypeCategory::POINTER; }
-        [[nodiscard]] bool IsNullPointerType() const { return Category == TypeCategory::NULL_POINTER; }
-        [[nodiscard]] bool IsReferenceType() const { return Category == TypeCategory::REFERENCE; }
-        [[nodiscard]] bool IsArrayType() const { return Category == TypeCategory::ARRAY; }
-        [[nodiscard]] bool IsClassType() const { return Category == TypeCategory::CLASS; }
+        [[nodiscard]] bool IsVoidType() const { return Category == TypeCategory::Void; }
+        [[nodiscard]] bool IsBoolType() const { return Category == TypeCategory::Boolean; }
+        [[nodiscard]] bool IsCharType() const { return Category == TypeCategory::Char; }
+        [[nodiscard]] bool IsIntegerType() const { return Category == TypeCategory::Integer; }
+        [[nodiscard]] bool IsFloatingPointType() const { return Category == TypeCategory::FloatingPoint; }
+        [[nodiscard]] bool IsPointerType() const { return Category == TypeCategory::Pointer; }
+        [[nodiscard]] bool IsNullPointerType() const { return Category == TypeCategory::NullPointer; }
+        [[nodiscard]] bool IsReferenceType() const { return Category == TypeCategory::Reference; }
+        [[nodiscard]] bool IsArrayType() const { return Category == TypeCategory::Array; }
+        [[nodiscard]] bool IsClassType() const { return Category == TypeCategory::Class; }
 
         [[nodiscard]] bool IsSignedIntegerType() const;
         [[nodiscard]] bool IsUnsignedIntegerType() const
         {
-            return Category == TypeCategory::INTEGER ? !IsSignedIntegerType() : false;
+            return Category == TypeCategory::Integer ? !IsSignedIntegerType() : false;
         }
 
         [[nodiscard]] TypeCategory GetCategory() const { return Category; }
@@ -179,7 +179,7 @@ namespace Volt
         GENERATED_BODY(VoidType, PrimitiveDataType)
 
     public:
-        VoidType() : PrimitiveDataType(TypeCategory::VOID) {}
+        VoidType() : PrimitiveDataType(TypeCategory::Void) {}
 
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
@@ -200,7 +200,7 @@ namespace Volt
         GENERATED_BODY(BoolType, PrimitiveDataType)
 
     public:
-        BoolType() : PrimitiveDataType(TypeCategory::BOOLEAN) {}
+        BoolType() : PrimitiveDataType(TypeCategory::Boolean) {}
 
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
@@ -221,7 +221,7 @@ namespace Volt
         GENERATED_BODY(CharType, PrimitiveDataType)
 
     public:
-        CharType() : PrimitiveDataType(TypeCategory::CHAR) {}
+        CharType() : PrimitiveDataType(TypeCategory::Char) {}
 
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
@@ -244,7 +244,7 @@ namespace Volt
         size_t BitWidth;
         bool IsSigned;
         IntegerType(size_t BitWidth, bool IsSigned = true)
-            : PrimitiveDataType(TypeCategory::INTEGER), BitWidth(BitWidth), IsSigned(IsSigned) {}
+            : PrimitiveDataType(TypeCategory::Integer), BitWidth(BitWidth), IsSigned(IsSigned) {}
 
     public:
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
@@ -267,7 +267,7 @@ namespace Volt
     public:
         size_t BitWidth;
         FloatingPointType(size_t BitWidth)
-            : PrimitiveDataType(TypeCategory::FLOATING_POINT), BitWidth(BitWidth) {}
+            : PrimitiveDataType(TypeCategory::FloatingPoint), BitWidth(BitWidth) {}
 
     public:
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
@@ -286,7 +286,7 @@ namespace Volt
     public:
         QualType BaseType;
         PointerType(QualType BaseType)
-            : DataType(TypeCategory::POINTER), BaseType(BaseType) {}
+            : DataType(TypeCategory::Pointer), BaseType(BaseType) {}
 
     public:
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
@@ -318,7 +318,7 @@ namespace Volt
     {
         GENERATED_BODY(NullPointerType, DataType)
     public:
-        NullPointerType() : DataType(TypeCategory::NULL_POINTER) {}
+        NullPointerType() : DataType(TypeCategory::NullPointer) {}
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             return llvm::PointerType::get(Context, 0);
@@ -339,7 +339,7 @@ namespace Volt
     public:
         QualType BaseType;
         ReferenceType(QualType BaseType)
-            : DataType(TypeCategory::REFERENCE), BaseType(BaseType) {}
+            : DataType(TypeCategory::Reference), BaseType(BaseType) {}
 
     public:
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
@@ -377,9 +377,9 @@ namespace Volt
         size_t Length;
         bool LengthInit;
 
-        ArrayType(QualType BaseType, size_t Length) : DataType(TypeCategory::ARRAY),
+        ArrayType(QualType BaseType, size_t Length) : DataType(TypeCategory::Array),
             BaseType(BaseType), Length(Length), LengthInit(true) {}
-        ArrayType(QualType BaseType) : DataType(TypeCategory::ARRAY),
+        ArrayType(QualType BaseType) : DataType(TypeCategory::Array),
             BaseType(BaseType), Length(0), LengthInit(false) {}
 
     public:

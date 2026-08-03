@@ -80,16 +80,16 @@ namespace Volt
 
 		switch (Type->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return CastBooleanTo(To, Explicit, CContext);
 
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return CastCharTo(To, Explicit, CContext);
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return CastIntegerTo(To, Explicit, CContext);
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return CastFloatTo(To, Explicit, CContext);
 
 			default:
@@ -287,13 +287,13 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return CreateChar(To, static_cast<char>(GetBool()), MainArena);
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return CreateInteger(To, static_cast<Int64>(GetBool()), MainArena);
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return CreateFloat(To, static_cast<double>(GetBool()), MainArena);
 
 			default:
@@ -310,16 +310,16 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Explicit ? CreateBool(To, static_cast<bool>(GetChar()), MainArena) : nullptr;
 
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return CreateChar(To, GetChar(), MainArena);
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return CreateInteger(To, static_cast<Int64>(GetChar()), MainArena);
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return CreateFloat(To, static_cast<double>(GetChar()), MainArena);
 
 			default:
@@ -336,16 +336,16 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Explicit ? CreateBool(To, static_cast<bool>(GetValue<Int64>()), MainArena) : nullptr;
 
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return CreateChar(To, static_cast<char>(GetValue<Int64>()), MainArena);
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return CreateInteger(To, GetValue<Int64>(), MainArena);
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return CreateFloat(To, static_cast<double>(GetValue<Int64>()), MainArena);
 
 			default:
@@ -362,16 +362,16 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Explicit ? CreateBool(To, static_cast<bool>(GetFloat()), MainArena) : nullptr;
 
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return CreateChar(To, static_cast<char>(GetFloat()), MainArena);
 
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return CreateInteger(To, static_cast<Int64>(GetFloat()), MainArena);
 
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return CreateFloat(To, GetFloat(), MainArena);
 			default:
 				return nullptr;

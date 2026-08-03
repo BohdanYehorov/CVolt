@@ -136,13 +136,13 @@ namespace Volt
 	{
 		switch (Type->GetCategory())
 		{
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return CreateInteger(Type, Value, TypesArena);
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::FloatingPoint:
 				return CreateFloat(Type, Value, TypesArena);
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return CreateBool(Type, Value, TypesArena);
-			case TypeCategory::CHAR:
+			case TypeCategory::Char:
 				return CreateChar(Type, Value, TypesArena);
 			default:
 				return nullptr;

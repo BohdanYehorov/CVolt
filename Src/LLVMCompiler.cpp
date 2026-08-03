@@ -25,16 +25,16 @@ namespace Volt
 
             switch (Type->GetCategory())
             {
-                case TypeCategory::INTEGER:
+                case TypeCategory::Integer:
                     return Create<IRValue>(llvm::ConstantInt::get(
                         CContext.GetLLVMType(Value->GetType().GetType()),
                         Value->GetType()->IsSignedIntegerType() ? Value->GetInt() : Value->GetUInt(),
                         Value->GetType()->IsSignedIntegerType()), Value->GetType().GetType());
-                case TypeCategory::FLOATING_POINT:
+                case TypeCategory::FloatingPoint:
                     return Create<IRValue>(llvm::ConstantFP::get(
                         CContext.GetLLVMType(Value->GetType().GetType()),
                         Value->GetFloat()), Value->GetType().GetType());
-                case TypeCategory::BOOLEAN:
+                case TypeCategory::Boolean:
                     return Create<IRValue>(llvm::ConstantInt::get(
                         llvm::Type::getInt1Ty(Context),
                         Value->GetBool()), Value->GetType().GetType());

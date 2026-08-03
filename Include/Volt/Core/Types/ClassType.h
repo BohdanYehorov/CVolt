@@ -34,7 +34,7 @@ namespace Volt
 
     public:
         ClassType(std::string Name, Array<Field> Fields)
-            : DataType(TypeCategory::CLASS), Name(std::move(Name)),
+            : DataType(TypeCategory::Class), Name(std::move(Name)),
             Fields(std::move(Fields)) { ComputeLayout(); }
 
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;

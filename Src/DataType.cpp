@@ -77,10 +77,10 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
-			case TypeCategory::CHAR:
-			case TypeCategory::INTEGER:
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::Boolean:
+			case TypeCategory::Char:
+			case TypeCategory::Integer:
+			case TypeCategory::FloatingPoint:
 				return true;
 			default:
 				return false;
@@ -94,12 +94,12 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Explicit;
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return To->IsSignedIntegerType() ? true : Explicit;
-			case TypeCategory::CHAR:
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::Char:
+			case TypeCategory::FloatingPoint:
 				return true;
 			default:
 				return false;
@@ -142,12 +142,12 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Explicit;
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return To->IsSignedIntegerType() == IsSigned ? true : Explicit;
-			case TypeCategory::CHAR:
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::Char:
+			case TypeCategory::FloatingPoint:
 				return true;
 			default:
 				return false;
@@ -190,12 +190,12 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return Explicit;
-			case TypeCategory::INTEGER:
+			case TypeCategory::Integer:
 				return To->IsSignedIntegerType() ? true : Explicit;
-			case TypeCategory::CHAR:
-			case TypeCategory::FLOATING_POINT:
+			case TypeCategory::Char:
+			case TypeCategory::FloatingPoint:
 				return true;
 			default:
 				return false;
@@ -219,10 +219,10 @@ namespace Volt
 			if (BaseType.HasQualifier(QualType::CONST) && !PtrType->BaseType.HasQualifier(QualType::CONST))
 				return false;
 
-			if (PtrType->BaseType->GetCategory() == TypeCategory::VOID)
+			if (PtrType->BaseType->GetCategory() == TypeCategory::Void)
 				return true;
 
-			if (Explicit && BaseType->GetCategory() == TypeCategory::VOID)
+			if (Explicit && BaseType->GetCategory() == TypeCategory::Void)
 				return true;
 
 			return false;
@@ -230,7 +230,7 @@ namespace Volt
 
 		switch (To->GetCategory())
 		{
-			case TypeCategory::BOOLEAN:
+			case TypeCategory::Boolean:
 				return true;
 			default:
 				return false;

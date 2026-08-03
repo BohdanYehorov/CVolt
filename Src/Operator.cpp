@@ -193,7 +193,7 @@ namespace Volt
             case Add: case Sub:
             case Mul: case Div:
             {
-                if (JointType->IsOneOf(INTEGER, FLOATING_POINT))
+                if (JointType->IsOneOf(Integer, FloatingPoint))
                     return Normalize(Left, Right, JointType);
 
                 Err.Kind = TypeErrorKind::BinaryOperandTypeMismatch;
@@ -235,7 +235,7 @@ namespace Volt
         {
             case Equal: case NotEqual:
             {
-                if (JointType->IsOneOf(BOOLEAN, CHAR, INTEGER, FLOATING_POINT, POINTER))
+                if (JointType->IsOneOf(Boolean, Char, Integer, FloatingPoint, Pointer))
                 {
                     Normalize(Left, Right, JointType);
                     return { CContext.GetBoolType(), 0 };
@@ -249,7 +249,7 @@ namespace Volt
             case Grater: case GraterEqual:
             case Less:   case LessEqual:
             {
-                if (JointType->IsOneOf(INTEGER, FLOATING_POINT))
+                if (JointType->IsOneOf(Integer, FloatingPoint))
                 {
                     Normalize(Left, Right, JointType);
                     return { CContext.GetBoolType(), 0 };
@@ -355,7 +355,7 @@ namespace Volt
         TypeCategory LeftCategory = Left->GetCategory();
         TypeCategory RightCategory = Right->GetCategory();
 
-        if (LeftCategory == POINTER && RightCategory == INTEGER)
+        if (LeftCategory == Pointer && RightCategory == Integer)
         {
             if (Op == Add || Op == Sub)
                 return Left;
@@ -365,7 +365,7 @@ namespace Volt
             return {};
         }
 
-        if (LeftCategory == INTEGER && RightCategory == POINTER)
+        if (LeftCategory == Integer && RightCategory == Pointer)
         {
             if (Op == Add)
                 return Right;
@@ -441,7 +441,7 @@ namespace Volt
             case UnPlus:
             case Inc: case Dec:
             {
-                if (Operand->IsOneOf(INTEGER, FLOATING_POINT))
+                if (Operand->IsOneOf(Integer, FloatingPoint))
                     return Operand;
 
                 Err.Kind = TypeErrorKind::UnaryOperandTypeMismatch;
