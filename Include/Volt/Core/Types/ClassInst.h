@@ -52,12 +52,6 @@ namespace Volt
         ClassInstBase(ClassType* Type, CompilationContext& CContext)
             : Type(Type), CContext(CContext) { }
 
-        ClassInstBase(const std::string& Name, const Array<Field>& Fields,
-            CompilationContext& CContext) : CContext(CContext)
-        {
-            Type = CContext.CreateClassType(Name, Fields);
-        }
-
     public:
         [[nodiscard]] ClassType* GetType() const { return Type; }
         [[nodiscard]] void *GetData() const { return Data; }
@@ -82,12 +76,6 @@ namespace Volt
     public:
         ClassInst(ClassType* Type, CompilationContext& CContext)
             : ClassInstBase(Type, CContext)
-        {
-            Data = static_cast<char*>(operator new(Type->GetSize()));
-        }
-
-        ClassInst(const std::string& Name, const Array<Field>& Fields, CompilationContext& CContext)
-            : ClassInstBase(Name, Fields, CContext)
         {
             Data = static_cast<char*>(operator new(Type->GetSize()));
         }
@@ -124,7 +112,7 @@ namespace Volt
     ClassMethod<RetTy, ArgsTy...> ClassInstBase::GetMethodAddr(const std::string &Name)
     {
         IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Type->Name.str());
         NameBuilder.AddName(Name);
 
         NameBuilder.AddParam(CContext.GetPointerType(Type));

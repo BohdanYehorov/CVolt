@@ -25,7 +25,7 @@ namespace Volt
     {
         GENERATED_BODY(ClassType, DataType)
     public:
-        std::string Name;
+        llvm::StringRef Name;
         Array<Field> Fields;
         FunctionTable Methods;
         FuncOverloadVector Constructors;
@@ -33,16 +33,16 @@ namespace Volt
         mutable size_t Alignment = 0;
 
     public:
-        ClassType(std::string Name, Array<Field> Fields)
-            : DataType(TypeCategory::Class), Name(std::move(Name)),
+        ClassType(llvm::StringRef Name, Array<Field> Fields)
+            : DataType(TypeCategory::Class), Name(Name),
             Fields(std::move(Fields)) { ComputeLayout(); }
 
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
         int GetRank() const override { return -1; }
-        std::string ToString() const override { return Name; }
+        std::string ToString() const override { return Name.str(); }
         size_t GetSize() const override;
         size_t GetAlignment() const override;
-        std::string GetIRName() const override { return std::to_string(Name.size()) + Name; }
+        std::string GetIRName() const override { return std::to_string(Name.size()) + Name.str(); }
 
         void ComputeLayout() const;
 

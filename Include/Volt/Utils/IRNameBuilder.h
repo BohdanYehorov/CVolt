@@ -37,7 +37,7 @@ namespace Volt
         IRNameBuilder(ClassType* Type, const FunctionSignature& Signature)
             : Kind(IRNameKind::Method)
         {
-            IRName = "M" + std::to_string(Type->Name.size()) + Type->Name;
+            IRName = "M" + std::to_string(Type->Name.size()) + Type->Name.str();
             AddSignature(Signature);
         }
 

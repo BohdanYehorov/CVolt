@@ -769,7 +769,7 @@ namespace Volt
         Params.push_back(CContext.GetLLVMType(ThisType));
 
         IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Type->Name.str());
         NameBuilder.AddName(Method->Name.str());
 
         NameBuilder.AddParam(ThisType);
@@ -804,7 +804,7 @@ namespace Volt
                 Create<IRValue>(Arg, ParamType, Builder));
         }
 
-        std::string FuncName = std::format("{}.{}", Type->Name, Method->Name.str());
+        std::string FuncName = std::format("{}.{}", Type->Name.str(), Method->Name.str());
         if (auto FuncCallee = Cast<FunctionCallee>(Method->ResolvedCallee))
             FuncCallee->Function = Func;
         else
@@ -839,8 +839,8 @@ namespace Volt
         Params.push_back(CContext.GetLLVMType(ThisType));
 
         IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->Name);
-        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Type->Name.str());
+        NameBuilder.AddName(Type->Name.str());
 
         NameBuilder.AddParam(ThisType);
 
@@ -874,7 +874,7 @@ namespace Volt
                 Create<IRValue>(Arg, ParamType, Builder));
         }
 
-        std::string FuncName = std::format("{}", Type->Name);
+        std::string FuncName = std::format("{}", Type->Name.str());
         if (auto FuncCallee = Cast<FunctionCallee>(Constructor->ResolvedCallee))
             FuncCallee->Function = Func;
         else
@@ -903,10 +903,10 @@ namespace Volt
     IRValue *LLVMCompiler::CompileClass(const ClassNode *Class)
     {
         for (auto Method : Class->Methods)
-            CompileMethod(Method, CContext.GetClassType(Class->Name.str()));
+            CompileMethod(Method, CContext.GetClassType(Class->Name));
 
         for (auto Constructor : Class->Constructors)
-            CompileConstructor(Constructor, CContext.GetClassType(Class->Name.str()));
+            CompileConstructor(Constructor, CContext.GetClassType(Class->Name));
 
         return nullptr;
     }

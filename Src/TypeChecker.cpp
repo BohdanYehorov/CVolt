@@ -540,7 +540,7 @@ namespace Volt
                     return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
                 }
 
-                Array<std::string> ErrorContext = { ClassTy->Name + "." + FieldName };
+                Array<std::string> ErrorContext = { ClassTy->Name.str() + "." + FieldName };
                 ErrorContext.Reserve(ArgsCount);
 
                 for (auto Arg : ArgTypes)
@@ -817,7 +817,7 @@ namespace Volt
         for (auto Field : Class->Fields)
             Fields.Emplace(std::string(Field->Name), VisitType(Field->Type));
 
-        ClassType* Type = CContext.CreateClassType(std::string(Class->Name), Fields);
+        ClassType* Type = CContext.CreateClassType(Class->Name, Fields);
         if (!Type)
         {
             // SendError
@@ -999,7 +999,7 @@ namespace Volt
         }
         if (auto Class = Cast<ClassTypeNode>(Type))
         {
-            auto ClassTy = CContext.GetClassType(std::string(Class->Name));
+            auto ClassTy = CContext.GetClassType(Class->Name);
             if (!ClassTy)
             {
                 // SendError
