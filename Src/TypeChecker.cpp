@@ -437,7 +437,7 @@ namespace Volt
     {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
-            const std::string& Name = Identifier->Value.str();
+            llvm::StringRef Name = Identifier->Value;
             size_t ArgsCount = Call->Arguments.size();
             ArgsVector<QualType> ArgTypes;
             ArgTypes.reserve(ArgsCount);
@@ -475,7 +475,7 @@ namespace Volt
                 return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
             }
 
-            Array<std::string> ErrorContext = { Name };
+            Array<std::string> ErrorContext = { Name.str() };
             ErrorContext.Reserve(ArgsCount);
 
             for (auto Arg : ArgTypes)
@@ -495,9 +495,9 @@ namespace Volt
             ExprAddress* Res = VisitToLValue(MemberAccess->Target);
             if (!Res) return nullptr;
 
-            std::string FieldName;
+            llvm::StringRef FieldName;
             if (auto Identifier = Cast<IdentifierNode>(MemberAccess->Member))
-                FieldName = std::string(Identifier->Value);
+                FieldName = Identifier->Value;
             else
             {
                 SendError(TypeErrorKind::MemberNotIdentifier, MemberAccess->Member);
@@ -540,7 +540,7 @@ namespace Volt
                     return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
                 }
 
-                Array<std::string> ErrorContext = { ClassTy->Name.str() + "." + FieldName };
+                Array<std::string> ErrorContext = { ClassTy->Name.str() + "." + FieldName.str() };
                 ErrorContext.Reserve(ArgsCount);
 
                 for (auto Arg : ArgTypes)
@@ -838,9 +838,9 @@ namespace Volt
         ExprAddress* Res = VisitToLValue(MemberAccess->Target);
         if (!Res) return nullptr;
 
-        std::string FieldName;
+        llvm::StringRef FieldName;
         if (auto Identifier = Cast<IdentifierNode>(MemberAccess->Member))
-            FieldName = std::string(Identifier->Value);
+            FieldName = Identifier->Value;
         else
         {
             SendError(TypeErrorKind::MemberNotIdentifier, MemberAccess->Member);
@@ -853,10 +853,10 @@ namespace Volt
 
         if (auto ClassTy = TargetType.CastAs<ClassType>())
         {
-            size_t Index = ClassTy->GetFieldIndex(FieldName);
+            size_t Index = ClassTy->GetFieldIndex(FieldName.str());
             if (Index == ClassTy->Fields.Length())
             {
-                SendError(TypeErrorKind::UndefinedVariable, MemberAccess, { FieldName });
+                SendError(TypeErrorKind::UndefinedVariable, MemberAccess, { FieldName.str() });
                 return nullptr;
             }
 
