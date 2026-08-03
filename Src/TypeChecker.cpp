@@ -815,7 +815,7 @@ namespace Volt
         Array<Field> Fields;
         Fields.Reserve(Class->Fields.size());
         for (auto Field : Class->Fields)
-            Fields.Emplace(std::string(Field->Name), VisitType(Field->Type));
+            Fields.Emplace(Field->Name, VisitType(Field->Type));
 
         ClassType* Type = CContext.CreateClassType(Class->Name, Fields);
         if (!Type)
@@ -853,7 +853,7 @@ namespace Volt
 
         if (auto ClassTy = TargetType.CastAs<ClassType>())
         {
-            size_t Index = ClassTy->GetFieldIndex(FieldName.str());
+            size_t Index = ClassTy->GetFieldIndex(FieldName);
             if (Index == ClassTy->Fields.Length())
             {
                 SendError(TypeErrorKind::UndefinedVariable, MemberAccess, { FieldName.str() });
@@ -1222,7 +1222,7 @@ namespace Volt
         {
             QualType ParamType = VisitType(Param->Type);
             ParamTypes.push_back(ParamType);
-            DeclareVariable(Param->Name.str(), MainArena.Create<ExprAddress>(
+            DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
                             ExprResult::CreateEmpty(ParamType, MainArena)));
         }
     }

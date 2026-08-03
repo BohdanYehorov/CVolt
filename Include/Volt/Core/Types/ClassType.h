@@ -13,12 +13,12 @@ namespace Volt
 {
     struct Field
     {
-        std::string Name;
+        llvm::StringRef Name;
         QualType Type;
         size_t Offset = 0;
 
-        Field(std::string Name, QualType Type)
-            : Name(std::move(Name)), Type(Type) {}
+        Field(llvm::StringRef Name, QualType Type)
+            : Name(Name), Type(Type) {}
     };
 
     class ClassType : public DataType
@@ -48,7 +48,7 @@ namespace Volt
 
         bool CastTo(DataType *To, bool Explicit) const override { return this == To; }
 
-        size_t GetFieldIndex(const std::string& Name);
+        size_t GetFieldIndex(llvm::StringRef Name);
 
         void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
         {

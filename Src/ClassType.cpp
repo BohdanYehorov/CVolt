@@ -54,13 +54,11 @@ namespace Volt
         Size = AlignUp(Size, Alignment);
     }
 
-    size_t ClassType::GetFieldIndex(const std::string &Name)
+    size_t ClassType::GetFieldIndex(llvm::StringRef Name)
     {
         for (size_t i = 0; i < Fields.Length(); i++)
-        {
             if (Fields[i].Name == Name)
                 return i;
-        }
 
         return Fields.Length();
     }

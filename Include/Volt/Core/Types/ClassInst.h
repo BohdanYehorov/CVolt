@@ -99,7 +99,7 @@ namespace Volt
     template<typename T>
     T& ClassInstBase::GetField(llvm::StringRef FieldName)
     {
-        size_t FieldIndex = Type->GetFieldIndex(FieldName.str());
+        size_t FieldIndex = Type->GetFieldIndex(FieldName);
         VoltAssert(FieldIndex != Type->Fields.Length());
         const Field& F = Type->Fields[FieldIndex];
         QualType Ty = TypeConv::GetDataType<T>(CContext);
