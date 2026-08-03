@@ -652,7 +652,7 @@ namespace Volt
         QualType VarType = VisitType(Variable->Type);
         if (!VarType) return nullptr;
 
-        std::string Name{ Variable->Name };
+        llvm::StringRef Name = Variable->Name;
         if (auto Iter = std::find_if(
             ScopeStack.Back().Begin(), ScopeStack.Back().End(),
             [&Name](const ScopeEntry& Entry) -> bool
@@ -661,7 +661,7 @@ namespace Volt
             });
             Iter != ScopeStack.Back().End())
         {
-            SendError(TypeErrorKind::DoubleVariableDeclaration, Variable, { Name });
+            SendError(TypeErrorKind::DoubleVariableDeclaration, Variable, { Name.str() });
             return nullptr;
         }
 
@@ -670,7 +670,7 @@ namespace Volt
             ExprAddress* ValueAddr = VisitToLValue(Variable->Value);
             if (!ValueAddr) return nullptr;
 
-            DeclareVariable(Variable->Name.str(), ValueAddr);
+            DeclareVariable(Name, ValueAddr);
             return nullptr;
         }
 
@@ -686,17 +686,17 @@ namespace Volt
         if (Value && !Value->GetType().ImplicitCast(VarType))
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
-                Variable,{ Variable->Name.str(),
+                Variable,{ Name.str(),
                 VarType->ToString(), Value->GetType()->ToString() });
             Value = ExprResult::CreateEmpty(VarType, MainArena);
-            DeclareVariable(Variable->Name.str(), MainArena.Create<ExprAddress>(Value));
+            DeclareVariable(Name, MainArena.Create<ExprAddress>(Value));
             return nullptr;
         }
 
         if (!VarType.HasQualifier(QualType::CONST))
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
-        DeclareVariable(Variable->Name.str(), MainArena.Create<ExprAddress>(Value));
+        DeclareVariable(Name, MainArena.Create<ExprAddress>(Value));
         return nullptr;
     }
 
@@ -733,7 +733,7 @@ namespace Volt
                 Construct->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
         }
 
-        DeclareVariable(Construct->Name.str(), MainArena.Create<ExprAddress>(
+        DeclareVariable(Construct->Name, MainArena.Create<ExprAddress>(
             ExprResult::CreateEmpty(VarType, MainArena)));
 
         return nullptr;
@@ -1188,17 +1188,17 @@ namespace Volt
                 VarType->ToString(), Value->GetType()->ToString() });
 
             Value = ExprResult::CreateEmpty(VarType, MainArena);
-            GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+            GlobalVariables[Variable->Name] = MainArena.Create<ExprAddress>(Value);
             return;
         }
 
         if (!VarType.HasQualifier(QualType::CONST))
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
-        GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+        GlobalVariables[Variable->Name] = MainArena.Create<ExprAddress>(Value);
     }
 
-    void TypeChecker::DeclareVariable(const std::string &Name, ExprAddress* Addr)
+    void TypeChecker::DeclareVariable(llvm::StringRef Name, ExprAddress* Addr)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
@@ -1208,7 +1208,7 @@ namespace Volt
         Variables[Name] = Addr;
     }
 
-    ExprAddress* TypeChecker::GetVariable(const std::string &Name)
+    ExprAddress* TypeChecker::GetVariable(llvm::StringRef Name)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             return Iter->second;

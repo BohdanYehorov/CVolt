@@ -7,7 +7,6 @@
 
 #include "Volt/Core/Parser/Parser.h"
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Core/Functions/FunctionSignature.h"
 #include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
@@ -22,10 +21,10 @@ namespace Volt
     {
         struct ScopeEntry
         {
-            std::string Name;
+            llvm::StringRef Name;
             ExprAddress* Prev = nullptr;
 
-            ScopeEntry(const std::string& Name, ExprAddress* Prev)
+            ScopeEntry(const llvm::StringRef Name, ExprAddress* Prev)
                 : Name(Name), Prev(Prev) {}
         };
 
@@ -142,8 +141,8 @@ namespace Volt
 
         void DeclareGlobalVariable(VariableNode* Variable);
 
-        void DeclareVariable(const std::string& Name, ExprAddress* Addr);
-        ExprAddress* GetVariable(const std::string& Name);
+        void DeclareVariable(llvm::StringRef Name, ExprAddress* Addr);
+        ExprAddress* GetVariable(llvm::StringRef Name);
 
         void DeclareAndAddParams(llvm::ArrayRef<ParamNode*> ParamNodes, ArgsVector<QualType>& ParamTypes);
 
