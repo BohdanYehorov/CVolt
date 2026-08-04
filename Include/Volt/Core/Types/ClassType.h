@@ -9,6 +9,7 @@
 #include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/ADT/Array.h"
 #include "Volt/Core/Functions/FunctionCallee.h"
+#include "Volt/Core/Functions/FunctionTable.h"
 
 namespace Volt
 {
@@ -28,7 +29,7 @@ namespace Volt
     public:
         llvm::StringRef Name;
         Array<Field> Fields;
-        FunctionMap Methods;
+        FunctionTable Methods;
         FuncOverloadVector Constructors;
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;
@@ -53,7 +54,7 @@ namespace Volt
 
         void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
         {
-            Methods[Name].emplace_back(std::move(Params), Callee);
+            Methods.AddFunction(Name, std::move(Params), Callee);
         }
 
         void AddConstructor(ArgsVector<QualType> Params, FunctionCallee* Callee)

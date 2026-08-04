@@ -530,7 +530,7 @@ namespace Volt
                     ArgTypes.push_back(ArgType);
                 }
 
-                if (auto Overload = TryGetFunction(FieldName, ArgTypes, ClassTy->Methods))
+                if (auto Overload = ClassTy->Methods.FindBestFunctionOverload(FieldName, ArgTypes))
                 {
                     Call->ResolvedCallee = Overload->Callee;
 
@@ -629,7 +629,7 @@ namespace Volt
             Arguments.push_back(Arg->GetType());
         }
 
-        if (const FunctionOverload* Overload = TryGetOverload(Arguments, ClassTy->Constructors))
+        if (const FunctionOverload* Overload = FunctionTable::FindBestOverload(Arguments, ClassTy->Constructors))
         {
             Construct->ResolvedCallee = Overload->Callee;
 
@@ -678,7 +678,7 @@ namespace Volt
         if (!Value && VarType->IsClassType())
         {
             auto* ClassTy = StaticCast<ClassType>(VarType.GetType());
-            if (auto* Constructor = TryGetOverload(
+            if (auto* Constructor = FunctionTable::FindBestOverload(
                 { CContext.GetPointerType(ClassTy) }, ClassTy->Constructors))
                 Variable->ResolvedConstructor = StaticCast<FunctionCallee>(Constructor->Callee);
         }
@@ -725,7 +725,7 @@ namespace Volt
             Args.push_back(Res->GetType());
         }
 
-        if (auto* Overload = TryGetOverload(Args, ClassTy->Constructors))
+        if (auto* Overload = FunctionTable::FindBestOverload(Args, ClassTy->Constructors))
         {
             Construct->ResolvedCallee = StaticCast<FunctionCallee>(Overload->Callee);
 
@@ -1081,69 +1081,6 @@ namespace Volt
         Function->ResolvedCallee = FuncCallee;
 
         return FuncCallee;
-    }
-
-    const FunctionOverload *TypeChecker::TryGetFunction(llvm::StringRef Name, llvm::ArrayRef<QualType> Args,
-                                                        const FunctionMap &FuncTable)
-    {
-        auto Iter = FuncTable.find(Name);
-        if (Iter == FuncTable.end()) return nullptr;
-        return TryGetOverload(Args, Iter->second);
-    }
-
-    const FunctionOverload *TypeChecker::TryGetOverload(llvm::ArrayRef<QualType> Args,
-                                                        const FuncOverloadVector &Overloads)
-    {
-        size_t ArgsCount = Args.size();
-        size_t MinCasts = ArgsCount;
-        int BestRank = std::numeric_limits<int>::max();
-        const FunctionOverload* BestOverload = nullptr;
-
-        for (const FunctionOverload& Overload : Overloads)
-        {
-            if (Overload.Args.size() != ArgsCount) continue;
-
-            int RankDiff = 0;
-            size_t Casts = 0;
-            bool Valid = true;
-            for (size_t i = 0; i < ArgsCount; i++)
-            {
-                QualType CandidateArgType = Overload.Args[i];
-                QualType ArgType = Args[i];
-
-                if (auto RefType = CandidateArgType.CastAs<ReferenceType>())
-                {
-                    if (RefType->CanBind(ArgType))
-                        continue;
-
-                    Valid = false;
-                    break;
-                }
-
-                if (!ArgType.ImplicitCast(CandidateArgType))
-                {
-                    Valid = false;
-                    break;
-                }
-
-                if (ArgType != CandidateArgType)
-                    Casts++;
-
-                RankDiff += std::abs(
-                    CandidateArgType->GetRank() - ArgType->GetRank());
-            }
-
-            if (!Valid) continue;
-
-            if (!BestOverload || Casts < MinCasts || (Casts == MinCasts && RankDiff < BestRank))
-            {
-                MinCasts = Casts;
-                BestRank = RankDiff;
-                BestOverload = &Overload;
-            }
-        }
-
-        return BestOverload;
     }
 
     bool TypeChecker::ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column)

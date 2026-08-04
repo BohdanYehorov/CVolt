@@ -130,11 +130,6 @@ namespace Volt
         FunctionCallee* CreateFunction(FunctionNode* Function, llvm::StringRef& Name,
                                        ArgsVector<QualType>& Params, QualType ThisType = {});
 
-        static const FunctionOverload* TryGetFunction(llvm::StringRef Name, llvm::ArrayRef<QualType> Args,
-                                               const FunctionMap& FuncTable);
-        static const FunctionOverload* TryGetOverload(llvm::ArrayRef<QualType> Args,
-                                                      const FuncOverloadVector& Overloads);
-
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
         void EnterScope();
