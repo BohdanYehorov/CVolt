@@ -6,6 +6,8 @@
 #define CVOLT_FUNCTIONDEFS_H
 
 #include "Volt/Core/Functions/FunctionOverload.h"
+#include "TypeDefs.h"
+#include <llvm/ADT/StringMap.h>
 
 namespace Volt
 {

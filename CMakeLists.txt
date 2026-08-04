@@ -27,6 +27,7 @@ set(SOURCES
         Src/DebugOutput.cpp
         Src/ClassType.cpp
         Src/ClassInst.cpp
+        Src/FunctionTable.cpp
 )
 
 if (COMPILE_TO_LIB)

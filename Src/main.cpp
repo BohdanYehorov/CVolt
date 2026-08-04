@@ -11,6 +11,8 @@
 #include <sstream>
 #include <Volt/Tests/Fuzzer/ParserFuzzer.h>
 
+#include "Volt/Core/Functions/FunctionTable.h"
+
 int main(int Argc, char* Argv[])
 {
     Volt::JITEngine::Init();
@@ -77,7 +79,17 @@ int main(int Argc, char* Argv[])
     FuncTable.AddFunction("MemFree", MemFree);
     FuncTable.AddFunction("MemCpy", MemCpy);
 
-    Volt::Lexer MyLexer(CContext);
+    Volt::FunctionTable FTable;
+
+    for (const auto& [Name, Overload] : FTable)
+    {
+        std::cout << Name.str() << '(';
+        for (Volt::QualType Arg : Overload.Args)
+            std::cout << Arg.ToString() << ", ";
+        std::cout << ")\n";
+    }
+
+/*    Volt::Lexer MyLexer(CContext);
     MyLexer.Lex();
 
 #ifdef _DEBUG
@@ -120,5 +132,5 @@ int main(int Argc, char* Argv[])
     std::cout << "\n====================================================\n";
 #endif
 
-    return Res;
+    return Res;*/
 }
