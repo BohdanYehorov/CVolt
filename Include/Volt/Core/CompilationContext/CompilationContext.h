@@ -49,7 +49,7 @@ namespace Volt
 		Array<TypeError> TypeErrors;
 
 	public:
-		CompilationContext(String&& Code, const std::string& FileName)
+		CompilationContext(String&& Code, llvm::StringRef FileName)
 			: Code(std::move(Code)), Module(std::make_unique<llvm::Module>(FileName, Context)) {}
 
 		CompilationContext(const CompilationContext&) = delete;
