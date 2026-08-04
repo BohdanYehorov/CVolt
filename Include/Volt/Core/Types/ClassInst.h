@@ -63,10 +63,10 @@ namespace Volt
         [[nodiscard]] class ClassInstView GetField(llvm::StringRef FieldName) const;
 
         template <typename RetTy, typename ...ArgsTy>
-        ClassMethod<RetTy, ArgsTy...> GetMethodAddr(const std::string& Name);
+        ClassMethod<RetTy, ArgsTy...> GetMethodAddr(llvm::StringRef Name);
 
         template <typename RetTy, typename ...ArgsTy>
-        RetTy CallMethod(const std::string& Name, ArgsTy... Args);
+        RetTy CallMethod(llvm::StringRef Name, ArgsTy... Args);
 
         friend class JITEngine;
     };
@@ -109,7 +109,7 @@ namespace Volt
     }
 
     template<typename RetTy, typename ... ArgsTy>
-    ClassMethod<RetTy, ArgsTy...> ClassInstBase::GetMethodAddr(const std::string &Name)
+    ClassMethod<RetTy, ArgsTy...> ClassInstBase::GetMethodAddr(llvm::StringRef Name)
     {
         IRNameBuilder NameBuilder(IRNameKind::Method);
         NameBuilder.AddName(Type->Name);
@@ -127,7 +127,7 @@ namespace Volt
     }
 
     template<typename RetTy, typename ... ArgsTy>
-    RetTy ClassInstBase::CallMethod(const std::string &Name, ArgsTy... Args)
+    RetTy ClassInstBase::CallMethod(llvm::StringRef Name, ArgsTy... Args)
     {
         return GetMethodAddr<RetTy, ArgsTy...>(Name)(Args...);
     }
