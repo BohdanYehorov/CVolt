@@ -6,8 +6,9 @@
 #define CVOLT_CLASSTYPE_H
 
 #include "DataType.h"
-#include "Volt/Core/TypeDefs/UMap.h"
+#include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/ADT/Array.h"
+#include "Volt/Core/Functions/FunctionCallee.h"
 
 namespace Volt
 {
@@ -27,7 +28,7 @@ namespace Volt
     public:
         llvm::StringRef Name;
         Array<Field> Fields;
-        FunctionTable Methods;
+        FunctionMap Methods;
         FuncOverloadVector Constructors;
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;

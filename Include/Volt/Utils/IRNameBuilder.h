@@ -7,6 +7,7 @@
 
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/Types/ClassType.h"
+#include "Volt/Core/Functions/FunctionSignature.h"
 
 namespace Volt
 {

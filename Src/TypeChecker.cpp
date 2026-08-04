@@ -1084,7 +1084,7 @@ namespace Volt
     }
 
     const FunctionOverload *TypeChecker::TryGetFunction(llvm::StringRef Name, llvm::ArrayRef<QualType> Args,
-                                                        const FunctionTable &FuncTable)
+                                                        const FunctionMap &FuncTable)
     {
         auto Iter = FuncTable.find(Name);
         if (Iter == FuncTable.end()) return nullptr;

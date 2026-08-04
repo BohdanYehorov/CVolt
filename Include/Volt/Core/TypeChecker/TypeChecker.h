@@ -10,7 +10,7 @@
 #include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
-#include "Volt/Core/TypeDefs/UMap.h"
+#include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "ExprResult.h"
 #include "ExprAddress.h"
@@ -43,7 +43,7 @@ namespace Volt
 
         GlobalVariableTable GlobalVariables;
 
-        FunctionTable Functions;
+        FunctionMap Functions;
         VariableTable Variables;
 
         Array<Array<ScopeEntry>> ScopeStack;
@@ -130,7 +130,7 @@ namespace Volt
                                        ArgsVector<QualType>& Params, QualType ThisType = {});
 
         static const FunctionOverload* TryGetFunction(llvm::StringRef Name, llvm::ArrayRef<QualType> Args,
-                                               const FunctionTable& FuncTable);
+                                               const FunctionMap& FuncTable);
         static const FunctionOverload* TryGetOverload(llvm::ArrayRef<QualType> Args,
                                                       const FuncOverloadVector& Overloads);
 

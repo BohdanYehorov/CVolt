@@ -21,7 +21,7 @@ namespace Volt
 		// using Map = std::unordered_map<FunctionSignature, BuiltinFuncCallee*, Hash<FunctionSignature>>;
 
 	private:
-		FunctionTable Functions;
+		FunctionMap Functions;
 		CompilationContext& CContext;
 		Arena& MainArena;
 
@@ -41,7 +41,7 @@ namespace Volt
 		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
 
-		[[nodiscard]] const FunctionTable& GetMap() const { return Functions; }
+		[[nodiscard]] const FunctionMap& GetMap() const { return Functions; }
 
 	private:
 		template <typename T, typename ...Rest>
