@@ -183,7 +183,7 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        ExprAddress* VarAddr = GetVariable(Identifier->Value.str());
+        ExprAddress* VarAddr = GetVariable(Identifier->Value);
         if (VarAddr)
         {
             Identifier->CompileTimeValue = VarAddr->GetValue();
