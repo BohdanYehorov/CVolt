@@ -7,7 +7,6 @@
 #include "Volt/Runtime/JITEngine/JITEngine.h"
 #include "Volt/ADT/String.h"
 #include "Volt/Debug/DebugOutput/DebugOutput.h"
-#include "Volt/Core/Types/VoltClass.h"
 #include <fstream>
 #include <sstream>
 #include <Volt/Tests/Fuzzer/ParserFuzzer.h>

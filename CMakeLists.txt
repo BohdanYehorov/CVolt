@@ -27,7 +27,6 @@ set(SOURCES
         Src/DebugOutput.cpp
         Src/ClassType.cpp
         Src/ClassInst.cpp
-        Src/VoltClass.cpp
 )
 
 if (COMPILE_TO_LIB)
