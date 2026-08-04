@@ -629,7 +629,7 @@ namespace Volt
             Arguments.push_back(Arg->GetType());
         }
 
-        if (const FunctionOverload* Overload = FunctionTable::FindBestOverload(Arguments, ClassTy->Constructors))
+        if (const FunctionOverload* Overload = ClassTy->Constructors.FindBestOverload(Arguments))
         {
             Construct->ResolvedCallee = Overload->Callee;
 
@@ -678,8 +678,8 @@ namespace Volt
         if (!Value && VarType->IsClassType())
         {
             auto* ClassTy = StaticCast<ClassType>(VarType.GetType());
-            if (auto* Constructor = FunctionTable::FindBestOverload(
-                { CContext.GetPointerType(ClassTy) }, ClassTy->Constructors))
+            if (auto* Constructor = ClassTy->Constructors.FindBestOverload(
+                { CContext.GetPointerType(ClassTy) }))
                 Variable->ResolvedConstructor = StaticCast<FunctionCallee>(Constructor->Callee);
         }
 
@@ -725,7 +725,7 @@ namespace Volt
             Args.push_back(Res->GetType());
         }
 
-        if (auto* Overload = FunctionTable::FindBestOverload(Args, ClassTy->Constructors))
+        if (auto* Overload = ClassTy->Constructors.FindBestOverload(Args))
         {
             Construct->ResolvedCallee = StaticCast<FunctionCallee>(Overload->Callee);
 

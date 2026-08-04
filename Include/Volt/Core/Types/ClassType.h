@@ -30,7 +30,7 @@ namespace Volt
         llvm::StringRef Name;
         Array<Field> Fields;
         FunctionTable Methods;
-        FuncOverloadVector Constructors;
+        FuncOverloadTable Constructors;
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;
 
@@ -59,7 +59,7 @@ namespace Volt
 
         void AddConstructor(ArgsVector<QualType> Params, FunctionCallee* Callee)
         {
-            Constructors.emplace_back(std::move(Params), Callee);
+            Constructors.AddOverload(std::move(Params), Callee);
         }
 
     private:

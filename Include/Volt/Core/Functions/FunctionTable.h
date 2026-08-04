@@ -112,10 +112,6 @@ namespace Volt
         [[nodiscard]] FunctionTableIterator end();
         [[nodiscard]] ConstFunctionTableIterator begin() const;
         [[nodiscard]] ConstFunctionTableIterator end() const;
-
-    public:
-        static const FunctionOverload* FindBestOverload(
-            llvm::ArrayRef<QualType> Args, const FuncOverloadVector& Overloads);
     };
 }
 
