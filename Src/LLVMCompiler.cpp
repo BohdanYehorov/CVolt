@@ -610,7 +610,7 @@ namespace Volt
             if (!Value || !Value->IsLValue())
                 return nullptr;
 
-            DeclareVariable(Var->Name.str(), Value);
+            DeclareVariable(Var->Name, Value);
             return nullptr;
         }
 
@@ -637,7 +637,7 @@ namespace Volt
         else if (Var->ResolvedConstructor)
             Builder.CreateCall(Var->ResolvedConstructor->Function, { Alloca });
 
-        DeclareVariable(Var->Name.str(),
+        DeclareVariable(Var->Name,
             Create<IRValue>(Alloca, VarType, true));
 
         return nullptr;
@@ -672,7 +672,7 @@ namespace Volt
         else
             VoltUnreachable("Invalid Callee");
 
-        DeclareVariable(Construct->Name.str(),
+        DeclareVariable(Construct->Name,
             Create<IRValue>(Alloca, VarType, true));
 
         return nullptr;
@@ -711,8 +711,8 @@ namespace Volt
         {
             DataType* ParamType = FuncParams[i]->Type->ResolvedType;
             auto Arg = Func->args().begin() + i;
-            Arg->setName(FuncParams[i]->Name.str());
-            DeclareVariable(FuncParams[i]->Name.str(),
+            Arg->setName(FuncParams[i]->Name);
+            DeclareVariable(FuncParams[i]->Name,
                 Create<IRValue>(Arg, ParamType, Builder));
         }
 
@@ -799,8 +799,8 @@ namespace Volt
         {
             DataType* ParamType = FuncParams[i]->Type->ResolvedType;
             auto Arg = Func->args().begin() + i + 1;
-            Arg->setName(FuncParams[i]->Name.str());
-            DeclareVariable(FuncParams[i]->Name.str(),
+            Arg->setName(FuncParams[i]->Name);
+            DeclareVariable(FuncParams[i]->Name,
                 Create<IRValue>(Arg, ParamType, Builder));
         }
 
@@ -869,8 +869,8 @@ namespace Volt
         {
             DataType* ParamType = FuncParams[i]->Type->ResolvedType;
             auto Arg = Func->args().begin() + i + 1;
-            Arg->setName(FuncParams[i]->Name.str());
-            DeclareVariable(FuncParams[i]->Name.str(),
+            Arg->setName(FuncParams[i]->Name);
+            DeclareVariable(FuncParams[i]->Name,
                 Create<IRValue>(Arg, ParamType, Builder));
         }
 
@@ -1049,7 +1049,7 @@ namespace Volt
         return nullptr;
     }
 
-    void LLVMCompiler::DeclareVariable(const std::string &Name, IRValue *Var)
+    void LLVMCompiler::DeclareVariable(llvm::StringRef Name, IRValue *Var)
     {
         if (auto Iter = std::find_if(
             ScopeStack.Back().Begin(), ScopeStack.Back().End(),
@@ -1058,7 +1058,7 @@ namespace Volt
                 return Entry.Name == Name;
             });
             Iter != ScopeStack.Back().End())
-            VoltUnreachableFmt("This variable: '{}' has already declared in this scope", Name);
+            VoltUnreachableFmt("This variable: '{}' has already declared in this scope", Name.str());
 
         if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
@@ -1066,14 +1066,6 @@ namespace Volt
             ScopeStack.Back().Emplace(Name, nullptr);
 
         SymbolTable[Name] = Var;
-    }
-
-    IRValue *LLVMCompiler::GetVariable(const std::string &Name)
-    {
-        if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
-            return Iter->second;
-
-        return nullptr;
     }
 
     void LLVMCompiler::EnterScope()
@@ -1092,17 +1084,6 @@ namespace Volt
         }
 
         ScopeStack.Pop();
-    }
-
-    bool LLVMCompiler::GetIntegerValue(const ASTNode *Node, Int64 &Num)
-    {
-        if (const auto Int = Cast<const IntegerNode>(Node))
-        {
-            Num = Int->Value;
-            return true;
-        }
-
-        return false;
     }
 
     void LLVMCompiler::FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca)

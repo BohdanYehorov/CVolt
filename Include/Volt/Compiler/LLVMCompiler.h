@@ -21,10 +21,10 @@ namespace Volt
     {
         struct ScopeEntry
         {
-            std::string Name;
+            llvm::StringRef Name;
             IRValue* Previous = nullptr;
 
-            ScopeEntry(const std::string& Name, IRValue* Previous)
+            ScopeEntry(llvm::StringRef Name, IRValue* Previous)
                 : Name(Name), Previous(Previous) {}
         };
 
@@ -112,13 +112,10 @@ namespace Volt
             return Value->GetRValue(Builder, CContext);
         }
 
-        void DeclareVariable(const std::string& Name, IRValue *Var);
-        IRValue *GetVariable(const std::string &Name);
+        void DeclareVariable(llvm::StringRef Name, IRValue *Var);
 
         void EnterScope();
         void ExitScope();
-
-        static bool GetIntegerValue(const ASTNode *Node, Int64 &Num);
 
         void FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca);
 
