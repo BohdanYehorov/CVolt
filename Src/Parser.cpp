@@ -396,7 +396,7 @@ namespace Volt
             case Identifier:
             {
                 llvm::StringRef Lexeme = GetTokenLexeme(Tok);
-                if (!CustomTypes.contains(Lexeme) && !CContext.GetClassType(Lexeme.str())) return nullptr;
+                if (!CustomTypes.contains(Lexeme) && !CContext.GetClassType(Lexeme)) return nullptr;
                 Consume();
                 return NodesArena.Create<ClassTypeNode>(Lexeme, Tok.Pos, Tok.Line, Tok.Column);
             }

@@ -183,7 +183,7 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        ExprAddress* VarAddr = GetVariable(Identifier->Value.str());
+        ExprAddress* VarAddr = GetVariable(Identifier->Value);
         if (VarAddr)
         {
             Identifier->CompileTimeValue = VarAddr->GetValue();
@@ -437,7 +437,7 @@ namespace Volt
     {
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
         {
-            const std::string& Name = Identifier->Value.str();
+            llvm::StringRef Name = Identifier->Value;
             size_t ArgsCount = Call->Arguments.size();
             ArgsVector<QualType> ArgTypes;
             ArgTypes.reserve(ArgsCount);
@@ -475,7 +475,7 @@ namespace Volt
                 return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
             }
 
-            Array<std::string> ErrorContext = { Name };
+            Array<std::string> ErrorContext = { Name.str() };
             ErrorContext.Reserve(ArgsCount);
 
             for (auto Arg : ArgTypes)
@@ -495,9 +495,9 @@ namespace Volt
             ExprAddress* Res = VisitToLValue(MemberAccess->Target);
             if (!Res) return nullptr;
 
-            std::string FieldName;
+            llvm::StringRef FieldName;
             if (auto Identifier = Cast<IdentifierNode>(MemberAccess->Member))
-                FieldName = std::string(Identifier->Value);
+                FieldName = Identifier->Value;
             else
             {
                 SendError(TypeErrorKind::MemberNotIdentifier, MemberAccess->Member);
@@ -540,7 +540,7 @@ namespace Volt
                     return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
                 }
 
-                Array<std::string> ErrorContext = { ClassTy->Name + "." + FieldName };
+                Array<std::string> ErrorContext = { ClassTy->Name.str() + "." + FieldName.str() };
                 ErrorContext.Reserve(ArgsCount);
 
                 for (auto Arg : ArgTypes)
@@ -652,7 +652,7 @@ namespace Volt
         QualType VarType = VisitType(Variable->Type);
         if (!VarType) return nullptr;
 
-        std::string Name{ Variable->Name };
+        llvm::StringRef Name = Variable->Name;
         if (auto Iter = std::find_if(
             ScopeStack.Back().Begin(), ScopeStack.Back().End(),
             [&Name](const ScopeEntry& Entry) -> bool
@@ -661,7 +661,7 @@ namespace Volt
             });
             Iter != ScopeStack.Back().End())
         {
-            SendError(TypeErrorKind::DoubleVariableDeclaration, Variable, { Name });
+            SendError(TypeErrorKind::DoubleVariableDeclaration, Variable, { Name.str() });
             return nullptr;
         }
 
@@ -670,7 +670,7 @@ namespace Volt
             ExprAddress* ValueAddr = VisitToLValue(Variable->Value);
             if (!ValueAddr) return nullptr;
 
-            DeclareVariable(Variable->Name.str(), ValueAddr);
+            DeclareVariable(Name, ValueAddr);
             return nullptr;
         }
 
@@ -686,17 +686,17 @@ namespace Volt
         if (Value && !Value->GetType().ImplicitCast(VarType))
         {
             SendError(TypeErrorKind::AssignmentTypeMismatch,
-                Variable,{ Variable->Name.str(),
+                Variable,{ Name.str(),
                 VarType->ToString(), Value->GetType()->ToString() });
             Value = ExprResult::CreateEmpty(VarType, MainArena);
-            DeclareVariable(Variable->Name.str(), MainArena.Create<ExprAddress>(Value));
+            DeclareVariable(Name, MainArena.Create<ExprAddress>(Value));
             return nullptr;
         }
 
         if (!VarType.HasQualifier(QualType::CONST))
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
-        DeclareVariable(Variable->Name.str(), MainArena.Create<ExprAddress>(Value));
+        DeclareVariable(Name, MainArena.Create<ExprAddress>(Value));
         return nullptr;
     }
 
@@ -733,7 +733,7 @@ namespace Volt
                 Construct->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
         }
 
-        DeclareVariable(Construct->Name.str(), MainArena.Create<ExprAddress>(
+        DeclareVariable(Construct->Name, MainArena.Create<ExprAddress>(
             ExprResult::CreateEmpty(VarType, MainArena)));
 
         return nullptr;
@@ -815,9 +815,9 @@ namespace Volt
         Array<Field> Fields;
         Fields.Reserve(Class->Fields.size());
         for (auto Field : Class->Fields)
-            Fields.Emplace(std::string(Field->Name), VisitType(Field->Type));
+            Fields.Emplace(Field->Name, VisitType(Field->Type));
 
-        ClassType* Type = CContext.CreateClassType(std::string(Class->Name), Fields);
+        ClassType* Type = CContext.CreateClassType(Class->Name, Fields);
         if (!Type)
         {
             // SendError
@@ -838,9 +838,9 @@ namespace Volt
         ExprAddress* Res = VisitToLValue(MemberAccess->Target);
         if (!Res) return nullptr;
 
-        std::string FieldName;
+        llvm::StringRef FieldName;
         if (auto Identifier = Cast<IdentifierNode>(MemberAccess->Member))
-            FieldName = std::string(Identifier->Value);
+            FieldName = Identifier->Value;
         else
         {
             SendError(TypeErrorKind::MemberNotIdentifier, MemberAccess->Member);
@@ -856,7 +856,7 @@ namespace Volt
             size_t Index = ClassTy->GetFieldIndex(FieldName);
             if (Index == ClassTy->Fields.Length())
             {
-                SendError(TypeErrorKind::UndefinedVariable, MemberAccess, { FieldName });
+                SendError(TypeErrorKind::UndefinedVariable, MemberAccess, { FieldName.str() });
                 return nullptr;
             }
 
@@ -999,7 +999,7 @@ namespace Volt
         }
         if (auto Class = Cast<ClassTypeNode>(Type))
         {
-            auto ClassTy = CContext.GetClassType(std::string(Class->Name));
+            auto ClassTy = CContext.GetClassType(Class->Name);
             if (!ClassTy)
             {
                 // SendError
@@ -1188,17 +1188,17 @@ namespace Volt
                 VarType->ToString(), Value->GetType()->ToString() });
 
             Value = ExprResult::CreateEmpty(VarType, MainArena);
-            GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+            GlobalVariables[Variable->Name] = MainArena.Create<ExprAddress>(Value);
             return;
         }
 
         if (!VarType.HasQualifier(QualType::CONST))
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
-        GlobalVariables[Variable->Name.str()] = MainArena.Create<ExprAddress>(Value);
+        GlobalVariables[Variable->Name] = MainArena.Create<ExprAddress>(Value);
     }
 
-    void TypeChecker::DeclareVariable(const std::string &Name, ExprAddress* Addr)
+    void TypeChecker::DeclareVariable(llvm::StringRef Name, ExprAddress* Addr)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             ScopeStack.Back().Emplace(Name, Iter->second);
@@ -1208,7 +1208,7 @@ namespace Volt
         Variables[Name] = Addr;
     }
 
-    ExprAddress* TypeChecker::GetVariable(const std::string &Name)
+    ExprAddress* TypeChecker::GetVariable(llvm::StringRef Name)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
             return Iter->second;
@@ -1222,7 +1222,7 @@ namespace Volt
         {
             QualType ParamType = VisitType(Param->Type);
             ParamTypes.push_back(ParamType);
-            DeclareVariable(Param->Name.str(), MainArena.Create<ExprAddress>(
+            DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
                             ExprResult::CreateEmpty(ParamType, MainArena)));
         }
     }

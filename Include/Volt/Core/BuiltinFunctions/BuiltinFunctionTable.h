@@ -30,13 +30,13 @@ namespace Volt
 			: CContext(CContext), MainArena(CContext.MainArena) {}
 
 		template <typename Ret, typename ...Args>
-		void AddFunction(const std::string& Name, Ret(*FuncPtr)(Args...));
+		void AddFunction(llvm::StringRef Name, Ret(*FuncPtr)(Args...));
 
 		template <typename Ret>
-		void AddFunction(const std::string& Name, Ret(*FuncPtr)());
+		void AddFunction(llvm::StringRef Name, Ret(*FuncPtr)());
 
 		template <typename T, typename ...ArgsTy>
-		void AddFunctionOverloads(const std::string& Name, T Fun, ArgsTy... Args);
+		void AddFunctionOverloads(llvm::StringRef Name, T Fun, ArgsTy... Args);
 
 		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
@@ -57,12 +57,11 @@ namespace Volt
 	}
 
 	template<typename Ret, typename ... Args>
-	void BuiltinFunctionTable::AddFunction(const std::string &Name, Ret(*FuncPtr)(Args...))
+	void BuiltinFunctionTable::AddFunction(llvm::StringRef Name, Ret(*FuncPtr)(Args...))
 	{
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
 		ArgsVector<QualType> Params;
 		FillParams<Args...>(Params);
-		//FunctionSignature Signature{ Name, std::move(Params) };
 		IRNameBuilder NameBuilder(IRNameKind::Function);
 		NameBuilder.AddName(Name);
 		for (const auto& Param : Params)
@@ -75,7 +74,7 @@ namespace Volt
 	}
 
 	template<typename Ret>
-	void BuiltinFunctionTable::AddFunction(const std::string &Name, Ret(*FuncPtr)())
+	void BuiltinFunctionTable::AddFunction(llvm::StringRef Name, Ret(*FuncPtr)())
 	{
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
 		IRNameBuilder NameBuilder(IRNameKind::Function);
@@ -88,7 +87,7 @@ namespace Volt
 	}
 
 	template<typename T, typename ... ArgsTy>
-	void BuiltinFunctionTable::AddFunctionOverloads(const std::string &Name, T Fun, ArgsTy... Args)
+	void BuiltinFunctionTable::AddFunctionOverloads(llvm::StringRef Name, T Fun, ArgsTy... Args)
 	{
 		static_assert(std::is_pointer_v<T>);
 		static_assert(std::is_function_v<std::remove_pointer_t<T>>);

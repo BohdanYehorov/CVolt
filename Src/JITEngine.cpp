@@ -53,15 +53,24 @@ namespace Volt
 	{
 		ClassType* Type = Inst.GetType();
 
-		// for (const auto& MethodSignature : Type->Methods)
-		// {
-		// 	IRNameBuilder NameBuilder(Type, MethodSignature);
-		// 	if (void* Method = GetRawFuncAddr(NameBuilder.GetIRName()))
-		// 		Inst.Methods[NameBuilder.GetIRName()] = Method;
-		// }
+		for (const auto& [FuncName, Overloads] : Type->Methods)
+		{
+			for (const auto& Overload : Overloads)
+			{
+				IRNameBuilder NameBuilder(IRNameKind::Method);
+				NameBuilder.AddName(Type->Name);
+				NameBuilder.AddName(FuncName);
+
+				for (QualType Arg : Overload.Args)
+					NameBuilder.AddParam(Arg);
+
+				if (void* Method = GetRawFuncAddr(NameBuilder.GetIRName()))
+					Inst.Methods[NameBuilder.GetIRName()] = Method;
+			}
+		}
 	}
 
-	void* JITEngine::GetRawFuncAddr(const std::string &IRName)
+	void* JITEngine::GetRawFuncAddr(llvm::StringRef IRName)
 	{
 		auto SymOrErr = Jit->get()->lookup(IRName);
 		if (!SymOrErr)

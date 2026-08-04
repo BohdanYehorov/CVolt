@@ -118,7 +118,7 @@ namespace Volt
 		return Type;
 	}
 
-	ClassType* CompilationContext::CreateClassType(const std::string &Name, const Array<Field> &Fields)
+	ClassType* CompilationContext::CreateClassType(llvm::StringRef Name, const Array<Field> &Fields)
 	{
 		if (ClassTypes.contains(Name)) return nullptr;
 		ClassType* Type = MainArena.Create<ClassType>(Name, Fields);
@@ -126,14 +126,14 @@ namespace Volt
 		return Type;
 	}
 
-	ClassType* CompilationContext::GetClassType(const std::string &Name)
+	ClassType* CompilationContext::GetClassType(llvm::StringRef Name)
 	{
 		if (auto Iter = ClassTypes.find(Name); Iter != ClassTypes.end())
 			return Iter->second;
 		return nullptr;
 	}
 
-	ClassType *CompilationContext::GetOrCreateClassType(const std::string &Name, const Array<Field> &Fields)
+	ClassType *CompilationContext::GetOrCreateClassType(llvm::StringRef Name, const Array<Field> &Fields)
 	{
 		if (auto Iter = ClassTypes.find(Name); Iter != ClassTypes.end())
 			return Iter->second;

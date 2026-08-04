@@ -49,7 +49,7 @@ namespace Volt
 		Array<TypeError> TypeErrors;
 
 	public:
-		CompilationContext(String&& Code, const std::string& FileName)
+		CompilationContext(String&& Code, llvm::StringRef FileName)
 			: Code(std::move(Code)), Module(std::make_unique<llvm::Module>(FileName, Context)) {}
 
 		CompilationContext(const CompilationContext&) = delete;
@@ -73,10 +73,10 @@ namespace Volt
 		[[nodiscard]] ReferenceType* GetReferenceType(QualType BaseType);
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 
-		ClassType* CreateClassType(const std::string& Name, const Array<Field>& Fields);
-		[[nodiscard]] ClassType* GetClassType(const std::string& Name);
+		ClassType* CreateClassType(llvm::StringRef Name, const Array<Field>& Fields);
+		[[nodiscard]] ClassType* GetClassType(llvm::StringRef Name);
 
-		ClassType* GetOrCreateClassType(const std::string& Name, const Array<Field> &Fields);
+		ClassType* GetOrCreateClassType(llvm::StringRef Name, const Array<Field> &Fields);
 
 		[[nodiscard]] llvm::Type* GetLLVMType(DataType* Type);
 
