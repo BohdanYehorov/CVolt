@@ -31,6 +31,8 @@ namespace Volt
         [[nodiscard]] ConstIterator begin() const { return Overloads.begin(); }
         [[nodiscard]] ConstIterator end() const { return Overloads.end(); }
     };
+
+    using FunctionMap = llvm::StringMap<FuncOverloadTable>;
 }
 
 #endif //CVOLT_FUNCOVERLOADTABLE_H

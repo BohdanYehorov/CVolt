@@ -11,7 +11,7 @@ namespace Volt
     {
         auto Iter = Functions.find(Name);
         if (Iter == Functions.end()) return nullptr;
-        return FindBestOverload(Args, Iter->second);
+        return Iter->second.FindBestOverload(Args);
     }
 
     FunctionTableIterator FunctionTable::begin()

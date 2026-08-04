@@ -7,6 +7,7 @@
 
 #include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/Core/Types/DataType.h"
+#include "FuncOverloadTable.h"
 
 namespace Volt
 {
@@ -67,11 +68,11 @@ namespace Volt
     }
 
     class FunctionTableIterator :
-        public FunctionTableIteratorBase<FunctionMap, FunctionMap::iterator, FuncOverloadVector::iterator>
+        public FunctionTableIteratorBase<FunctionMap, FunctionMap::iterator, FuncOverloadTable::Iterator>
     {
     public:
         FunctionTableIterator(FunctionMap& Functions,
-            FunctionMap::iterator FuncMapIter, FuncOverloadVector::iterator OverloadIter)
+            FunctionMap::iterator FuncMapIter, FuncOverloadTable::Iterator OverloadIter)
             : FunctionTableIteratorBase(Functions, FuncMapIter, OverloadIter) {}
 
         FunctionTableEntry operator*() const
@@ -81,7 +82,7 @@ namespace Volt
     };
 
     class ConstFunctionTableIterator :
-    public FunctionTableIteratorBase<const FunctionMap, FunctionMap::const_iterator, FuncOverloadVector::const_iterator>
+    public FunctionTableIteratorBase<const FunctionMap, FunctionMap::const_iterator, FuncOverloadTable::ConstIterator>
     {
     public:
         ConstFunctionTableIterator(const FunctionMap& Functions,
@@ -102,7 +103,7 @@ namespace Volt
     public:
         void AddFunction(llvm::StringRef Name, ArgsVector<QualType> Params, CalleeBase* Callee)
         {
-            Functions[Name].emplace_back(std::move(Params), Callee);
+            Functions[Name].AddOverload(std::move(Params), Callee);
         }
 
         const FunctionOverload* FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const;

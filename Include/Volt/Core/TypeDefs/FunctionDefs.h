@@ -12,7 +12,6 @@
 namespace Volt
 {
     using FuncOverloadVector = SmallVec8<FunctionOverload>;
-    using FunctionMap = llvm::StringMap<FuncOverloadVector>;
 }
 
 #endif //CVOLT_FUNCTIONDEFS_H
