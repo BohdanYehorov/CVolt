@@ -5,10 +5,13 @@
 #ifndef CVOLT_FUNCOVERLOADTABLE_H
 #define CVOLT_FUNCOVERLOADTABLE_H
 
-#include "Volt/Core/TypeDefs/FunctionDefs.h"
+#include "Volt/Core/Functions/FunctionOverload.h"
+#include "Volt/Core/TypeDefs/TypeDefs.h"
 
 namespace Volt
 {
+    using FuncOverloadVector = SmallVec8<FunctionOverload>;
+
     class FuncOverloadTable
     {
     public:

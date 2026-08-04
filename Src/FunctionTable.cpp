@@ -21,13 +21,13 @@ namespace Volt
                Functions.begin()->second.begin());
 
         return FunctionTableIterator(Functions,
-            Functions.begin(), FuncOverloadVector::iterator());
+            Functions.begin(), FuncOverloadTable::Iterator());
     }
 
     FunctionTableIterator FunctionTable::end()
     {
         return FunctionTableIterator(Functions, Functions.end(),
-            FuncOverloadVector::iterator());
+            FuncOverloadTable::Iterator());
     }
 
     ConstFunctionTableIterator FunctionTable::begin() const
@@ -37,12 +37,12 @@ namespace Volt
             Functions.begin()->second.begin());
 
         return ConstFunctionTableIterator(Functions,
-        Functions.begin(), FuncOverloadVector::const_iterator());
+        Functions.begin(), FuncOverloadTable::ConstIterator());
     }
 
     ConstFunctionTableIterator FunctionTable::end() const
     {
         return ConstFunctionTableIterator(Functions, Functions.end(),
-                                          FuncOverloadVector::iterator());
+                                          FuncOverloadTable::ConstIterator());
     }
 }

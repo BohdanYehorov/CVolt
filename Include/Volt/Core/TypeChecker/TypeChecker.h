@@ -10,7 +10,6 @@
 #include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
-#include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Core/Functions/FunctionTable.h"
 #include "ExprResult.h"

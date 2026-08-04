@@ -6,7 +6,6 @@
 #define CVOLT_CLASSTYPE_H
 
 #include "DataType.h"
-#include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/ADT/Array.h"
 #include "Volt/Core/Functions/FunctionCallee.h"
 #include "Volt/Core/Functions/FunctionTable.h"

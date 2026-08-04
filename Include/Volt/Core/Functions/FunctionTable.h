@@ -5,7 +5,6 @@
 #ifndef CVOLT_FUNCTIONTABLE_H
 #define CVOLT_FUNCTIONTABLE_H
 
-#include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/Core/Types/DataType.h"
 #include "FuncOverloadTable.h"
 
@@ -86,7 +85,7 @@ namespace Volt
     {
     public:
         ConstFunctionTableIterator(const FunctionMap& Functions,
-            FunctionMap::const_iterator FuncMapIter, FuncOverloadVector::const_iterator OverloadIter)
+            FunctionMap::const_iterator FuncMapIter, FuncOverloadTable::ConstIterator OverloadIter)
             : FunctionTableIteratorBase(Functions, FuncMapIter, OverloadIter) {}
 
         ConstFunctionTableEntry operator*() const
