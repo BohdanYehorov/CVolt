@@ -173,7 +173,7 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileString(const StringNode *String)
     {
-        return Create<IRValue>(Builder.CreateGlobalString(String->Value.str()),
+        return Create<IRValue>(Builder.CreateGlobalString(String->Value),
             CContext.GetPointerType({ CContext.GetCharType(), 0 }));
     }
 
@@ -593,7 +593,7 @@ namespace Volt
                 Constant = llvm::Constant::getNullValue(Type);
 
             auto GlobalVar = new llvm::GlobalVariable(*Module, Type,
-                false, llvm::GlobalVariable::ExternalLinkage, Constant, Var->Name.str());
+                false, llvm::GlobalVariable::ExternalLinkage, Constant, Var->Name);
 
             GlobalVariables[Var->Name] = Create<IRValue>(GlobalVar, VarType, true);
             return nullptr;
@@ -685,7 +685,7 @@ namespace Volt
 
         IRNameBuilder NameBuilder(IRNameKind::Function);
 
-        NameBuilder.AddName(Function->Name.str());
+        NameBuilder.AddName(Function->Name);
         for (const auto Param : Function->Params)
         {
             DataType* ParamType = Param->Type->ResolvedType;
@@ -697,7 +697,7 @@ namespace Volt
         llvm::FunctionType* FuncType = llvm::FunctionType::get(
             RetType, Params, false);
 
-        const std::string& FuncName = Function->Name.str();
+        llvm::StringRef FuncName = Function->Name;
         llvm::Function* Func = llvm::Function::Create(
             FuncType, llvm::Function::ExternalLinkage, NameBuilder.GetIRName(), Module.get());
 
@@ -719,7 +719,7 @@ namespace Volt
         if (auto FuncCallee = Cast<FunctionCallee>(Function->ResolvedCallee))
             FuncCallee->Function = Func;
         else
-            VoltUnreachableFmt("Function definition '{}' is unknown", FuncName);
+            VoltUnreachableFmt("Function definition '{}' is unknown", FuncName.str());
 
         FunctionReturnType = Function->ReturnType->ResolvedType;
         InFunction = true;
@@ -734,7 +734,7 @@ namespace Volt
             if (RetType->isVoidTy())
                 Builder.CreateRetVoid();
             else
-                VoltUnreachableFmt("Function '{}' must return value", FuncName);
+                VoltUnreachableFmt("Function '{}' must return value", FuncName.str());
         }
 
         ExitScope();
@@ -769,8 +769,8 @@ namespace Volt
         Params.push_back(CContext.GetLLVMType(ThisType));
 
         IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->Name.str());
-        NameBuilder.AddName(Method->Name.str());
+        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Method->Name);
 
         NameBuilder.AddParam(ThisType);
 
@@ -839,8 +839,8 @@ namespace Volt
         Params.push_back(CContext.GetLLVMType(ThisType));
 
         IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->Name.str());
-        NameBuilder.AddName(Type->Name.str());
+        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Type->Name);
 
         NameBuilder.AddParam(ThisType);
 

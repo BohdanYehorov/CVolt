@@ -112,7 +112,7 @@ namespace Volt
     ClassMethod<RetTy, ArgsTy...> ClassInstBase::GetMethodAddr(const std::string &Name)
     {
         IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->Name.str());
+        NameBuilder.AddName(Type->Name);
         NameBuilder.AddName(Name);
 
         NameBuilder.AddParam(CContext.GetPointerType(Type));

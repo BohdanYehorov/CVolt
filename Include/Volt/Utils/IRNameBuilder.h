@@ -37,11 +37,16 @@ namespace Volt
         IRNameBuilder(ClassType* Type, const FunctionSignature& Signature)
             : Kind(IRNameKind::Method)
         {
-            IRName = "M" + std::to_string(Type->Name.size()) + Type->Name.str();
+            IRName = "M" + std::to_string(Type->Name.size());
+            IRName.append(Type->Name.data(), Type->Name.size());
             AddSignature(Signature);
         }
 
-        void AddName(const std::string& Name) { IRName += std::to_string(Name.size()) + Name; }
+        void AddName(const llvm::StringRef Name)
+        {
+            IRName += std::to_string(Name.size());
+            IRName.append(Name.data(), Name.size());
+        }
         void AddParam(QualType Param) { IRName += Param.GetIRName(); }
 
         template <typename T>
