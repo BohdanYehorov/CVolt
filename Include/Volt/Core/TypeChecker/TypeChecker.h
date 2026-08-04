@@ -12,6 +12,7 @@
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Core/TypeDefs/FunctionDefs.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
+#include "Volt/Core/Functions/FunctionTable.h"
 #include "ExprResult.h"
 #include "ExprAddress.h"
 
@@ -43,7 +44,7 @@ namespace Volt
 
         GlobalVariableTable GlobalVariables;
 
-        FunctionMap Functions;
+        FunctionTable Functions;
         VariableTable Variables;
 
         Array<Array<ScopeEntry>> ScopeStack;

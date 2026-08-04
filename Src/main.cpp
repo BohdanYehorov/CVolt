@@ -89,7 +89,7 @@ int main(int Argc, char* Argv[])
         std::cout << ")\n";
     }
 
-/*    Volt::Lexer MyLexer(CContext);
+    Volt::Lexer MyLexer(CContext);
     MyLexer.Lex();
 
 #ifdef _DEBUG
@@ -132,5 +132,5 @@ int main(int Argc, char* Argv[])
     std::cout << "\n====================================================\n";
 #endif
 
-    return Res;*/
+    return Res;
 }

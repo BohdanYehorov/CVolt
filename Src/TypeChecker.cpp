@@ -455,7 +455,7 @@ namespace Volt
                 ArgTypes.push_back(ArgType);
             }
 
-            if (auto Overload = TryGetFunction(Name, ArgTypes, Functions))
+            if (auto Overload = Functions.FindBestFunctionOverload(Name, ArgTypes))
             {
                 Call->ResolvedCallee = Overload->Callee;
 
@@ -465,7 +465,7 @@ namespace Volt
                 return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
             }
 
-            if (auto Overload = TryGetFunction(Name, ArgTypes, BuiltinFuncTable.GetMap()))
+            if (auto Overload = BuiltinFuncTable.GetFunctionTable().FindBestFunctionOverload(Name, ArgTypes))
             {
                 Call->ResolvedCallee = Overload->Callee;
 
@@ -747,7 +747,7 @@ namespace Volt
         ArgsVector<QualType> Params;
         FunctionCallee* FuncCallee = CreateFunction(Function, Name, Params);
 
-        Functions[Name].emplace_back(std::move(Params), FuncCallee);
+        Functions.AddFunction(Name, std::move(Params), FuncCallee);
 
         FunctionReturnType = FuncCallee->ReturnType;
         InFunction = true;

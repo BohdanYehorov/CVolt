@@ -6,7 +6,8 @@
 
 namespace Volt
 {
-    FunctionOverload* FunctionTable::FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args)
+    const FunctionOverload* FunctionTable::FindBestFunctionOverload(
+        llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const
     {
         auto Iter = Functions.find(Name);
         if (Iter == Functions.end()) return nullptr;
@@ -45,14 +46,15 @@ namespace Volt
                                           FuncOverloadVector::iterator());
     }
 
-    FunctionOverload* FunctionTable::FindBestOverload(llvm::ArrayRef<QualType> Args, FuncOverloadVector &Overloads)
+    const FunctionOverload* FunctionTable::FindBestOverload(
+        llvm::ArrayRef<QualType> Args, const FuncOverloadVector &Overloads)
     {
         size_t ArgsCount = Args.size();
         size_t MinCasts = ArgsCount;
         int BestRank = std::numeric_limits<int>::max();
-        FunctionOverload* BestOverload = nullptr;
+        const FunctionOverload* BestOverload = nullptr;
 
-        for (FunctionOverload& Overload : Overloads)
+        for (const FunctionOverload& Overload : Overloads)
         {
             if (Overload.Args.size() != ArgsCount) continue;
 

@@ -4,12 +4,13 @@
 
 #ifndef CVOLT_BUILTINFUNCTIONTABLE_H
 #define CVOLT_BUILTINFUNCTIONTABLE_H
+
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/Functions/FunctionSignature.h"
-#include "Volt/Core/Hash/Hash.h"
 #include "Volt/Core/Types/TypeConv.h"
 #include "Volt/Core/Functions/BuiltinFuncCallee.h"
 #include "Volt/Utils/IRNameBuilder.h"
+#include "Volt/Core/Functions/FunctionTable.h"
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
@@ -17,11 +18,8 @@ namespace Volt
 {
 	class BuiltinFunctionTable
 	{
-	public:
-		// using Map = std::unordered_map<FunctionSignature, BuiltinFuncCallee*, Hash<FunctionSignature>>;
-
 	private:
-		FunctionMap Functions;
+		FunctionTable Functions;
 		CompilationContext& CContext;
 		Arena& MainArena;
 
@@ -41,7 +39,7 @@ namespace Volt
 		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
 
-		[[nodiscard]] const FunctionMap& GetMap() const { return Functions; }
+		[[nodiscard]] const FunctionTable& GetFunctionTable() const { return Functions; }
 
 	private:
 		template <typename T, typename ...Rest>
@@ -70,7 +68,7 @@ namespace Volt
 		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
 			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 
-		Functions[Name].emplace_back(std::move(Params), Callee);
+		Functions.AddFunction(Name, std::move(Params), Callee);
 	}
 
 	template<typename Ret>
@@ -83,7 +81,7 @@ namespace Volt
 		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
 			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 
-		Functions[Name].emplace_back(ArgsVector<QualType>(), Callee);
+		Functions.AddFunction(Name, ArgsVector<QualType>(), Callee);
 	}
 
 	template<typename T, typename ... ArgsTy>

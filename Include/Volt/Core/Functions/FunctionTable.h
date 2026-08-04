@@ -105,7 +105,7 @@ namespace Volt
             Functions[Name].emplace_back(std::move(Params), Callee);
         }
 
-        FunctionOverload* FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args);
+        const FunctionOverload* FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const;
 
         [[nodiscard]] FunctionTableIterator begin();
         [[nodiscard]] FunctionTableIterator end();
@@ -113,7 +113,8 @@ namespace Volt
         [[nodiscard]] ConstFunctionTableIterator end() const;
 
     public:
-        static FunctionOverload* FindBestOverload(llvm::ArrayRef<QualType> Args, FuncOverloadVector& Overloads);
+        static const FunctionOverload* FindBestOverload(
+            llvm::ArrayRef<QualType> Args, const FuncOverloadVector& Overloads);
     };
 }
 
