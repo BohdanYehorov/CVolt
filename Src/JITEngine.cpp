@@ -61,7 +61,7 @@ namespace Volt
 		// }
 	}
 
-	void* JITEngine::GetRawFuncAddr(const std::string &IRName)
+	void* JITEngine::GetRawFuncAddr(llvm::StringRef IRName)
 	{
 		auto SymOrErr = Jit->get()->lookup(IRName);
 		if (!SymOrErr)

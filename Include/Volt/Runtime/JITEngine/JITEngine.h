@@ -37,19 +37,19 @@ namespace Volt
 		JITEngine(CompilationContext &CContext, BuiltinFunctionTable& Table);
 
 		template <typename RetT, typename ... ArgsT>
-		FuncT<RetT, ArgsT...> GetFunctionAddr(const std::string& Name);
+		FuncT<RetT, ArgsT...> GetFunctionAddr(llvm::StringRef Name);
 
 		template <typename RetT, typename ... ArgsT>
-		RetT CallFunction(const std::string& Name, ArgsT... Args);
+		RetT CallFunction(llvm::StringRef Name, ArgsT... Args);
 
 		void FillClassMethods(ClassInst& Inst);
 
 	private:
-		void* GetRawFuncAddr(const std::string& IRName);
+		void* GetRawFuncAddr(llvm::StringRef IRName);
 	};
 
 	template<typename RetT, typename ... ArgsT>
-	JITEngine::FuncT<RetT, ArgsT...> JITEngine::GetFunctionAddr(const std::string &Name)
+	JITEngine::FuncT<RetT, ArgsT...> JITEngine::GetFunctionAddr(llvm::StringRef Name)
 	{
 		IRNameBuilder NameBuilder(IRNameKind::Function);
 		NameBuilder.AddName(Name);
@@ -76,7 +76,7 @@ namespace Volt
 	}
 
 	template<typename RetT, typename ... ArgsT>
-	RetT JITEngine::CallFunction(const std::string& Name, ArgsT...Args)
+	RetT JITEngine::CallFunction(llvm::StringRef Name, ArgsT...Args)
 	{
 		FuncT<RetT, ArgsT...> Func = GetFunctionAddr<RetT, ArgsT...>(Name);
 		if (!Func) return RetT();
