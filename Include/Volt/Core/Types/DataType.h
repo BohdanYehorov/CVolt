@@ -80,6 +80,9 @@ namespace Volt
             static_assert((std::same_as<Args_, TypeCategory> && ...));
             return ((Args == Category) || ...);
         }
+
+        [[nodiscard]] llvm::Type* GetLLVMOrCachedType(llvm::LLVMContext& Context);
+
     protected:
         static DataType* GetJointType(DataType* Left, DataType* Right);
 
@@ -404,7 +407,7 @@ namespace Volt
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
         {
             if (!BaseType) return nullptr;
-            return llvm::ArrayType::get(BaseType->ToLLVMType(Context), Length);
+            return llvm::ArrayType::get(BaseType->GetLLVMOrCachedType(Context), Length);
         }
 
         int GetRank() const override { return 12; }

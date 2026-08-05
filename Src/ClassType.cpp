@@ -13,7 +13,7 @@ namespace Volt
         SmallVec4<llvm::Type*> Types;
         Types.reserve(Fields.Length());
         for (auto Field : Fields)
-            Types.push_back(Field.Type->ToLLVMType(Context));
+            Types.push_back(Field.Type->GetLLVMOrCachedType(Context));
 
         return llvm::StructType::create(Context, Types, Name);
     }

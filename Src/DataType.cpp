@@ -16,6 +16,13 @@ namespace Volt
 		return false;
 	}
 
+	llvm::Type *DataType::GetLLVMOrCachedType(llvm::LLVMContext &Context)
+	{
+		if (!CachedType)
+			CachedType = ToLLVMType(Context);
+		return CachedType;
+	}
+
 	DataType *DataType::GetJointType(DataType *Left, DataType *Right)
 	{
 		if (Left == Right)
