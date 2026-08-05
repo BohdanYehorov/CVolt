@@ -23,9 +23,13 @@ namespace Volt
         IRBuilder(CompilationContext& CContext)
             : Builder(CContext.Context), CContext(CContext) {}
 
+        llvm::IRBuilder<>& Get() { return Builder; }
+
         llvm::AllocaInst* CreateAlloca(DataType* Type);
 
-        IRValue* CreateLoad(IRValue* Value);
+        IRValue* CreateLoad(IRValue* Value) { return CreateLoad(Value->GetDataType(), Value->GetValue()); }
+        IRValue* CreateLoad(DataType* Type, llvm::Value* Value);
+        IRValue* CreateLoadIfLValue(IRValue* Value);
         llvm::StoreInst* CreateStore(IRValue* Value, llvm::Value* Ptr);
         llvm::StoreInst* CreateStore(IRValue* Value, IRValue* Ptr);
 
@@ -66,6 +70,11 @@ namespace Volt
         llvm::Value* GetInt64(UInt64 Value) { return Builder.getInt64(Value); }
 
         IRValue* CreateGEP(IRValue* Value, llvm::Value* Index);
+        llvm::Value* CreateGEP(llvm::Type* Ty,
+            llvm::Value* Ptr, llvm::ArrayRef<llvm::Value*> IdxList)
+        {
+            return Builder.CreateGEP(Ty, Ptr, IdxList);
+        }
 
         llvm::BranchInst* CreateCondBr(llvm::Value* Cond,
             llvm::BasicBlock* True, llvm::BasicBlock* False)
@@ -107,6 +116,15 @@ namespace Volt
             return Builder.CreateBitCast(V, DestTy);
         }
 
+        IRValue* CreateCast(IRValue* V, DataType* DestTy)
+        {
+            return V->CastTo(DestTy, Builder, CContext);
+        }
+
+        IRValue* CreateCastOrBind(IRValue* V, DataType* DestTy)
+        {
+            return V->CastOrBind(DestTy, Builder, CContext);
+        }
     };
 }
 #endif //CVOLT_IRBUILDER_H

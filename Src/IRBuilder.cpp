@@ -13,13 +13,19 @@ namespace Volt
         return Alloca;
     }
 
-    IRValue *IRBuilder::CreateLoad(IRValue *Value)
+    IRValue * IRBuilder::CreateLoad(DataType *Type, llvm::Value *Value)
     {
-        DataType* Type = Value->GetDataType();
         llvm::Type* LLVMType = CContext.GetLLVMType(Type);
         llvm::LoadInst* LoadValue = Builder.CreateAlignedLoad(LLVMType,
-            Value->GetValue(), llvm::MaybeAlign(Type->GetAlignment()));
+            Value, llvm::MaybeAlign(Type->GetAlignment()));
         return CContext.MainArena.Create<IRValue>(LoadValue, Type);
+    }
+
+    IRValue *IRBuilder::CreateLoadIfLValue(IRValue *Value)
+    {
+        if (Value->IsLValue())
+            return CreateLoad(Value);
+        return Value;
     }
 
     llvm::StoreInst *IRBuilder::CreateStore(IRValue *Value, llvm::Value *Ptr)
@@ -269,7 +275,7 @@ namespace Volt
 
         DataType* Type = Left->GetDataType();
         VoltAssert(Left->IsLValue() && "Cannot apply assignment operator to r-value");
-        VoltAssert(Type != Right->GetDataType() && "Cannot assign value with another type");
+        VoltAssert(Type == Right->GetDataType() && "Cannot assign value with another type");
 
         if (Op == Assign)
         {
@@ -280,20 +286,20 @@ namespace Volt
         IRValue* NewValue = Left->GetRValue(Builder, CContext);
         switch (Op)
         {
-            case AddAssign: NewValue = CreateAdd(Left, Right);       break;
-            case SubAssign: NewValue = CreateSub(Left, Right);       break;
-            case MulAssign: NewValue = CreateMul(Left, Right);       break;
-            case DivAssign: NewValue = CreateDiv(Left, Right);       break;
-            case ModAssign: NewValue = CreateMod(Left, Right);       break;
-            case AndAssign: NewValue = CreateAnd(Left, Right);       break;
-            case OrAssign:  NewValue = CreateOr(Left, Right);        break;
-            case XorAssign: NewValue = CreateXor(Left, Right);       break;
-            case LShiftAssign: NewValue = CreateLShift(Left, Right); break;
-            case RShiftAssign: NewValue = CreateRShift(Left, Right); break;
+            case AddAssign: NewValue = CreateAdd(NewValue, Right);       break;
+            case SubAssign: NewValue = CreateSub(NewValue, Right);       break;
+            case MulAssign: NewValue = CreateMul(NewValue, Right);       break;
+            case DivAssign: NewValue = CreateDiv(NewValue, Right);       break;
+            case ModAssign: NewValue = CreateMod(NewValue, Right);       break;
+            case AndAssign: NewValue = CreateAnd(NewValue, Right);       break;
+            case OrAssign:  NewValue = CreateOr(NewValue, Right);        break;
+            case XorAssign: NewValue = CreateXor(NewValue, Right);       break;
+            case LShiftAssign: NewValue = CreateLShift(NewValue, Right); break;
+            case RShiftAssign: NewValue = CreateRShift(NewValue, Right); break;
             default: VoltUnreachable("Unknown assignment operator");
         }
 
-        CreateStore(Left, NewValue);
+        CreateStore(NewValue, Left);
         return NewValue;
     }
 

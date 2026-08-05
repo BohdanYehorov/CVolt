@@ -10,6 +10,7 @@
 #include "Volt/Compiler/Value/IRValue.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
 #include "Volt/Core/TypeChecker/TypeChecker.h"
+#include "IRBuilder.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
@@ -36,7 +37,7 @@ namespace Volt
 
         llvm::LLVMContext& Context;
         std::unique_ptr<llvm::Module>& Module;
-        llvm::IRBuilder<> Builder;
+        IRBuilder Builder;
         Arena& CompilerArena;
 
         ASTNode* ASTTree;
@@ -56,7 +57,7 @@ namespace Volt
     public:
         LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
             : CContext(CContext), Context(CContext.Context),
-            Module(CContext.Module), Builder(Context),
+            Module(CContext.Module), Builder(CContext),
             CompilerArena(CContext.MainArena), ASTTree(CContext.ASTTree),
             BuiltinFuncTable(BuiltinFuncTable)
         {
@@ -109,7 +110,7 @@ namespace Volt
         {
             IRValue* Value = CompileNode(Node);
             if (!Value) return nullptr;
-            return Value->GetRValue(Builder, CContext);
+            return Builder.CreateLoadIfLValue(Value);
         }
 
         void DeclareVariable(llvm::StringRef Name, IRValue *Var);
