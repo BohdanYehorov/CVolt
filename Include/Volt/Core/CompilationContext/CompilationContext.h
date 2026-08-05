@@ -95,6 +95,7 @@ namespace Volt
 		friend class IRValue;
 		friend class DebugOutput;
 		friend class ClassInst;
+		friend class IRBuilder;
 	};
 }
 

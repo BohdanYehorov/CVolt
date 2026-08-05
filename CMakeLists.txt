@@ -29,6 +29,7 @@ set(SOURCES
         Src/ClassInst.cpp
         Src/FunctionTable.cpp
         Src/FuncOverloadTable.cpp
+        Src/IRBuilder.cpp
 )
 
 if (COMPILE_TO_LIB)
