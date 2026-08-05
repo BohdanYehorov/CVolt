@@ -13,7 +13,7 @@ namespace Volt
 		if (auto RefType = Cast<ReferenceType>(InType))
 		{
 			Value = InValue;
-			Type = RefType->BaseType.GetType();
+			Type = RefType->GetBaseType().GetType();
 			return;
 		}
 
@@ -117,7 +117,7 @@ namespace Volt
 
 		if (auto IntType = Cast<IntegerType>(Type))
 		{
-			bool IsSigned = IntType->IsSigned;
+			bool IsSigned = IntType->IsSigned();
 
 			llvm::ICmpInst::Predicate Pred;
 			switch (Op)
@@ -172,7 +172,7 @@ namespace Volt
 
 			auto PtrType = Cast<PointerType>(Ptr->Type);
 
-			llvm::Type* PointeeType = CContext.GetLLVMType(PtrType->BaseType.GetType());
+			llvm::Type* PointeeType = CContext.GetLLVMType(PtrType->GetBaseType().GetType());
 			return MainArena.Create<IRValue>(
 				Builder.CreateGEP(PointeeType, Ptr->Value, Index->Value), PtrType);
 		}
@@ -217,7 +217,7 @@ namespace Volt
 			VoltUnreachable("Cannot multiply values with different types");
 
 		if (auto IntType = Cast<IntegerType>(Type))
-			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
+			return CContext.MainArena.Create<IRValue>(IntType->IsSigned() ?
 				Builder.CreateSDiv(Value, Right->Value) :
 				Builder.CreateUDiv(Value, Right->Value), Type);
 
@@ -230,7 +230,7 @@ namespace Volt
 			VoltUnreachable("Cannot apply 'mod' to values with different types");
 
 		if (auto IntType = Cast<IntegerType>(Type))
-			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
+			return CContext.MainArena.Create<IRValue>(IntType->IsSigned() ?
 				Builder.CreateSRem(Value, Right->Value) :
 				Builder.CreateURem(Value, Right->Value), Type);
 
@@ -276,7 +276,7 @@ namespace Volt
 			VoltUnreachable("Cannot apply 'rshift' to values with different types");
 
 		if (auto IntType = Cast<IntegerType>(Type))
-			return CContext.MainArena.Create<IRValue>(IntType->IsSigned ?
+			return CContext.MainArena.Create<IRValue>(IntType->IsSigned() ?
 				Builder.CreateAShr(Value, Right->Value) :
 				Builder.CreateLShr(Value, Right->Value), Type);
 
@@ -423,7 +423,7 @@ namespace Volt
 				if (!FromIntType || !ToIntType)
 					return nullptr;
 
-				return FromIntType->BitWidth < ToIntType->BitWidth ? ToIntType->IsSigned ?
+				return FromIntType->GetBitWidth() < ToIntType->GetBitWidth() ? ToIntType->IsSigned() ?
 					Builder.CreateSExt(Value, CContext.GetLLVMType(To))   :
 					Builder.CreateZExt(Value, CContext.GetLLVMType(Type)) :
 					Builder.CreateTrunc(Value, CContext.GetLLVMType(To));
@@ -464,7 +464,7 @@ namespace Volt
 				if (!FromFloatType || !ToFloatType)
 					return nullptr;
 
-				return FromFloatType->BitWidth < ToFloatType->BitWidth ?
+				return FromFloatType->GetBitWidth() < ToFloatType->GetBitWidth() ?
 					Builder.CreateFPExt(Value, CContext.GetLLVMType(To)) :
 					Builder.CreateFPTrunc(Value, CContext.GetLLVMType(To));
 			}
@@ -508,11 +508,11 @@ namespace Volt
 
 		if (auto RefType = Cast<ReferenceType>(Type))
 		{
-			if (!RefType->BaseType->CastTo(To, true))
+			if (!RefType->GetBaseType()->CastTo(To, true))
 				return nullptr;
 
 			auto Val = MainArena.Create<IRValue>(Builder.CreateLoad(
-				CContext.GetLLVMType(RefType->BaseType.GetType()), Value), RefType->BaseType.GetType());
+				CContext.GetLLVMType(RefType->GetBaseType().GetType()), Value), RefType->GetBaseType().GetType());
 
 			return Val->CastLLVM(To, Builder, CContext);
 		}

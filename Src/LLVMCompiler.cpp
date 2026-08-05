@@ -186,7 +186,7 @@ namespace Volt
 
         if (auto Type = Cast<ArrayType>(Array->CompileTimeValue->GetType().GetType()))
             ArrType = llvm::ArrayType::get(
-                CContext.GetLLVMType(Type->BaseType.GetType()), Array->Elements.size());
+                CContext.GetLLVMType(Type->GetBaseType().GetType()), Array->Elements.size());
 
         llvm::AllocaInst* Arr = Builder.CreateAlloca(ArrType);
 
@@ -483,7 +483,7 @@ namespace Volt
         if (auto PtrType = Cast<PointerType>(Type))
         {
             Value = Builder.CreateLoad(Value->getType(), Value);
-            Type = PtrType->BaseType.GetType();
+            Type = PtrType->GetBaseType().GetType();
         }
 
         return Create<IRValue>(Builder.CreateStructGEP(CContext.GetLLVMType(Type),
@@ -499,11 +499,11 @@ namespace Volt
             if (!Value) return nullptr;
 
             llvm::Value* LLVMValue = Value->GetValue();
-            llvm::Type* ElType = CContext.GetLLVMType(PtrType->BaseType.GetType());
+            llvm::Type* ElType = CContext.GetLLVMType(PtrType->GetBaseType().GetType());
             IRValue* Index = CompileToRValue(Subscript->Index);
             if (!Index) return nullptr;
             llvm::Value* ElPtr = Builder.CreateGEP(ElType, LLVMValue, Index->GetValue());
-            return Create<IRValue>(ElPtr, PtrType->BaseType.GetType(), true);
+            return Create<IRValue>(ElPtr, PtrType->GetBaseType().GetType(), true);
         }
 
         if (auto ArrType = Cast<ArrayType>(Subscript->TargetType))
@@ -518,7 +518,7 @@ namespace Volt
             if (!Index) return nullptr;
             llvm::Value* ElPtr = Builder.CreateGEP(CContext.GetLLVMType(ArrType), LLVMValue,
                 { Builder.getInt32(0), Index->GetValue() });
-            return Create<IRValue>(ElPtr, ArrType->BaseType.GetType(), true);
+            return Create<IRValue>(ElPtr, ArrType->GetBaseType().GetType(), true);
         }
 
         return nullptr;
@@ -619,7 +619,7 @@ namespace Volt
         {
             if (auto Arr = Cast<ArrayNode>(Var->Value))
             {
-                if (ArrType->Length < Arr->Elements.size())
+                if (ArrType->GetLength() < Arr->Elements.size())
                     VoltUnreachable("Too many elements in array initializer");
                 FillArray(Arr, Alloca);
             }

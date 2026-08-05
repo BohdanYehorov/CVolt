@@ -12,7 +12,7 @@ namespace Volt
 	bool DataType::IsSignedIntegerType() const
 	{
 		if (auto IntType = Cast<const IntegerType>(this))
-			return IntType->IsSigned;
+			return IntType->IsSigned();
 		return false;
 	}
 
@@ -50,7 +50,7 @@ namespace Volt
 	QualType QualType::GetNotReferenceType() const
 	{
 		if (auto RefType = CastAs<ReferenceType>())
-			return RefType->BaseType;
+			return RefType->GetBaseType();
 		return *this;
 	}
 
@@ -108,12 +108,12 @@ namespace Volt
 
 	std::string IntegerType::ToString() const
 	{
-		return (IsSigned ? "i" : "u") + std::to_string(BitWidth);
+		return (bIsSigned ? "i" : "u") + std::to_string(BitWidth);
 	}
 
 	std::string IntegerType::GetIRName() const
 	{
-		if (IsSigned)
+		if (bIsSigned)
 		{
 			switch (BitWidth)
 			{
@@ -145,7 +145,7 @@ namespace Volt
 			case TypeCategory::Boolean:
 				return Explicit;
 			case TypeCategory::Integer:
-				return To->IsSignedIntegerType() == IsSigned ? true : Explicit;
+				return To->IsSignedIntegerType() == bIsSigned ? true : Explicit;
 			case TypeCategory::Char:
 			case TypeCategory::FloatingPoint:
 				return true;

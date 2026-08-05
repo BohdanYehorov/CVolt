@@ -161,7 +161,7 @@ namespace Volt
 
 		if (auto IntType = Type.CastAs<IntegerType>())
 		{
-			if (IntType->IsSigned)
+			if (IntType->IsSigned())
 				return CreateInteger(Type, Fun(GetInt(), Right->GetInt()), CContext.MainArena);
 
 			return CreateInteger(Type, Fun(GetUInt(), Right->GetUInt()), CContext.MainArena);
@@ -185,7 +185,7 @@ namespace Volt
 
 		if (auto IntType = Type.CastAs<IntegerType>())
 		{
-			if (IntType->IsSigned)
+			if (IntType->IsSigned())
 				return CreateInteger(Type, Fun(GetInt(), Right->GetInt()), CContext.MainArena);
 
 			return CreateInteger(Type, Fun(GetUInt(), Right->GetUInt()), CContext.MainArena);

@@ -227,7 +227,7 @@ namespace Volt
         {
             if (UnrefValue->IsEmpty())
                 Unref->CompileTimeValue = MainArena.Create<ExprAddress>(
-                    ExprResult::CreateEmpty(PtrType->BaseType, MainArena));
+                    ExprResult::CreateEmpty(PtrType->GetBaseType(), MainArena));
             else
                 Unref->CompileTimeValue = UnrefValue->GetPointer();
 
@@ -506,7 +506,7 @@ namespace Volt
 
             QualType TargetType = Res->GetType().GetNotReferenceType();
             if (auto PtrType = TargetType.CastAs<PointerType>())
-                TargetType = PtrType->BaseType;
+                TargetType = PtrType->GetBaseType();
 
             if (auto ClassTy = TargetType.CastAs<ClassType>())
             {
@@ -576,13 +576,13 @@ namespace Volt
         if (auto ArrType = Cast<ArrayType>(TargetType))
         {
             Subscript->TargetType = ArrType;
-            return MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(ArrType->BaseType, MainArena));
+            return MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(ArrType->GetBaseType(), MainArena));
         }
 
         if (auto PtrType = Cast<PointerType>(TargetType))
         {
             Subscript->TargetType = PtrType;
-            return MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(PtrType->BaseType, MainArena));
+            return MainArena.Create<ExprAddress>(ExprResult::CreateEmpty(PtrType->GetBaseType(), MainArena));
         }
 
         return nullptr;
@@ -849,7 +849,7 @@ namespace Volt
 
         QualType TargetType = Res->GetType().GetNotReferenceType();
         if (auto PtrType = TargetType.CastAs<PointerType>())
-            TargetType = PtrType->BaseType;
+            TargetType = PtrType->GetBaseType();
 
         if (auto ClassTy = TargetType.CastAs<ClassType>())
         {

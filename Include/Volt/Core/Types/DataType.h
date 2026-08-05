@@ -240,11 +240,13 @@ namespace Volt
     class IntegerType : public PrimitiveDataType
     {
         GENERATED_BODY(IntegerType, PrimitiveDataType)
-    public:
+    private:
         size_t BitWidth;
-        bool IsSigned;
+        bool bIsSigned;
+
+    public:
         IntegerType(size_t BitWidth, bool IsSigned = true)
-            : PrimitiveDataType(TypeCategory::Integer), BitWidth(BitWidth), IsSigned(IsSigned) {}
+            : PrimitiveDataType(TypeCategory::Integer), BitWidth(BitWidth), bIsSigned(IsSigned) {}
 
     public:
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
@@ -259,13 +261,18 @@ namespace Volt
         std::string GetIRName() const override;
 
         bool CastTo(DataType *To, bool Explicit) const override;
+
+        [[nodiscard]] size_t GetBitWidth() const { return BitWidth; }
+        [[nodiscard]] size_t IsSigned() const { return bIsSigned; }
     };
 
     class FloatingPointType : public PrimitiveDataType
     {
         GENERATED_BODY(FloatingPointType, PrimitiveDataType)
-    public:
+    private:
         size_t BitWidth;
+
+    public:
         FloatingPointType(size_t BitWidth)
             : PrimitiveDataType(TypeCategory::FloatingPoint), BitWidth(BitWidth) {}
 
@@ -278,13 +285,17 @@ namespace Volt
         std::string GetIRName() const override;
 
         bool CastTo(DataType *To, bool Explicit) const override;
+
+        [[nodiscard]] size_t GetBitWidth() const { return BitWidth; }
     };
 
     class PointerType : public DataType, public llvm::FoldingSetNode
     {
         GENERATED_BODY(PointerType, DataType)
-    public:
+    private:
         QualType BaseType;
+
+    public:
         PointerType(QualType BaseType)
             : DataType(TypeCategory::Pointer), BaseType(BaseType) {}
 
@@ -312,6 +323,8 @@ namespace Volt
         }
 
         bool CastTo(DataType *To, bool Explicit) const override;
+
+        [[nodiscard]] QualType GetBaseType() const { return BaseType; }
     };
 
     class NullPointerType : public DataType
@@ -336,8 +349,10 @@ namespace Volt
     class ReferenceType : public DataType, public llvm::FoldingSetNode
     {
         GENERATED_BODY(ReferenceType, DataType)
-    public:
+    private:
         QualType BaseType;
+
+    public:
         ReferenceType(QualType BaseType)
             : DataType(TypeCategory::Reference), BaseType(BaseType) {}
 
@@ -367,16 +382,19 @@ namespace Volt
         }
 
         bool CastTo(DataType *To, bool Explicit) const override;
+
+        [[nodiscard]] QualType GetBaseType() const { return BaseType; }
     };
 
     class ArrayType : public DataType, public llvm::FoldingSetNode
     {
         GENERATED_BODY(ArrayType, DataType)
-    public:
+    private:
         QualType BaseType;
         size_t Length;
         bool LengthInit;
 
+    public:
         ArrayType(QualType BaseType, size_t Length) : DataType(TypeCategory::Array),
             BaseType(BaseType), Length(Length), LengthInit(true) {}
         ArrayType(QualType BaseType) : DataType(TypeCategory::Array),
@@ -417,6 +435,10 @@ namespace Volt
         }
 
         bool CastTo(DataType *To, bool Explicit) const override;
+
+        [[nodiscard]] QualType GetBaseType() const { return BaseType; }
+        [[nodiscard]] size_t GetLength() const { return Length; }
+        [[nodiscard]] bool IsLengthInit() const { return LengthInit; }
     };
 }
 
