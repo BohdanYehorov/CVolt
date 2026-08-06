@@ -436,7 +436,7 @@ namespace Volt
 
         if (auto MemberAccess = Cast<MemberAccessNode>(Call->Callee))
         {
-            IRValue* Res = CompileNode(MemberAccess);
+            IRValue* Res = CompileMemberAccess(MemberAccess);
             if (!Res || !Res->IsLValue()) return nullptr;
             VoltAssert(Res->GetDataType()->IsClassType());
 
@@ -485,8 +485,14 @@ namespace Volt
             Type = PtrType->GetBaseType().GetType();
         }
 
-        return Create<IRValue>(Builder.CreateStructGEP(CContext.GetLLVMType(Type),
-            Value, MemberAccess->ResolvedMemberIndex),
+        ClassType* ClassTy = StaticCast<ClassType>(Type);
+        const Field& F = ClassTy->Fields[MemberAccess->ResolvedMemberIndex];
+
+        llvm::Value* Res = Builder.CreateGEP(CContext.GetLLVMType(Type),
+            Value, { Builder.GetInt64(0), Builder.GetInt64(F.Offset) });
+
+        return Create<IRValue>(Builder.CreateBitCast(Res,
+            llvm::PointerType::get(Context, 0)),
             MemberAccess->CompileTimeValue->GetType().GetType(), true);
     }
 
@@ -539,13 +545,10 @@ namespace Volt
     IRValue *LLVMCompiler::CompileConstruct(const ConstructNode *Construct)
     {
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
+        IRBuilder TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin(), CContext);
 
         DataType* ClassTy = Construct->CompileTimeValue->GetType().GetType();
-        auto StructTy = llvm::cast<llvm::StructType>(CContext.GetLLVMType(ClassTy));
-        if (!StructTy)
-            VoltUnreachable("Cannot construct non-struct type");
-        llvm::AllocaInst* ClassAlloca = TmpBuilder.CreateAlloca(StructTy);
+        llvm::AllocaInst* ClassAlloca = TmpBuilder.CreateAlloca(ClassTy);
 
         ArgsVector<llvm::Value*> LLVMArgs;
         LLVMArgs.reserve(Construct->Args.size() + 1);
@@ -581,7 +584,7 @@ namespace Volt
                 IRValue* Value = CompileToRValue(Var->Value);
                 if (!Value) return nullptr;
 
-                Value = Builder.CreateCast(Value, VarType);// Value->CastTo(VarType, Builder, CContext);
+                Value = Builder.CreateCast(Value, VarType);
                 if (!Value) return nullptr;
 
                 Constant = llvm::cast<llvm::Constant>(Value->GetValue());
@@ -600,8 +603,8 @@ namespace Volt
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
-        llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
-        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
+        IRBuilder TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin(), CContext);
+        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(VarType);
 
         if (VarType->IsReferenceType())
         {
@@ -646,12 +649,11 @@ namespace Volt
     {
         DataType* VarType = Construct->Type->ResolvedType;
         VoltAssert(VarType->IsClassType());
-        llvm::Type* Type = CContext.GetLLVMType(VarType);
 
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
 
-        llvm::IRBuilder<> TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin());
-        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(Type);
+        IRBuilder TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin(), CContext);
+        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(VarType);
 
         ArgsVector<llvm::Value*> LLVMArgs;
         LLVMArgs.reserve(Construct->Arguments.size() + 1);

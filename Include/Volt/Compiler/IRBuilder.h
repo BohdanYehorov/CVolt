@@ -23,6 +23,9 @@ namespace Volt
         IRBuilder(CompilationContext& CContext)
             : Builder(CContext.Context), CContext(CContext) {}
 
+        IRBuilder(llvm::BasicBlock* InsertBlock, llvm::BasicBlock::iterator InsertBlockIter,
+            CompilationContext& CContext) : Builder(InsertBlock, InsertBlockIter), CContext(CContext) {}
+
         llvm::IRBuilder<>& Get() { return Builder; }
 
         llvm::AllocaInst* CreateAlloca(DataType* Type);

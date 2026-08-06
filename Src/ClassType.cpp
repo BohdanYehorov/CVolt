@@ -10,12 +10,14 @@ namespace Volt
 {
     llvm::Type *ClassType::ToLLVMType(llvm::LLVMContext &Context) const
     {
-        SmallVec4<llvm::Type*> Types;
-        Types.reserve(Fields.Length());
-        for (auto Field : Fields)
-            Types.push_back(Field.Type->GetLLVMOrCachedType(Context));
+        // SmallVec4<llvm::Type*> Types;
+        // Types.reserve(Fields.Length());
+        // for (auto Field : Fields)
+        //     Types.push_back(Field.Type->GetLLVMOrCachedType(Context));
+        //
+        // return llvm::StructType::create(Context, Types, Name);
 
-        return llvm::StructType::create(Context, Types, Name);
+        return llvm::ArrayType::get(llvm::Type::getInt8Ty(Context), GetSize());
     }
 
     size_t ClassType::GetSize() const
