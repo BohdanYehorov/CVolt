@@ -121,10 +121,7 @@ namespace Volt
             return V->CastTo(DestTy, Builder, CContext);
         }
 
-        IRValue* CreateCastOrBind(IRValue* V, DataType* DestTy)
-        {
-            return V->CastOrBind(DestTy, Builder, CContext);
-        }
+        IRValue* CreateCastOrBind(IRValue* V, DataType* DestTy);
     };
 }
 #endif //CVOLT_IRBUILDER_H

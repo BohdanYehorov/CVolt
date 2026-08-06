@@ -283,7 +283,7 @@ namespace Volt
             return Right;
         }
 
-        IRValue* NewValue = Left->GetRValue(Builder, CContext);
+        IRValue* NewValue = CreateLoadIfLValue(Left);
         switch (Op)
         {
             case AddAssign: NewValue = CreateAdd(NewValue, Right);       break;
@@ -325,4 +325,14 @@ namespace Volt
         VoltUnreachableFmt("Cannot create GEP to this type: {}", Type->ToString());
     }
 
+    IRValue *IRBuilder::CreateCastOrBind(IRValue *V, DataType *DestTy)
+    {
+        if (DestTy->IsReferenceType())
+        {
+            VoltAssert(V->IsLValue() && "Cannot bind r-value to reference");
+            return V;
+        }
+
+        return  CreateLoadIfLValue(V)->CastTo(DestTy, Builder, CContext);
+    }
 }

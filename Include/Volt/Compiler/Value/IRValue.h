@@ -36,31 +36,7 @@ namespace Volt
         [[nodiscard]] bool IsLValue() const { return bIsLValue; }
 
         [[nodiscard]] IRValue* CastTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        [[nodiscard]] IRValue* CastOrBind(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
         [[nodiscard]] llvm::Value* CastLLVM(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-
-        IRValue* GetRValue(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-
-        IRValue* CreateNeg(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateNot(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateLogicalNot(llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-
-        IRValue* CreateCmp(IRValue* Right, OperatorType Op, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-
-        IRValue* CreateAdd(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateSub(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateMul(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateDiv(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateMod(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateBitAnd(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateBitOr(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateBitXor(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateRShift(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-        IRValue* CreateLShift(IRValue* Right, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-
-        IRValue* CreateAssignment(IRValue* Right, OperatorType Op,
-            llvm::IRBuilder<>& Builder, CompilationContext& CContext);
-
     private:
         [[nodiscard]] llvm::Value* CastBooleanTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
         [[nodiscard]] llvm::Value* CastCharTo(DataType* To, llvm::IRBuilder<>& Builder, CompilationContext& CContext);
