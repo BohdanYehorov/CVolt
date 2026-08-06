@@ -33,7 +33,7 @@ namespace Volt
 		static ExprResult* CreateFromType(QualType Type, T Value, Arena& TypesArena);
 
 	private:
-		AlignedStorage<Int64, UInt64, double, ExprAddress*> Storage;
+		AlignedStorage<Int64, UInt64, char, bool, double, ExprAddress*> Storage;
 		bool bIsEmpty = true;
 
 	public:
@@ -41,42 +41,42 @@ namespace Volt
 		{
 			VoltAssert(!bIsEmpty);
 			VoltAssert(Type->IsSignedIntegerType());
-			return GetValue<Int64>();
+			return Storage.As<Int64>();
 		}
 
 		[[nodiscard]] UInt64 GetUInt() const
 		{
 			VoltAssert(!bIsEmpty);
 			VoltAssert(Type->IsUnsignedIntegerType());
-			return GetValue<UInt64>();
+			return Storage.As<UInt64>();
 		}
 
 		[[nodiscard]] double GetFloat() const
 		{
 			VoltAssert(!bIsEmpty);
 			VoltAssert(Type->IsFloatingPointType());
-			return GetValue<double>();
+			return Storage.As<double>();
 		}
 
 		[[nodiscard]] bool GetBool() const
 		{
 			VoltAssert(!bIsEmpty);
 			VoltAssert(Type->IsBoolType());
-			return GetValue<bool>();
+			return Storage.As<bool>();
 		}
 
 		[[nodiscard]] char GetChar() const
 		{
 			VoltAssert(!bIsEmpty);
 			VoltAssert(Type->IsCharType());
-			return GetValue<char>();
+			return Storage.As<char>();
 		}
 
 		[[nodiscard]] ExprAddress* GetPointer() const
 		{
 			VoltAssert(!bIsEmpty);
 			VoltAssert(Type->IsPointerType());
-			return GetValue<ExprAddress*>();
+			return Storage.As<ExprAddress*>();
 		}
 
 		[[nodiscard]] bool IsEmpty() const { return bIsEmpty; }
@@ -123,12 +123,6 @@ namespace Volt
 		template <typename Func>
 		ExprResult* CreateBinaryForInt(
 			ExprResult* Right, Func Fun, CompilationContext& CContext) const;
-
-		template <typename T>
-		void SetValue(T Value);
-
-		template <typename T>
-		T GetValue() const;
 	};
 
 	template<typename T>
@@ -192,22 +186,6 @@ namespace Volt
 		}
 
 		return nullptr;
-	}
-
-	template<typename T>
-	void ExprResult::SetValue(T Value)
-	{
-		static_assert(sizeof(T) <= sizeof(Storage));
-		std::memcpy(Storage.Buffer, &Value, sizeof(Value));
-	}
-
-	template<typename T>
-	T ExprResult::GetValue() const
-	{
-		static_assert(sizeof(T) <= sizeof(Storage));
-		T Value;
-		std::memcpy(&Value, Storage.Buffer, sizeof(T));
-		return Value;
 	}
 }
 

@@ -18,7 +18,7 @@ namespace Volt
 
 		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = IntType;
-		Value->SetValue(Integer);
+		Value->Storage.Construct<Int64>(Integer);
 		Value->bIsEmpty = false;
 		return Value;
 	}
@@ -27,7 +27,7 @@ namespace Volt
 	{
 		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = FloatType;
-		Value->SetValue(Float);
+		Value->Storage.Construct<double>(Float);
 		Value->bIsEmpty = false;
 		return Value;
 	}
@@ -36,7 +36,7 @@ namespace Volt
 	{
 		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = BoolType;
-		Value->SetValue(Bool);
+		Value->Storage.Construct<bool>(Bool);
 		Value->bIsEmpty = false;
 		return Value;
 	}
@@ -45,7 +45,7 @@ namespace Volt
 	{
 		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = CharType;
-		Value->SetValue(Char);
+		Value->Storage.Construct<char>(Char);
 		Value->bIsEmpty = false;
 		return Value;
 	}
@@ -54,7 +54,7 @@ namespace Volt
 	{
 		auto Value = MainArena.Create<ExprResult>();
 		Value->Type = PointerType;
-		Value->SetValue(Pointer);
+		Value->Storage.Construct<ExprAddress*>(Pointer);
 		Value->bIsEmpty = false;
 		return Value;
 	}
@@ -271,7 +271,7 @@ namespace Volt
 		if (BoolValue == this)
 			return CreateBool(BoolTy, !GetBool(), CContext.MainArena);
 
-		BoolValue->SetValue(!BoolValue->GetBool());
+		BoolValue->Storage.Set(!BoolValue->GetBool());
 		return BoolValue;
 	}
 
@@ -337,16 +337,16 @@ namespace Volt
 		switch (To->GetCategory())
 		{
 			case TypeCategory::Boolean:
-				return Explicit ? CreateBool(To, static_cast<bool>(GetValue<Int64>()), MainArena) : nullptr;
+				return Explicit ? CreateBool(To, static_cast<bool>(Storage.As<Int64>()), MainArena) : nullptr;
 
 			case TypeCategory::Char:
-				return CreateChar(To, static_cast<char>(GetValue<Int64>()), MainArena);
+				return CreateChar(To, static_cast<char>(Storage.As<Int64>()), MainArena);
 
 			case TypeCategory::Integer:
-				return CreateInteger(To, GetValue<Int64>(), MainArena);
+				return CreateInteger(To, Storage.As<Int64>(), MainArena);
 
 			case TypeCategory::FloatingPoint:
-				return CreateFloat(To, static_cast<double>(GetValue<Int64>()), MainArena);
+				return CreateFloat(To, static_cast<double>(Storage.As<Int64>()), MainArena);
 
 			default:
 				return nullptr;
