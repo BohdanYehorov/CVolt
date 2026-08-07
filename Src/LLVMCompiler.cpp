@@ -892,11 +892,13 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileClass(const ClassNode *Class)
     {
+        ClassType* ClassTy = CContext.GetClassType(Class->Name);
+
         for (auto Method : Class->Methods)
-            CompileMethod(Method, CContext.GetClassType(Class->Name));
+            CompileMethod(Method, ClassTy);
 
         for (auto Constructor : Class->Constructors)
-            CompileConstructor(Constructor, CContext.GetClassType(Class->Name));
+            CompileConstructor(Constructor, ClassTy);
 
         return nullptr;
     }
