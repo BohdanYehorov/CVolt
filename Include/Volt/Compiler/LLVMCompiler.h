@@ -108,6 +108,10 @@ namespace Volt
 
         bool GetClassFromMemberAccess(const MemberAccessNode* MemberAccess, llvm::Value*& Value, ClassType*& Type);
 
+        void CreateFunction(llvm::StringRef Name, llvm::ArrayRef<ParamNode*> Params,
+            DataType* ReturnType, BlockNode* Body, CalleeBase* Callee,
+            ArgsVector<llvm::Type*>& LLVMParams, DataType* ThisType = nullptr);
+
         IRValue *CompileToRValue(const ASTNode* Node)
         {
             IRValue* Value = CompileNode(Node);
