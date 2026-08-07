@@ -436,12 +436,12 @@ namespace Volt
 
         if (auto MemberAccess = Cast<MemberAccessNode>(Call->Callee))
         {
-            IRValue* Res = CompileMemberAccess(MemberAccess);
-            if (!Res || !Res->IsLValue()) return nullptr;
-            VoltAssert(Res->GetDataType()->IsClassType());
+            llvm::Value* Value;
+            ClassType* ClassTy;
+            if (!GetClassFromMemberAccess(MemberAccess, Value, ClassTy)) return nullptr;
 
             LLVMArgs.reserve(Args.size() + 1);
-            LLVMArgs.push_back(Res->GetValue());
+            LLVMArgs.push_back(Value);
         }
         else
             LLVMArgs.reserve(Args.size());
@@ -471,24 +471,13 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileMemberAccess(const MemberAccessNode *MemberAccess)
     {
-        IRValue* Target = CompileNode(MemberAccess->Target);
-        if (!Target) return nullptr;
-        if (!Target->IsLValue())
-            VoltUnreachable("Cannot access to r-value value");
+        llvm::Value* Value;
+        ClassType* ClassTy;
+        if (!GetClassFromMemberAccess(MemberAccess, Value, ClassTy)) return nullptr;
 
-        llvm::Value* Value = Target->GetValue();
-        DataType* Type = Target->GetDataType();
-
-        if (auto PtrType = Cast<PointerType>(Type))
-        {
-            Value = Builder.CreateLoad(Target)->GetValue();
-            Type = PtrType->GetBaseType().GetType();
-        }
-
-        ClassType* ClassTy = StaticCast<ClassType>(Type);
         const Field& F = ClassTy->Fields[MemberAccess->ResolvedMemberIndex];
 
-        llvm::Value* Res = Builder.CreateGEP(CContext.GetLLVMType(Type),
+        llvm::Value* Res = Builder.CreateGEP(CContext.GetLLVMType(ClassTy),
             Value, { Builder.GetInt64(0), Builder.GetInt64(F.Offset) });
 
         return Create<IRValue>(Builder.CreateBitCast(Res,
@@ -1048,6 +1037,26 @@ namespace Volt
 
         Builder.CreateBr(LoopHeaderStack.top());
         return nullptr;
+    }
+
+    bool LLVMCompiler::GetClassFromMemberAccess(const MemberAccessNode* MemberAccess,
+        llvm::Value *&Value, ClassType *&ClassTy)
+    {
+        IRValue* Target = CompileNode(MemberAccess->Target);
+        if (!Target) return false;
+        VoltAssert(Target->IsLValue() && "Cannot access to r-value value");
+
+        Value = Target->GetValue();
+        DataType* Type = Target->GetDataType();
+
+        if (auto PtrType = Cast<PointerType>(Type))
+        {
+            Value = Builder.CreateLoad(Target)->GetValue();
+            Type = PtrType->GetBaseType().GetType();
+        }
+
+        ClassTy = StaticCast<ClassType>(Type);
+        return true;
     }
 
     void LLVMCompiler::DeclareVariable(llvm::StringRef Name, IRValue *Var)

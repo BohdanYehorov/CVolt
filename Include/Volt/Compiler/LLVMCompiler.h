@@ -106,6 +106,8 @@ namespace Volt
         IRValue *CompileBreak();
         IRValue *CompileContinue();
 
+        bool GetClassFromMemberAccess(const MemberAccessNode* MemberAccess, llvm::Value*& Value, ClassType*& Type);
+
         IRValue *CompileToRValue(const ASTNode* Node)
         {
             IRValue* Value = CompileNode(Node);
