@@ -28,6 +28,20 @@ namespace Volt
                 : Name(Name), Prev(Prev) {}
         };
 
+        struct FunctionBodyData
+        {
+            llvm::StringRef Name;
+            BlockNode* Body;
+            QualType ReturnType;
+            QualType ThisType;
+            llvm::ArrayRef<ParamNode*> Params;
+
+            FunctionBodyData(llvm::StringRef Name, BlockNode* Body,
+                QualType ReturnType, QualType ThisType, llvm::ArrayRef<ParamNode*> Params)
+                : Name(Name), Body(Body),
+                ReturnType(ReturnType), ThisType(ThisType), Params(Params) {}
+        };
+
         using VariableTable = llvm::StringMap<ExprAddress*>;
         using GlobalVariableTable = llvm::StringMap<ExprAddress*>;
 
@@ -48,6 +62,8 @@ namespace Volt
 
         Array<Array<ScopeEntry>> ScopeStack;
 
+        Array<FunctionBodyData> FunctionBodies;
+
         QualType FunctionReturnType;
         bool InFunction = false;
 
@@ -60,7 +76,7 @@ namespace Volt
         void Check()
         {
             if (CContext.HasErrors()) return;
-            VisitNode(ASTTree);
+            Visit(ASTTree);
         }
 
     private:
@@ -73,6 +89,8 @@ namespace Volt
         {
             Errors.Emplace(Kind, Node->Line, Node->Column, std::move(Context));
         }
+
+        void Visit(ASTNode* Node);
 
         SemaResult *VisitNode(ASTNode *Node);
 
@@ -126,8 +144,7 @@ namespace Volt
         ExprAddress* VisitToLValue(ASTNode* Node);
         ExprAddress* VisitToLValueAndCheckConst(ASTNode* Node);
 
-        FunctionCallee* CreateFunction(FunctionNode* Function, llvm::StringRef& Name,
-                                       ArgsVector<QualType>& Params, QualType ThisType = {});
+        FunctionCallee* CreateFunction(FunctionNode* Function, ArgsVector<QualType>& Params, QualType ThisType = {});
 
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
@@ -140,6 +157,8 @@ namespace Volt
         ExprAddress* GetVariable(llvm::StringRef Name);
 
         void DeclareAndAddParams(llvm::ArrayRef<ParamNode*> ParamNodes, ArgsVector<QualType>& ParamTypes);
+
+        void VisitFunctionBodies();
 
         friend class LLVMCompiler;
     };

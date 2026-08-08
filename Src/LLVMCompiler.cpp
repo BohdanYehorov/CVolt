@@ -11,6 +11,7 @@ namespace Volt
     {
         if (CContext.HasErrors()) return;
         CompileNode(ASTTree);
+        CompileFunctionBodies();
     }
 
     IRValue *LLVMCompiler::GetCompileTimeValue(const ASTNode *Node)
@@ -918,49 +919,57 @@ namespace Volt
         llvm::Function* Func = llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage,
             NameBuilder.GetIRName(), Module.get());
 
-        EnterScope();
-        llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Func);
-        Builder.SetInsertPoint(Entry);
-
-        size_t Start = 0;
-        if (ThisType)
-        {
-            DeclareVariable("this", Create<IRValue>(Func->args().begin(),
-                ThisType, Builder.Get()));
-            Start = 1;
-        }
-
-        for (size_t i = 0; i < Params.size(); i++)
-        {
-            DataType* ParamType = Params[i]->Type->ResolvedType;
-            auto Arg = Func->args().begin() + i + Start;
-            Arg->setName(Params[i]->Name);
-            DeclareVariable(Params[i]->Name,
-                Create<IRValue>(Arg, ParamType, Builder.Get()));
-        }
-
         if (auto FuncCallee = Cast<FunctionCallee>(Callee))
             FuncCallee->Function = Func;
         else
             VoltUnreachableFmt("Function definition '{}' is unknown", Name.str());
 
-        FunctionReturnType = ReturnType;
-        InFunction = true;
-        CompileBlock(Body);
-        FunctionReturnType = nullptr;
-        InFunction = false;
+        FunctionBlocks.Emplace(Name, Body, Func, ReturnType, ThisType, Params);
+    }
 
-        llvm::BasicBlock* Bb = Builder.GetInsertBlock();
-
-        if (!Bb->getTerminator())
+    void LLVMCompiler::CompileFunctionBodies()
+    {
+        for (const auto& Data : FunctionBlocks)
         {
-            if (RetType->isVoidTy())
-                Builder.CreateRetVoid();
-            else
-                VoltUnreachableFmt("Function '{}' must return value", Name.str());
-        }
+            EnterScope();
+            llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Data.Func);
+            Builder.SetInsertPoint(Entry);
 
-        ExitScope();
+            size_t Start = 0;
+            if (Data.ThisType)
+            {
+                DeclareVariable("this", Create<IRValue>(Data.Func->args().begin(),
+                    Data.ThisType, Builder.Get()));
+                Start = 1;
+            }
+
+            for (size_t i = 0; i < Data.Params.size(); i++)
+            {
+                DataType* ParamType = Data.Params[i]->Type->ResolvedType;
+                auto Arg = Data.Func->args().begin() + i + Start;
+                Arg->setName(Data.Params[i]->Name);
+                DeclareVariable(Data.Params[i]->Name,
+                    Create<IRValue>(Arg, ParamType, Builder.Get()));
+            }
+
+            FunctionReturnType = Data.ReturnType;
+            InFunction = true;
+            CompileBlock(Data.BodyNode);
+            FunctionReturnType = nullptr;
+            InFunction = false;
+
+            llvm::BasicBlock* Bb = Builder.GetInsertBlock();
+
+            if (!Bb->getTerminator())
+            {
+                if (Data.Func->getReturnType()->isVoidTy())
+                    Builder.CreateRetVoid();
+                else
+                    VoltUnreachableFmt("Function '{}' must return value", Data.Name.str());
+            }
+
+            ExitScope();
+        }
     }
 
     void LLVMCompiler::DeclareVariable(llvm::StringRef Name, IRValue *Var)

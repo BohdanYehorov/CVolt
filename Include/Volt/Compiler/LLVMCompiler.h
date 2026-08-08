@@ -29,6 +29,21 @@ namespace Volt
                 : Name(Name), Previous(Previous) {}
         };
 
+        struct FunctionBodyData
+        {
+            llvm::StringRef Name;
+            BlockNode* BodyNode;
+            llvm::Function* Func;
+            DataType* ReturnType;
+            DataType* ThisType;
+            llvm::ArrayRef<ParamNode*> Params;
+
+            FunctionBodyData(llvm::StringRef Name, BlockNode* BodyNode,
+                llvm::Function* Func, DataType* ReturnType, DataType* ThisType, llvm::ArrayRef<ParamNode*> Params)
+                : Name(Name), BodyNode(BodyNode),
+                Func(Func), ReturnType(ReturnType), ThisType(ThisType), Params(Params) {}
+        };
+
         using VariableTable = llvm::StringMap<IRValue*>;
         using GlobalVariableTable = llvm::StringMap<IRValue*>;
 
@@ -50,6 +65,8 @@ namespace Volt
         Array<Array<ScopeEntry>> ScopeStack;
         std::stack<llvm::BasicBlock*> LoopEndStack;
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
+
+        Array<FunctionBodyData> FunctionBlocks;
 
         DataType* FunctionReturnType = nullptr;
         bool InFunction = false;
@@ -118,6 +135,8 @@ namespace Volt
             if (!Value) return nullptr;
             return Builder.CreateLoadIfLValue(Value);
         }
+
+        void CompileFunctionBodies();
 
         void DeclareVariable(llvm::StringRef Name, IRValue *Var);
 

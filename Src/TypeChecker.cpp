@@ -9,6 +9,12 @@
 
 namespace Volt
 {
+    void TypeChecker::Visit(ASTNode *Node)
+    {
+        VisitNode(Node);
+        VisitFunctionBodies();
+    }
+
     SemaResult* TypeChecker::VisitNode(ASTNode *Node)
     {
         if (auto Sequence = Cast<SequenceNode>(Node))
@@ -741,58 +747,40 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitFunction(FunctionNode *Function)
     {
-        EnterScope();
-
-        llvm::StringRef Name;
         ArgsVector<QualType> Params;
-        FunctionCallee* FuncCallee = CreateFunction(Function, Name, Params);
+        FunctionCallee* FuncCallee = CreateFunction(Function, Params);
 
-        Functions.AddFunction(Name, std::move(Params), FuncCallee);
-
-        FunctionReturnType = FuncCallee->ReturnType;
-        InFunction = true;
-        VisitBlock(Cast<BlockNode>(Function->Body));
-        FunctionReturnType = {};
-        InFunction = false;
-
-        ExitScope();
+        Functions.AddFunction(Function->Name, std::move(Params), FuncCallee);
+        FunctionBodies.Emplace(Function->Name, Function->Body,
+            FuncCallee->ReturnType, nullptr, Function->Params);
         return nullptr;
     }
 
     void TypeChecker::VisitMethod(FunctionNode *Method, ClassType* Type)
     {
-        EnterScope();
-
-        llvm::StringRef Name;
         ArgsVector<QualType> Params;
 
-        FunctionCallee* FuncCallee = CreateFunction(Method, Name, Params,
+        FunctionCallee* FuncCallee = CreateFunction(Method, Params,
                                                  CContext.GetPointerType(Type));
-        Type->AddMethod(Name, std::move(Params), FuncCallee);
-
-        FunctionReturnType = FuncCallee->ReturnType;
-        InFunction = true;
-        VisitBlock(Cast<BlockNode>(Method->Body));
-        FunctionReturnType = {};
-        InFunction = false;
-
-        ExitScope();
+        Type->AddMethod(Method->Name, std::move(Params), FuncCallee);
+        FunctionBodies.Emplace(Method->Name, Method->Body, FuncCallee->ReturnType,
+            CContext.GetPointerType(Type), Method->Params);
     }
 
     void TypeChecker::VisitConstructor(ConstructorNode *Constructor, ClassType *Type)
     {
-        EnterScope();
-
         QualType ThisType = CContext.GetPointerType(Type);
 
         ArgsVector<QualType> Params;
-        size_t ParamsCount = Constructor->Params.size() + 1;
-        Params.reserve(ParamsCount);
-        Params.push_back(ThisType);
-        DeclareVariable("this", MainArena.Create<ExprAddress>(
-                        ExprResult::CreateEmpty(ThisType, MainArena)));
 
-        DeclareAndAddParams(Constructor->Params, Params);
+        Params.reserve(Constructor->Params.size() + 1);
+        Params.push_back(ThisType);
+
+        for (auto* Param : Constructor->Params)
+        {
+            QualType ParamType = VisitType(Param->Type);
+            Params.push_back(ParamType);
+        }
 
         QualType ReturnType = CContext.GetVoidType();
 
@@ -800,14 +788,8 @@ namespace Volt
         Constructor->ResolvedCallee = ConstructorCallee;
 
         Type->AddConstructor(std::move(Params), ConstructorCallee);
-
-        FunctionReturnType = ReturnType;
-        InFunction = true;
-        VisitBlock(Cast<BlockNode>(Constructor->Body));
-        FunctionReturnType = {};
-        InFunction = false;
-
-        ExitScope();
+        FunctionBodies.Emplace(Type->Name, Constructor->Body,
+            ReturnType, ThisType, Constructor->Params);
     }
 
     SemaResult *TypeChecker::VisitClass(ClassNode *Class)
@@ -1058,22 +1040,22 @@ namespace Volt
         return Addr;
     }
 
-    FunctionCallee* TypeChecker::CreateFunction(FunctionNode *Function, llvm::StringRef& Name,
-                                                ArgsVector<QualType>& Params, QualType ThisType)
+    FunctionCallee* TypeChecker::CreateFunction(FunctionNode *Function,
+        ArgsVector<QualType>& Params, QualType ThisType)
     {
-        Name = Function->Name;
-
         if (ThisType)
         {
             Params.reserve(Function->Params.size() + 1);
             Params.push_back(ThisType);
-            DeclareVariable("this", MainArena.Create<ExprAddress>(
-                            ExprResult::CreateEmpty(ThisType, MainArena)));
         }
         else
             Params.reserve(Function->Params.size());
 
-        DeclareAndAddParams(Function->Params, Params);
+        for (auto* Param : Function->Params)
+        {
+            QualType ParamType = VisitType(Param->Type);
+            Params.push_back(ParamType);
+        }
 
         QualType ReturnType = VisitType(Function->ReturnType);
 
@@ -1161,6 +1143,41 @@ namespace Volt
             ParamTypes.push_back(ParamType);
             DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
                             ExprResult::CreateEmpty(ParamType, MainArena)));
+        }
+    }
+
+    void TypeChecker::VisitFunctionBodies()
+    {
+        for (const auto& Data : FunctionBodies)
+        {
+            EnterScope();
+
+            ArgsVector<QualType> Params;
+            if (Data.ThisType)
+            {
+                Params.reserve(Data.Params.size() + 1);
+                Params.push_back(Data.ThisType);
+                DeclareVariable("this", MainArena.Create<ExprAddress>(
+                                ExprResult::CreateEmpty(Data.ThisType, MainArena)));
+            }
+            else
+                Params.reserve(Data.Params.size());
+
+            for (auto* Param : Data.Params)
+            {
+                QualType ParamType = Param->Type->ResolvedType;
+                Params.push_back(ParamType);
+                DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
+                                ExprResult::CreateEmpty(ParamType, MainArena)));
+            }
+
+            FunctionReturnType = Data.ReturnType;
+            InFunction = true;
+            VisitBlock(Cast<BlockNode>(Data.Body));
+            FunctionReturnType = {};
+            InFunction = false;
+
+            ExitScope();
         }
     }
 }
