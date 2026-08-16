@@ -25,7 +25,7 @@ namespace Volt
     class ClassType : public DataType
     {
         GENERATED_BODY(ClassType, DataType)
-    public:
+    private:
         llvm::StringRef Name;
         Array<Field> Fields;
         FunctionTable Methods;
@@ -46,10 +46,26 @@ namespace Volt
         std::string GetIRName() const override { return std::to_string(Name.size()) + Name.str(); }
 
         void ComputeLayout() const;
-
         bool CastTo(DataType *To, bool Explicit) const override { return this == To; }
 
-        size_t GetFieldIndex(llvm::StringRef Name);
+        [[nodiscard]] size_t GetFieldIndex(llvm::StringRef Name);
+        [[nodiscard]] const Field& GetField(size_t Index) const { return Fields[Index]; }
+        [[nodiscard]] size_t GetFieldsCount() const { return Fields.Length(); }
+
+        [[nodiscard]] const FunctionTable& GetMethods() const { return Methods; }
+
+        [[nodiscard]] llvm::StringRef GetName() { return Name; }
+        [[nodiscard]] const FunctionOverload* FindBestMethodOverload(
+            llvm::StringRef Name, llvm::ArrayRef<QualType> Params) const
+        {
+            return Methods.FindBestFunctionOverload(Name, Params);
+        }
+
+        [[nodiscard]] const FunctionOverload* FindBestConstructorOverload(
+            llvm::ArrayRef<QualType> Params) const
+        {
+            return Constructors.FindBestOverload(Params);
+        }
 
         void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
         {

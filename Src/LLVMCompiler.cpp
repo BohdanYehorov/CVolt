@@ -476,7 +476,7 @@ namespace Volt
         ClassType* ClassTy;
         if (!GetClassFromMemberAccess(MemberAccess, Value, ClassTy)) return nullptr;
 
-        const Field& F = ClassTy->Fields[MemberAccess->ResolvedMemberIndex];
+        const Field& F = ClassTy->GetField(MemberAccess->ResolvedMemberIndex);
 
         llvm::Value* Res = Builder.CreateGEP(CContext.GetLLVMType(ClassTy),
             Value, { Builder.GetInt64(0), Builder.GetInt64(F.Offset) });
@@ -712,7 +712,7 @@ namespace Volt
         DataType* ThisType = CContext.GetPointerType(Type);
 
         ArgsVector<llvm::Type*> Params;
-        CreateFunction(Type->Name, Constructor->Params, CContext.GetVoidType(),
+        CreateFunction(Type->GetName(), Constructor->Params, CContext.GetVoidType(),
             Constructor->Body, Constructor->ResolvedCallee, Params, ThisType);
 
         return nullptr;

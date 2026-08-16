@@ -9,8 +9,8 @@ namespace Volt
     void *ClassInstBase::GetField(llvm::StringRef FieldName, size_t Size) const
     {
         size_t FieldIndex = Type->GetFieldIndex(FieldName);
-        VoltAssert(FieldIndex != Type->Fields.Length());
-        const Field& F = Type->Fields[FieldIndex];
+        VoltAssert(FieldIndex != Type->GetFieldsCount());
+        const Field& F = Type->GetField(FieldIndex);
         VoltAssert(F.Type->GetSize() == Size);
         return Data + F.Offset;
     }
@@ -18,8 +18,8 @@ namespace Volt
     ClassInstView ClassInstBase::GetField(llvm::StringRef FieldName) const
     {
         size_t FieldIndex = Type->GetFieldIndex(FieldName);
-        VoltAssert(FieldIndex != Type->Fields.Length());
-        const Field& F = Type->Fields[FieldIndex];
+        VoltAssert(FieldIndex != Type->GetFieldsCount());
+        const Field& F = Type->GetField(FieldIndex);
         VoltAssert(F.Type->IsClassType());
         return { F.Type.CastAs<ClassType>(), Data + F.Offset,  CContext };
     }

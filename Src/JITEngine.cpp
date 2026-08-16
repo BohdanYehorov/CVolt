@@ -53,10 +53,10 @@ namespace Volt
 	{
 		ClassType* Type = Inst.GetType();
 
-		for (const auto& [FuncName, Overload] : Type->Methods)
+		for (const auto& [FuncName, Overload] : Type->GetMethods())
 		{
 			IRNameBuilder NameBuilder(IRNameKind::Method);
-			NameBuilder.AddName(Type->Name);
+			NameBuilder.AddName(Type->GetName());
 			NameBuilder.AddName(FuncName);
 
 			for (QualType Arg : Overload.Args)

@@ -536,7 +536,7 @@ namespace Volt
                     ArgTypes.push_back(ArgType);
                 }
 
-                if (auto Overload = ClassTy->Methods.FindBestFunctionOverload(FieldName, ArgTypes))
+                if (auto Overload = ClassTy->FindBestMethodOverload(FieldName, ArgTypes))
                 {
                     Call->ResolvedCallee = Overload->Callee;
 
@@ -546,7 +546,7 @@ namespace Volt
                     return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
                 }
 
-                Array<std::string> ErrorContext = { ClassTy->Name.str() + "." + FieldName.str() };
+                Array<std::string> ErrorContext = { ClassTy->GetName().str() + "." + FieldName.str() };
                 ErrorContext.Reserve(ArgsCount);
 
                 for (auto Arg : ArgTypes)
@@ -635,7 +635,7 @@ namespace Volt
             Arguments.push_back(Arg->GetType());
         }
 
-        if (const FunctionOverload* Overload = ClassTy->Constructors.FindBestOverload(Arguments))
+        if (const FunctionOverload* Overload = ClassTy->FindBestConstructorOverload(Arguments))
         {
             Construct->ResolvedCallee = Overload->Callee;
 
@@ -684,7 +684,7 @@ namespace Volt
         if (!Value && VarType->IsClassType())
         {
             auto* ClassTy = StaticCast<ClassType>(VarType.GetType());
-            if (auto* Constructor = ClassTy->Constructors.FindBestOverload(
+            if (auto* Constructor = ClassTy->FindBestConstructorOverload(
                 { CContext.GetPointerType(ClassTy) }))
                 Variable->ResolvedConstructor = StaticCast<FunctionCallee>(Constructor->Callee);
         }
@@ -731,7 +731,7 @@ namespace Volt
             Args.push_back(Res->GetType());
         }
 
-        if (auto* Overload = ClassTy->Constructors.FindBestOverload(Args))
+        if (auto* Overload = ClassTy->FindBestConstructorOverload(Args))
         {
             Construct->ResolvedCallee = StaticCast<FunctionCallee>(Overload->Callee);
 
@@ -788,7 +788,7 @@ namespace Volt
         Constructor->ResolvedCallee = ConstructorCallee;
 
         Type->AddConstructor(std::move(Params), ConstructorCallee);
-        FunctionBodies.Emplace(Type->Name, Constructor->Body,
+        FunctionBodies.Emplace(Type->GetName(), Constructor->Body,
             ReturnType, ThisType, Constructor->Params);
     }
 
@@ -836,13 +836,13 @@ namespace Volt
         if (auto ClassTy = TargetType.CastAs<ClassType>())
         {
             size_t Index = ClassTy->GetFieldIndex(FieldName);
-            if (Index == ClassTy->Fields.Length())
+            if (Index == ClassTy->GetFieldsCount())
             {
                 SendError(TypeErrorKind::UndefinedVariable, MemberAccess, { FieldName.str() });
                 return nullptr;
             }
 
-            QualType FieldType = ClassTy->Fields[Index].Type;
+            QualType FieldType = ClassTy->GetField(Index).Type;
             MemberAccess->ResolvedMemberIndex = Index;
             MemberAccess->CompileTimeValue = MainArena.Create<ExprAddress>(
                 ExprResult::CreateEmpty(FieldType, MainArena));

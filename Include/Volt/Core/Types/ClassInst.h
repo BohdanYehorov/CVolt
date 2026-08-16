@@ -100,8 +100,8 @@ namespace Volt
     T& ClassInstBase::GetField(llvm::StringRef FieldName)
     {
         size_t FieldIndex = Type->GetFieldIndex(FieldName);
-        VoltAssert(FieldIndex != Type->Fields.Length());
-        const Field& F = Type->Fields[FieldIndex];
+        VoltAssert(FieldIndex != Type->GetFieldsCount());
+        const Field& F = Type->GetField(FieldIndex);
         QualType Ty = TypeConv::GetDataType<T>(CContext);
         if (Ty != F.Type)
             VoltUnreachableFmt("Cannot get field with type '{}' as '{}'", F.Type.ToString(), Ty.ToString());
@@ -112,7 +112,7 @@ namespace Volt
     ClassMethod<RetTy, ArgsTy...> ClassInstBase::GetMethodAddr(llvm::StringRef Name)
     {
         IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->Name);
+        NameBuilder.AddName(Type->GetName());
         NameBuilder.AddName(Name);
 
         NameBuilder.AddParam(CContext.GetPointerType(Type));
