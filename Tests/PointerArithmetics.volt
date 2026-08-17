@@ -1,6 +1,6 @@
 fun:i32 Main()
 {
-    let:i32* Ptr = i32*(MemAlloc(8u64));
+    let:i32* Ptr = MemAlloc(8u64) to i32*;
     *Ptr = 2;
     *(Ptr + 1) = 10;
     OutLine(Ptr[0]);

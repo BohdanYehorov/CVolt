@@ -11,7 +11,7 @@ class IntArray
 
     fun:void Add(i32 Num)
     {
-        let:i32* NewData = i32*(MemAlloc((this.Size + 1u64) * 4u64));
+        let:i32* NewData = MemAlloc((this.Size + 1u64) * 4u64) to i32*;
         if (this.Data)
         {
             MemCpy(NewData, this.Data, this.Size * 4u64);
@@ -56,7 +56,7 @@ fun:i32 Main()
         OutLine(Arr.GetEl(i));
 
     for (let:u64 i = 0u64; i < 10u64; i++)
-        Arr.SetEl(i, i32(i + 10u64));
+        Arr.SetEl(i, (i + 10u64) to i32);
 
     for (let:u64 i = 0u64; i < 10u64; i++)
         OutLine(Arr.GetEl(i));

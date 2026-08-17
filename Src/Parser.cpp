@@ -1293,27 +1293,6 @@ namespace Volt
                         break;
                     }
 
-                    if (auto Type = Cast<DataTypeNodeBase>(Operand))
-                    {
-                        Consume();
-                        ASTNode* Value = ParseAssignment();
-                        if (!Value) return nullptr;
-                        if (IsErrorNode(Value))
-                        {
-                            SkipExpressionInBrackets(TokenType::LParen,
-                                TokenType::RParen, 1);
-                            return Value;
-                        }
-
-                        Operand = NodesArena.Create<ExplicitCastNode>(
-                            Type, Value, Type->Pos, Type->Line, Type->Column);
-
-                        if (!Expect(TokenType::RParen))
-                            return CreateErrorNode(Operand->Pos, Operand->Line, Operand->Column);
-
-                        break;
-                    }
-
                     Consume();
                     ArgsVector<ASTNode*> Arguments;
                     if (!ParseExpressionsSeparatedByComma(Arguments, TokenType::RParen))
