@@ -11,10 +11,10 @@ class IntArray
 
     fun:void Add(i32 Num)
     {
-        let:i32* NewData = MemAlloc((this.Size + 1u64) * 4u64) to i32*;
+        let:i32* NewData = MemAlloc((this.Size + 1u64) * sizeof i32) to i32*;
         if (this.Data)
         {
-            MemCpy(NewData, this.Data, this.Size * 4u64);
+            MemCpy(NewData, this.Data, this.Size * sizeof i32);
             MemFree(this.Data);
         }
 
