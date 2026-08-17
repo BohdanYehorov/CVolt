@@ -68,6 +68,10 @@ namespace Volt
             return VisitSubscript(Subscript);
         if (auto ECast = Cast<ExplicitCastNode>(Node))
             return VisitExplicitCast(ECast);
+        if (auto SizeOf = Cast<SizeOfNode>(Node))
+            return VisitSizeOf(SizeOf);
+        if (auto AlignOf = Cast<AlignOfNode>(Node))
+            return VisitAlignOf(AlignOf);
         if (auto Construct = Cast<ConstructNode>(Node))
             return VisitConstruct(Construct);
         if (auto Variable = Cast<VariableNode>(Node))
@@ -623,6 +627,46 @@ namespace Volt
         SendError(TypeErrorKind::IncompatibleTypes, ECast->Line, ECast->Column,
             { SrcType->ToString(), Target->GetType()->ToString() });
         return nullptr;
+    }
+
+    SemaResult * TypeChecker::VisitSizeOf(SizeOfNode *SizeOf)
+    {
+        if (auto TypeNode = Cast<DataTypeNodeBase>(SizeOf->Target))
+        {
+            QualType Type = VisitType(TypeNode);
+            if (!Type) return nullptr;
+            SizeOf->CompileTimeValue = ExprResult::CreateInteger(
+                CContext.GetIntegerType(32, false),
+                Type->GetSize(), MainArena);
+            return SizeOf->CompileTimeValue;
+        }
+
+        SemaResult* Value = VisitNode(SizeOf->Target);
+        if (!Value) return nullptr;
+        SizeOf->CompileTimeValue = ExprResult::CreateInteger(
+            CContext.GetIntegerType(32, false),
+            Value->GetType()->GetSize(), MainArena);
+        return SizeOf->CompileTimeValue;
+    }
+
+    SemaResult * TypeChecker::VisitAlignOf(AlignOfNode *AlignOf)
+    {
+        if (auto TypeNode = Cast<DataTypeNodeBase>(AlignOf->Target))
+        {
+            QualType Type = VisitType(TypeNode);
+            if (!Type) return nullptr;
+            AlignOf->CompileTimeValue = ExprResult::CreateInteger(
+                CContext.GetIntegerType(32, false),
+                Type->GetAlignment(), MainArena);
+            return AlignOf->CompileTimeValue;
+        }
+
+        SemaResult* Value = VisitNode(AlignOf->Target);
+        if (!Value) return nullptr;
+        AlignOf->CompileTimeValue = ExprResult::CreateInteger(
+            CContext.GetIntegerType(32, false),
+            Value->GetType()->GetAlignment(), MainArena);
+        return AlignOf->CompileTimeValue;
     }
 
     SemaResult *TypeChecker::VisitConstruct(ConstructNode *Construct)

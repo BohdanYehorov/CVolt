@@ -96,6 +96,9 @@ namespace Volt
 		KwClass,
 		KwTo,
 		KwForce,
+		KwType,
+		KwSizeOf,
+		KwAlignOf,
 
 		TypeConst,
 		TypeVoid,

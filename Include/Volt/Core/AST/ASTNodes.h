@@ -244,6 +244,26 @@ namespace Volt
             : ASTNode(Pos, Line, Column), Target(Target), Index(Index) {}
     };
 
+    class SizeOfNode : public ASTNode
+    {
+        GENERATED_BODY(SizeOfNode, ASTNode)
+    public:
+        ASTNode* Target;
+
+        SizeOfNode(ASTNode* Target, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Target(Target) {}
+    };
+
+    class AlignOfNode : public ASTNode
+    {
+        GENERATED_BODY(SizeOfNode, ASTNode)
+    public:
+        ASTNode* Target;
+
+        AlignOfNode(ASTNode* Target, size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Target(Target) {}
+    };
+
     class DataTypeNodeBase : public ASTNode
     {
         GENERATED_BODY(DataTypeNodeBase, ASTNode)

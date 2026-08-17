@@ -1246,17 +1246,40 @@ namespace Volt
                 OpType, Operand, Tok.Pos, Tok.Line, Tok.Column);
         }
 
-        if (Tok.Type == TokenType::Dollar)
+        switch (Tok.Type)
         {
-            Consume();
-            ASTNode* Target = ParseUnary();
-            if (!IsValidNode(Target))
-                return Target;
+            case TokenType::Dollar:
+            {
+                Consume();
+                ASTNode* Target = ParseUnary();
+                if (!IsValidNode(Target))
+                    return Target;
 
-            return NodesArena.Create<RefNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
+                return NodesArena.Create<RefNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
+            }
+
+            case TokenType::KwSizeOf:
+            {
+                Consume();
+                ASTNode* Target = ParseUnary();
+                if (!IsValidNode(Target))
+                    return Target;
+
+                return NodesArena.Create<SizeOfNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
+            }
+
+            case TokenType::KwAlignOf:
+            {
+                Consume();
+                ASTNode* Target = ParseUnary();
+                if (!IsValidNode(Target))
+                    return Target;
+
+                return NodesArena.Create<AlignOfNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
+            }
+
+            default: return ParsePostfix();
         }
-
-        return ParsePostfix();
     }
 
     ASTNode* Parser::ParsePostfix()
@@ -1385,9 +1408,6 @@ namespace Volt
             case Identifier:
             {
                 llvm::StringRef Lexeme = GetTokenLexeme(Tok);
-                if (CustomTypes.contains(Lexeme))
-                    return ParseDataType();
-
                 Consume();
                 return NodesArena.Create<IdentifierNode>(
                     Lexeme, Tok.Pos, Tok.Line, Tok.Column);
@@ -1420,6 +1440,9 @@ namespace Volt
             case NullPointer:
                 Consume();
                 return NodesArena.Create<NullPointerNode>(Tok.Pos, Tok.Line, Tok.Column);
+            case KwType:
+                Consume();
+                return ParseDataType();
             case LParen:
             {
                 Consume();
