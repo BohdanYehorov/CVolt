@@ -134,7 +134,7 @@ namespace Volt
         SemaResult *VisitExplicitCast(ExplicitCastNode *ECast);
         SemaResult *VisitSizeOf(SizeOfNode *SizeOf);
         SemaResult *VisitAlignOf(AlignOfNode *AlignOf);
-        SemaResult *VisitConstruct(ConstructNode *Construct);
+        SemaResult *VisitConstruct(CallNode *Construct);
         SemaResult *VisitVariable(VariableNode *Variable);
         SemaResult *VisitVariableConstruct(VariableConstructNode *Construct);
         SemaResult *VisitFunction(FunctionNode *Function);

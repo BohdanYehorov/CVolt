@@ -437,6 +437,7 @@ namespace Volt
 
         SmallVec8<llvm::Value*> LLVMArgs;
 
+        IRValue* ClassValue = nullptr;
         if (auto MemberAccess = Cast<MemberAccessNode>(Call->Callee))
         {
             llvm::Value* Value;
@@ -446,8 +447,22 @@ namespace Volt
             LLVMArgs.reserve(Args.size() + 1);
             LLVMArgs.push_back(Value);
         }
-        else
-            LLVMArgs.reserve(Args.size());
+        else if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
+        {
+            if (ClassType* ClassTy = CContext.GetClassType(Identifier->Value))
+            {
+                llvm::Function* Func = Builder.GetInsertBlock()->getParent();
+                IRBuilder TmpBuilder(&Func->getEntryBlock(),
+                    Func->getEntryBlock().begin(), CContext);
+
+                llvm::AllocaInst* Alloca = Builder.CreateAlloca(ClassTy);
+                LLVMArgs.reserve(Args.size() + 1);
+                LLVMArgs.push_back(Alloca);
+                ClassValue = Create<IRValue>(Alloca, ClassTy, true);
+            }
+            else
+                LLVMArgs.reserve(Args.size());
+        }
 
         for (const auto Arg : Args)
         {
@@ -459,8 +474,11 @@ namespace Volt
         }
 
         if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
-            return Create<IRValue>(Builder.CreateCall(Func->Function, LLVMArgs),
-                Func->ReturnType.GetType());
+        {
+            llvm::Value* RetVal = Builder.CreateCall(Func->Function, LLVMArgs);
+            if (ClassValue) return ClassValue;
+            return Create<IRValue>(RetVal, Func->ReturnType.GetType());
+        }
 
         if (auto BuiltinFunc = Cast<BuiltinFuncCallee>(Call->ResolvedCallee))
         {
@@ -932,6 +950,37 @@ namespace Volt
                 FillArray(Arr, cast<llvm::AllocaInst>(Var->GetValue()));
 
                 return Var;
+            }
+        }
+
+        if (auto ClassTy = Cast<ClassType>(VarType))
+        {
+            if (auto Call = Cast<CallNode>(Value))
+            {
+                if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
+                {
+                    if (Identifier->Value == ClassTy->GetName())
+                    {
+                        ArgsVector<llvm::Value*> Args;
+                        Args.reserve(Call->Arguments.size() + 1);
+                        Args.push_back(Var->GetValue());
+
+                        for (const auto Arg : Call->Arguments)
+                        {
+                            IRValue* ArgValue = Builder.CreateCastOrBind(CompileNode(Arg), Arg->ExpectedType);
+                            if (!ArgValue)
+                                return nullptr;
+
+                            Args.push_back(ArgValue->GetValue());
+                        }
+
+                        if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
+                        {
+                            Builder.CreateCall(Func->Function, Args);
+                            return Var;
+                        }
+                    }
+                }
             }
         }
 

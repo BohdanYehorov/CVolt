@@ -72,8 +72,8 @@ namespace Volt
             return VisitSizeOf(SizeOf);
         if (auto AlignOf = Cast<AlignOfNode>(Node))
             return VisitAlignOf(AlignOf);
-        if (auto Construct = Cast<ConstructNode>(Node))
-            return VisitConstruct(Construct);
+        // if (auto Construct = Cast<ConstructNode>(Node))
+        //     return VisitConstruct(Construct);
         if (auto Variable = Cast<VariableNode>(Node))
             return VisitVariable(Variable);
         if (auto VarConstruct = Cast<VariableConstructNode>(Node))
@@ -434,6 +434,9 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitCall(CallNode *Call)
     {
+        if (SemaResult* Res = VisitConstruct(Call))
+            return Res;
+
         if (SemaResult* Res = VisitFunctionCall(Call))
             return Res;
 
@@ -669,38 +672,43 @@ namespace Volt
         return AlignOf->CompileTimeValue;
     }
 
-    SemaResult *TypeChecker::VisitConstruct(ConstructNode *Construct)
+    SemaResult *TypeChecker::VisitConstruct(CallNode *Construct)
     {
-        QualType Type = VisitType(Construct->Type);
-        auto ClassTy = Type.CastAs<ClassType>();
-        if (!ClassTy)
+        if (auto Identifier = Cast<IdentifierNode>(Construct->Callee))
         {
-            // SendError
-            return nullptr;
+            QualType Type = CContext.GetClassType(Identifier->Value);
+            auto ClassTy = Type.CastAs<ClassType>();
+            if (!ClassTy)
+            {
+                // SendError
+                return nullptr;
+            }
+
+            size_t ArgsCount = Construct->Arguments.size();
+            ArgsVector<QualType> Arguments;
+            Arguments.reserve(ArgsCount + 1);
+            Arguments.emplace_back(CContext.GetPointerType(ClassTy));
+            for (auto ArgNode : Construct->Arguments)
+            {
+                ExprResult* Arg = VisitToRValue(ArgNode);
+                if (!Arg) return nullptr;
+
+                Arguments.push_back(Arg->GetType());
+            }
+
+            if (const FunctionOverload* Overload = ClassTy->FindBestConstructorOverload(Arguments))
+            {
+                Construct->ResolvedCallee = Overload->Callee;
+
+                for (size_t i = 0; i < ArgsCount; i++)
+                    Construct->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
+            }
+
+            Construct->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);
+            return Construct->CompileTimeValue;
         }
 
-        size_t ArgsCount = Construct->Args.size();
-        ArgsVector<QualType> Arguments;
-        Arguments.reserve(ArgsCount + 1);
-        Arguments.emplace_back(CContext.GetPointerType(ClassTy));
-        for (auto ArgNode : Construct->Args)
-        {
-            ExprResult* Arg = VisitToRValue(ArgNode);
-            if (!Arg) return nullptr;
-
-            Arguments.push_back(Arg->GetType());
-        }
-
-        if (const FunctionOverload* Overload = ClassTy->FindBestConstructorOverload(Arguments))
-        {
-            Construct->ResolvedCallee = Overload->Callee;
-
-            for (size_t i = 0; i < ArgsCount; i++)
-                Construct->Args[i]->ExpectedType = Overload->Args[i + 1].GetType();
-        }
-
-        Construct->CompileTimeValue = ExprResult::CreateEmpty(Type, MainArena);
-        return Construct->CompileTimeValue;
+        return nullptr;
     }
 
     SemaResult *TypeChecker::VisitVariable(VariableNode *Variable)
