@@ -30,13 +30,13 @@ Volt - programming language, designed as scripting for embedding in C++ applicat
 cd CVolt
 mkdir build
 cd build
-cmake .. -DLLVM_DIR="/path/to/llvm/lib/cmake/llvm"
+cmake .. -G Ninja -DLLVM_DIR="/path/to/llvm/lib/cmake/llvm"
 ninja
 ```
 
 ## Build to static library
 ```bash
-cmake .. -DCOMPILE_TO_LIB=ON
+cmake .. -G Ninja -DCOMPILE_TO_LIB=ON
 ```
 
 ## Project structure
@@ -172,7 +172,7 @@ for (Initialization; Condition; Iteration)
 ```
 class <Name>
 {
-    let:<type> Field;
+    Field: <type>;
 };
 ```
 ### Note
@@ -242,8 +242,8 @@ fun:i32 Main()
 ```c++
 class Vec2
 {
-    let:i32 x;
-    let:i32 y;
+    x: i32;
+    y: i32;
 };
 
 fun:i32 Main()
