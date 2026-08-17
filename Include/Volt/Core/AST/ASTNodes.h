@@ -455,16 +455,28 @@ namespace Volt
             : ASTNode(Pos, Line, Column), ReturnValue(ReturnValue) {}
     };
 
+    class FieldNode : public ASTNode
+    {
+        GENERATED_BODY(FieldNode, ASTNode)
+    public:
+        DataTypeNodeBase* Type;
+        llvm::StringRef Name;
+
+        FieldNode(DataTypeNodeBase* Type, llvm::StringRef Name,
+            size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Type(Type), Name(Name) {}
+    };
+
     class ClassNode : public ASTNode
     {
         GENERATED_BODY(ClassNode, ASTNode)
     public:
         llvm::StringRef Name;
-        SmallVec4<VariableNode*> Fields;
+        SmallVec4<FieldNode*> Fields;
         SmallVec4<FunctionNode*> Methods;
         SmallVec4<ConstructorNode*> Constructors;
 
-        ClassNode(llvm::StringRef Name, SmallVec4<VariableNode*>&& Fields,
+        ClassNode(llvm::StringRef Name, SmallVec4<FieldNode*>&& Fields,
             SmallVec4<FunctionNode*>&& Methods,
             SmallVec4<ConstructorNode*>&& Constructors
             , size_t Pos, size_t Line, size_t Column)

@@ -248,6 +248,9 @@ namespace Volt
                     Sequence->Column = Expr->Column;
                 }
                 Sequence->Statements.Add(Expr);
+
+                if (LastNodeIsBlock)
+                    LastNodeIsBlock = false;
             }
 
             if (StartIndex == Index)
@@ -395,8 +398,6 @@ namespace Volt
             case TypeF128: Type = CContext.GetFPType(128); break;
             case Identifier:
             {
-                // llvm::StringRef Lexeme = GetTokenLexeme(Tok);
-                // if (!CustomTypes.contains(Lexeme) && !CContext.GetClassType(Lexeme)) return nullptr;
                 Consume();
                 return NodesArena.Create<ClassTypeNode>(GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
             }
@@ -582,7 +583,7 @@ namespace Volt
 
         Expect(TokenType::LBrace);
 
-        SmallVec4<VariableNode*> Fields;
+        SmallVec4<FieldNode*> Fields;
         SmallVec4<FunctionNode*> Methods;
         SmallVec4<ConstructorNode*> Constructors;
 
@@ -595,17 +596,6 @@ namespace Volt
 
             switch (TokType)
             {
-                case TokenType::KwLet:
-                {
-                    if (VariableNode* Field = Cast<VariableNode>(ParseVariable()))
-                    {
-                        Fields.push_back(Field);
-                        Expect(TokenType::Semicolon);
-                        SkipSemicolons();
-                        break;
-                    }
-                    return nullptr;
-                }
                 case TokenType::KwFun:
                 {
                     if (FunctionNode* Method = Cast<FunctionNode>(ParseFunction()))
@@ -617,29 +607,41 @@ namespace Volt
                 }
                 case TokenType::Identifier:
                 {
-                    if (GetTokenLexeme(Tok) != Name)
+                    llvm::StringRef Lexeme = GetTokenLexeme(Tok);
+                    if (Lexeme == Name)
                     {
-                        SendError(ParseErrorType::ExpectedDeclaration);
-                        Synchronize();
-                        return CreateErrorNodeOnCurrentOrEndToken();
+                        Consume();
+
+                        ArgsVector<ParamNode*> Params;
+                        ParseParametersInParens(Params);
+
+                        InFunction = true;
+                        ASTNode* Body = ParseBlock();
+                        InFunction = false;
+                        if (!Body)
+                        {
+                            SendError(ParseErrorType::ExpectedFunctionBody);
+                            return CreateErrorNodeOnCurrentOrEndToken();
+                        }
+
+                        Constructors.push_back(NodesArena.Create<ConstructorNode>(std::move(Params),
+                                               Cast<BlockNode>(Body), Tok.Pos, Tok.Line, Tok.Column));
+                        break;
                     }
 
                     Consume();
+                    Expect(TokenType::Colon);
 
-                    ArgsVector<ParamNode*> Params;
-                    ParseParametersInParens(Params);
+                    ASTNode* Type = ParseDataType();
+                    if (!Type)
+                        SendError(ParseErrorType::ExpectedDataType);
 
-                    InFunction = true;
-                    ASTNode* Body = ParseBlock();
-                    InFunction = false;
-                    if (!Body)
-                    {
-                        SendError(ParseErrorType::ExpectedFunctionBody);
-                        return CreateErrorNodeOnCurrentOrEndToken();
-                    }
+                    if (IsErrorNode(Type)) return Type;
+                    Expect(TokenType::Semicolon);
+                    SkipSemicolons();
 
-                    Constructors.push_back(NodesArena.Create<ConstructorNode>(std::move(Params),
-                                           Cast<BlockNode>(Body), Tok.Pos, Tok.Line, Tok.Column));
+                    Fields.push_back(NodesArena.Create<FieldNode>(
+                        StaticCast<DataTypeNodeBase>(Type), Lexeme, Tok.Pos, Tok.Line, Tok.Column));
                     break;
                 }
                 default:
@@ -650,6 +652,7 @@ namespace Volt
         }
 
         Expect(TokenType::RBrace);
+        LastNodeIsBlock = true;
 
         return NodesArena.Create<ClassNode>(Name, std::move(Fields), std::move(Methods),
                                             std::move(Constructors), FirstTokPtr->Pos,

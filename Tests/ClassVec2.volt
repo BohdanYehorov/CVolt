@@ -1,7 +1,7 @@
 class Vec2
 {
-    let:f32 x;
-    let:f32 y;
+    x: f32;
+    y: f32;
 
     Vec2(i32 x, i32 y)
     {

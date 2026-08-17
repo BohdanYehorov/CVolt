@@ -45,11 +45,11 @@ namespace Volt
         struct ClassData
         {
             ClassType* ClassTy;
-            llvm::ArrayRef<VariableNode*> Fields;
+            llvm::ArrayRef<FieldNode*> Fields;
             llvm::ArrayRef<FunctionNode*> Methods;
             llvm::ArrayRef<ConstructorNode*> Constructors;
 
-            ClassData(ClassType* ClassTy, llvm::ArrayRef<VariableNode*> Fields,
+            ClassData(ClassType* ClassTy, llvm::ArrayRef<FieldNode*> Fields,
                 llvm::ArrayRef<FunctionNode*> Methods, llvm::ArrayRef<ConstructorNode*> Constructors)
                 : ClassTy(ClassTy), Fields(Fields), Methods(Methods), Constructors(Constructors) {}
         };

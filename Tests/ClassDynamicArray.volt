@@ -1,7 +1,7 @@
 class IntArray
 {
-    let:i32* Data;
-    let:u64 Size;
+    Data: i32*;
+    Size: u64;
 
     IntArray()
     {
