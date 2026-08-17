@@ -159,6 +159,11 @@ namespace Volt
         {
             Os << "Name: " << ClassTy->Name << '\n';
         }
+        else if (auto TypeOf = Cast<TypeOfNode>(Node))
+        {
+            Os << "Target:\n";
+            WriteAST(TypeOf->Target, Indent + 1);
+        }
         else if (auto ExplicitCast = Cast<ExplicitCastNode>(Node))
         {
             Os << "Type: \n";
@@ -166,6 +171,16 @@ namespace Volt
             WriteIndent(Indent);
             Os << "Target: \n";
             WriteAST(ExplicitCast->Target, Indent + 1);
+        }
+        else if (auto SizeOf = Cast<SizeOfNode>(Node))
+        {
+            Os << "Target:\n";
+            WriteAST(SizeOf->Target, Indent + 1);
+        }
+        else if (auto AlignOf = Cast<AlignOfNode>(Node))
+        {
+            Os << "Target:\n";
+            WriteAST(AlignOf->Target, Indent + 1);
         }
         else if (auto Variable = Cast<VariableNode>(Node))
         {
