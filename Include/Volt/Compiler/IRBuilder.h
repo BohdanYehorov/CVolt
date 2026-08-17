@@ -125,6 +125,8 @@ namespace Volt
         }
 
         IRValue* CreateCastOrBind(IRValue* V, DataType* DestTy);
+
+        llvm::CallInst* CreateMemCpy(IRValue* Dst, IRValue* Src);
     };
 }
 #endif //CVOLT_IRBUILDER_H

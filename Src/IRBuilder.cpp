@@ -335,4 +335,13 @@ namespace Volt
 
         return  CreateLoadIfLValue(V)->CastTo(DestTy, Builder, CContext);
     }
+
+    llvm::CallInst* IRBuilder::CreateMemCpy(IRValue *Dst, IRValue *Src)
+    {
+        size_t Size = Dst->GetDataType()->GetSize();
+        VoltAssert(Size == Src->GetDataType()->GetSize() && "Cannot copy types with different sizes");
+        return Builder.CreateMemCpy(Dst->GetValue(),
+            llvm::MaybeAlign(Dst->GetDataType()->GetAlignment()),Src->GetValue(),
+            llvm::MaybeAlign(Src->GetDataType()->GetAlignment()), Size);
+    }
 }

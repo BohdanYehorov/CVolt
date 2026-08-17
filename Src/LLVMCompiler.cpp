@@ -614,6 +614,8 @@ namespace Volt
             return nullptr;
         }
 
+        IRValue* VarValue = Create<IRValue>(Alloca, VarType, true);
+
         auto ArrType = Cast<ArrayType>(VarType);
         if (ArrType && Var->Value)
         {
@@ -622,6 +624,16 @@ namespace Volt
                 if (ArrType->GetLength() < Arr->Elements.size())
                     VoltUnreachable("Too many elements in array initializer");
                 FillArray(Arr, Alloca);
+            }
+            else
+            {
+                IRValue* Value = CompileNode(Var->Value);
+                if (!Value || !Value->IsLValue()) return nullptr;
+
+                if (auto CastedValue = Builder.CreateCast(Value, VarType))
+                    Builder.CreateMemCpy(VarValue, CastedValue);
+                else
+                    return nullptr;
             }
         }
         else if (Var->Value)
@@ -637,8 +649,7 @@ namespace Volt
         else if (Var->ResolvedConstructor)
             Builder.CreateCall(Var->ResolvedConstructor->Function, { Alloca });
 
-        DeclareVariable(Var->Name,
-            Create<IRValue>(Alloca, VarType, true));
+        DeclareVariable(Var->Name, VarValue);
 
         return nullptr;
     }
