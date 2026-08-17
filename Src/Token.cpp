@@ -89,6 +89,8 @@ namespace Volt
 			GEN_CASE_TO_STRING(KwBreak)
 			GEN_CASE_TO_STRING(KwContinue)
 			GEN_CASE_TO_STRING(KwClass)
+			GEN_CASE_TO_STRING(KwTo)
+			GEN_CASE_TO_STRING(KwForce)
 			GEN_CASE_TO_STRING(TypeConst)
 			GEN_CASE_TO_STRING(TypeVoid)
 			GEN_CASE_TO_STRING(TypeBool)

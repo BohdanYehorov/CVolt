@@ -95,6 +95,7 @@ namespace Volt
 		KwContinue,
 		KwClass,
 		KwTo,
+		KwForce,
 
 		TypeConst,
 		TypeVoid,

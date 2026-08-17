@@ -1335,7 +1335,20 @@ namespace Volt
                     ASTNode* Node = ParseDataType();
                     if (!IsValidNode(Node)) return Node;
                     Operand = NodesArena.Create<ExplicitCastNode>(StaticCast<DataTypeNodeBase>(Node),
-                        Operand, Operand->Pos, Operand->Line, Operand->Column);
+                        Operand, false, Operand->Pos, Operand->Line, Operand->Column);
+                    break;
+                }
+                case TokenType::KwForce:
+                {
+                    Consume();
+                    if (Expect(TokenType::KwTo))
+                    {
+                        ASTNode* Node = ParseDataType();
+                        if (!IsValidNode(Node)) return Node;
+                        Operand = NodesArena.Create<ExplicitCastNode>(StaticCast<DataTypeNodeBase>(Node),
+                            Operand, true, Operand->Pos, Operand->Line, Operand->Column);
+                    }
+
                     break;
                 }
                 default:

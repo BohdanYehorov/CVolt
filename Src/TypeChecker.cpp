@@ -603,10 +603,21 @@ namespace Volt
         if (!SrcType || !Target)
             return nullptr;
 
-        if (auto CastedTarget = Target->ExplicitCast(SrcType, CContext))
+        if (ECast->IsBitCast)
         {
-            ECast->CompileTimeValue = CastedTarget;
-            return CastedTarget;
+            if (Target->GetType()->GetSize() == SrcType->GetSize())
+            {
+                ECast->CompileTimeValue = ExprResult::CreateEmpty(SrcType, MainArena);
+                return ECast->CompileTimeValue;
+            }
+        }
+        else
+        {
+            if (auto CastedTarget = Target->ExplicitCast(SrcType, CContext))
+            {
+                ECast->CompileTimeValue = CastedTarget;
+                return CastedTarget;
+            }
         }
 
         SendError(TypeErrorKind::IncompatibleTypes, ECast->Line, ECast->Column,

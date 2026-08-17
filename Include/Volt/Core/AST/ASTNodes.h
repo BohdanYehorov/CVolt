@@ -337,9 +337,12 @@ namespace Volt
     public:
         DataTypeNodeBase* Type;
         ASTNode* Target;
+        bool IsBitCast = false;
 
-        ExplicitCastNode(DataTypeNodeBase* Type, ASTNode* Value, size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Type(Type), Target(Value) {}
+        ExplicitCastNode(DataTypeNodeBase* Type, ASTNode* Value, bool IsBitCast,
+            size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column),
+            Type(Type), Target(Value), IsBitCast(IsBitCast) {}
     };
 
     class VariableNode : public ASTNode

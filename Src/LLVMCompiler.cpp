@@ -525,11 +525,19 @@ namespace Volt
         IRValue* Target = CompileToRValue(ExplicitCast->Target);
         if (!Target) return nullptr;
 
+        if (ExplicitCast->IsBitCast)
+        {
+            if (Target->GetDataType()->IsArrayType() || Target->GetDataType()->IsPointerType() ||
+                DstType->IsArrayType()               || DstType->IsPointerType())
+                return Create<IRValue>(Target->GetValue(), DstType);
+            return Create<IRValue>(Builder.CreateBitCast(
+               Target->GetValue(), CContext.GetLLVMType(DstType)), DstType);
+        }
+
         if (IRValue* Value = Builder.CreateCast(Target, DstType))
             return Value;
 
-        return Create<IRValue>(
-            Builder.CreateBitCast(Target->GetValue(), CContext.GetLLVMType(DstType)), DstType);
+        VoltUnreachableFmt("Cannot convert {} to {}", Target->GetDataType()->ToString(), DstType->ToString());
     }
 
     IRValue *LLVMCompiler::CompileConstruct(const ConstructNode *Construct)
