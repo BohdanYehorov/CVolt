@@ -400,6 +400,13 @@ namespace Volt
                 Consume();
                 return NodesArena.Create<ClassTypeNode>(GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
             }
+            case KwTypeOf:
+            {
+                Consume();
+                ASTNode* Target = ParseUnary();
+                if (!IsValidNode(Target)) return Target;
+                return NodesArena.Create<TypeOfNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
+            }
             case LParen:
             {
                 Consume();
@@ -1257,7 +1264,6 @@ namespace Volt
 
                 return NodesArena.Create<RefNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
             }
-
             case TokenType::KwSizeOf:
             {
                 Consume();
@@ -1267,7 +1273,6 @@ namespace Volt
 
                 return NodesArena.Create<SizeOfNode>(Target, Tok.Pos, Tok.Line, Tok.Column);
             }
-
             case TokenType::KwAlignOf:
             {
                 Consume();

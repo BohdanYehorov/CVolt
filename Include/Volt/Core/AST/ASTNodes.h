@@ -256,7 +256,7 @@ namespace Volt
 
     class AlignOfNode : public ASTNode
     {
-        GENERATED_BODY(SizeOfNode, ASTNode)
+        GENERATED_BODY(AlignOfNode, ASTNode)
     public:
         ASTNode* Target;
 
@@ -336,6 +336,16 @@ namespace Volt
         llvm::StringRef Name;
         ClassTypeNode(llvm::StringRef Name, size_t Pos, size_t Line, size_t Column)
             : DataTypeNodeBase(Pos, Line, Column), Name(Name) {}
+    };
+
+    class TypeOfNode : public DataTypeNodeBase
+    {
+        GENERATED_BODY(TypeOfNode, DataTypeNodeBase)
+    public:
+        ASTNode* Target;
+
+        TypeOfNode(ASTNode* Target, size_t Pos, size_t Line, size_t Column)
+            : DataTypeNodeBase(Pos, Line, Column), Target(Target) {}
     };
 
     class ConstructNode : public ASTNode

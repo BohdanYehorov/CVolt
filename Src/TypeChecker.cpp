@@ -1044,6 +1044,13 @@ namespace Volt
             QType.AddQualifiers(QualTy->Quals);
             return QType;
         }
+        if (auto TypeOf = Cast<TypeOfNode>(Type))
+        {
+            SemaResult* Value = VisitNode(TypeOf->Target);
+            if (!Value) return nullptr;
+            TypeOf->ResolvedType = Value->GetType().GetType();
+            return Value->GetType();
+        }
 
         return {};
     }
