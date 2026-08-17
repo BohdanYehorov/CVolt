@@ -33,10 +33,16 @@ namespace Volt
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;
 
+        bool ClassInitialized;
+
     public:
         ClassType(llvm::StringRef Name, Array<Field> Fields)
             : DataType(TypeCategory::Class), Name(Name),
-            Fields(std::move(Fields)) { ComputeLayout(); }
+            Fields(std::move(Fields)), ClassInitialized(true) { ComputeLayout(); }
+
+        ClassType(llvm::StringRef Name)
+            : DataType(TypeCategory::Class),
+            Name(Name), ClassInitialized(false) {}
 
         llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override;
         int GetRank() const override { return -1; }
@@ -67,6 +73,12 @@ namespace Volt
             return Constructors.FindBestOverload(Params);
         }
 
+        void AddField(llvm::StringRef Name, QualType Type)
+        {
+            VoltAssert(!ClassInitialized && "Cannot add field to initialized class");
+            Fields.Emplace(Name, Type);
+        }
+
         void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
         {
             Methods.AddFunction(Name, std::move(Params), Callee);
@@ -75,6 +87,12 @@ namespace Volt
         void AddConstructor(ArgsVector<QualType> Params, FunctionCallee* Callee)
         {
             Constructors.AddOverload(std::move(Params), Callee);
+        }
+
+        void FinishInitializing()
+        {
+            ClassInitialized = true;
+            ComputeLayout();
         }
 
     private:

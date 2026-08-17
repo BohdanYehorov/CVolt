@@ -12,6 +12,7 @@ namespace Volt
     void TypeChecker::Visit(ASTNode *Node)
     {
         VisitNode(Node);
+        VisitClassAndMethodDecls();
         VisitFunctionBodies();
     }
 
@@ -794,24 +795,14 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitClass(ClassNode *Class)
     {
-        Array<Field> Fields;
-        Fields.Reserve(Class->Fields.size());
-        for (auto Field : Class->Fields)
-            Fields.Emplace(Field->Name, VisitType(Field->Type));
-
-        ClassType* Type = CContext.CreateClassType(Class->Name, Fields);
+        ClassType* Type = CContext.CreateClassType(Class->Name);
         if (!Type)
         {
             // SendError
             return nullptr;
         }
 
-        for (auto* Method : Class->Methods)
-            VisitMethod(Method, Type);
-
-        for (auto* Constructor : Class->Constructors)
-            VisitConstructor(Constructor, Type);
-
+        Classes.Emplace(Type, Class->Fields, Class->Methods, Class->Constructors);
         return nullptr;
     }
 
@@ -1143,6 +1134,24 @@ namespace Volt
             ParamTypes.push_back(ParamType);
             DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
                             ExprResult::CreateEmpty(ParamType, MainArena)));
+        }
+    }
+
+    void TypeChecker::VisitClassAndMethodDecls()
+    {
+        for (const ClassData& Data : Classes)
+        {
+            ClassType* ClassTy = Data.ClassTy;
+
+            for (auto Field : Data.Fields)
+                ClassTy->AddField(Field->Name, VisitType(Field->Type));
+            ClassTy->FinishInitializing();
+
+            for (auto* Method : Data.Methods)
+                VisitMethod(Method, ClassTy);
+
+            for (auto* Constructor : Data.Constructors)
+                VisitConstructor(Constructor, ClassTy);
         }
     }
 

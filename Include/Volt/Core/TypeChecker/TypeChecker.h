@@ -42,6 +42,18 @@ namespace Volt
                 ReturnType(ReturnType), ThisType(ThisType), Params(Params) {}
         };
 
+        struct ClassData
+        {
+            ClassType* ClassTy;
+            llvm::ArrayRef<VariableNode*> Fields;
+            llvm::ArrayRef<FunctionNode*> Methods;
+            llvm::ArrayRef<ConstructorNode*> Constructors;
+
+            ClassData(ClassType* ClassTy, llvm::ArrayRef<VariableNode*> Fields,
+                llvm::ArrayRef<FunctionNode*> Methods, llvm::ArrayRef<ConstructorNode*> Constructors)
+                : ClassTy(ClassTy), Fields(Fields), Methods(Methods), Constructors(Constructors) {}
+        };
+
         using VariableTable = llvm::StringMap<ExprAddress*>;
         using GlobalVariableTable = llvm::StringMap<ExprAddress*>;
 
@@ -63,6 +75,8 @@ namespace Volt
         Array<Array<ScopeEntry>> ScopeStack;
 
         Array<FunctionBodyData> FunctionBodies;
+
+        Array<ClassData> Classes;
 
         QualType FunctionReturnType;
         bool InFunction = false;
@@ -158,6 +172,7 @@ namespace Volt
 
         void DeclareAndAddParams(llvm::ArrayRef<ParamNode*> ParamNodes, ArgsVector<QualType>& ParamTypes);
 
+        void VisitClassAndMethodDecls();
         void VisitFunctionBodies();
 
         friend class LLVMCompiler;

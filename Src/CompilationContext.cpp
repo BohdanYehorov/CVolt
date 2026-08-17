@@ -126,6 +126,14 @@ namespace Volt
 		return Type;
 	}
 
+	ClassType * CompilationContext::CreateClassType(llvm::StringRef Name)
+	{
+		if (ClassTypes.contains(Name)) return nullptr;
+		ClassType* Type = MainArena.Create<ClassType>(Name);
+		ClassTypes[Name] = Type;
+		return Type;
+	}
+
 	ClassType* CompilationContext::GetClassType(llvm::StringRef Name)
 	{
 		if (auto Iter = ClassTypes.find(Name); Iter != ClassTypes.end())

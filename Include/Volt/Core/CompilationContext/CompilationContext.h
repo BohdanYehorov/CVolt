@@ -74,6 +74,7 @@ namespace Volt
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 
 		ClassType* CreateClassType(llvm::StringRef Name, const Array<Field>& Fields);
+		ClassType* CreateClassType(llvm::StringRef Name);
 		[[nodiscard]] ClassType* GetClassType(llvm::StringRef Name);
 
 		ClassType* GetOrCreateClassType(llvm::StringRef Name, const Array<Field> &Fields);

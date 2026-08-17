@@ -395,10 +395,10 @@ namespace Volt
             case TypeF128: Type = CContext.GetFPType(128); break;
             case Identifier:
             {
-                llvm::StringRef Lexeme = GetTokenLexeme(Tok);
-                if (!CustomTypes.contains(Lexeme) && !CContext.GetClassType(Lexeme)) return nullptr;
+                // llvm::StringRef Lexeme = GetTokenLexeme(Tok);
+                // if (!CustomTypes.contains(Lexeme) && !CContext.GetClassType(Lexeme)) return nullptr;
                 Consume();
-                return NodesArena.Create<ClassTypeNode>(Lexeme, Tok.Pos, Tok.Line, Tok.Column);
+                return NodesArena.Create<ClassTypeNode>(GetTokenLexeme(Tok), Tok.Pos, Tok.Line, Tok.Column);
             }
             case LParen:
             {

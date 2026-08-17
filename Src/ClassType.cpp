@@ -10,14 +10,8 @@ namespace Volt
 {
     llvm::Type *ClassType::ToLLVMType(llvm::LLVMContext &Context) const
     {
-        // SmallVec4<llvm::Type*> Types;
-        // Types.reserve(Fields.Length());
-        // for (auto Field : Fields)
-        //     Types.push_back(Field.Type->GetLLVMOrCachedType(Context));
-        //
-        // return llvm::StructType::create(Context, Types, Name);
-
-        return llvm::ArrayType::get(llvm::Type::getInt8Ty(Context), GetSize());
+        return llvm::ArrayType::get(
+            llvm::Type::getInt8Ty(Context), GetSize());
     }
 
     size_t ClassType::GetSize() const
@@ -36,6 +30,8 @@ namespace Volt
 
     void ClassType::ComputeLayout() const
     {
+        VoltAssert(ClassInitialized && "Cannot compute layout of non-initialized class");
+
         if (Fields.Empty())
         {
             Size = 1;
@@ -58,6 +54,8 @@ namespace Volt
 
     size_t ClassType::GetFieldIndex(llvm::StringRef Name)
     {
+        VoltAssert(ClassInitialized && "Cannot get field from non-initialized class");
+
         for (size_t i = 0; i < Fields.Length(); i++)
             if (Fields[i].Name == Name)
                 return i;
