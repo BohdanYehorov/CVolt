@@ -1350,6 +1350,15 @@ namespace Volt
                         Operand, ParsePrimary(), Operand->Pos, Operand->Line, Operand->Column);
                     break;
                 }
+                case TokenType::KwTo:
+                {
+                    Consume();
+                    ASTNode* Node = ParseDataType();
+                    if (!IsValidNode(Node)) return Node;
+                    Operand = NodesArena.Create<ExplicitCastNode>(StaticCast<DataTypeNodeBase>(Node),
+                        Operand, Operand->Pos, Operand->Line, Operand->Column);
+                    break;
+                }
                 default:
                 {
                     OperatorType OpType = Operator::GetPostfix(TokType);
