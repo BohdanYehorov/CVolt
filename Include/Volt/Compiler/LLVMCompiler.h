@@ -136,6 +136,8 @@ namespace Volt
             return Builder.CreateLoadIfLValue(Value);
         }
 
+        IRValue* Assign(IRValue* Var, ASTNode* Value);
+
         void CompileFunctionBodies();
 
         void DeclareVariable(llvm::StringRef Name, IRValue *Var);

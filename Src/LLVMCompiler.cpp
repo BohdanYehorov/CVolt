@@ -385,14 +385,16 @@ namespace Volt
     IRValue *LLVMCompiler::CompileAssignment(const AssignmentNode *Assignment)
     {
         IRValue* Value = CompileNode(Assignment->Left);
+
+        OperatorType Op = Assignment->Type;
+
+        if (Op == OperatorType::Assign)
+            return Assign(Value, Assignment->Right);
+
         IRValue* Right = CompileToRValue(Assignment->Right);
 
-        if (!Value || !Right)
-            VoltUnreachable("Invalid assignment values");
-
         Right = Builder.CreateCast(Right, Value->GetDataType());
-        if (!Right)
-            VoltUnreachable("Invalid cast");
+        if (!Right) VoltUnreachable("Invalid cast");
 
         return Builder.CreateAssignment(Value, Right, Assignment->Type);
     }
@@ -616,41 +618,12 @@ namespace Volt
 
         IRValue* VarValue = Create<IRValue>(Alloca, VarType, true);
 
-        auto ArrType = Cast<ArrayType>(VarType);
-        if (ArrType && Var->Value)
-        {
-            if (auto Arr = Cast<ArrayNode>(Var->Value))
-            {
-                if (ArrType->GetLength() < Arr->Elements.size())
-                    VoltUnreachable("Too many elements in array initializer");
-                FillArray(Arr, Alloca);
-            }
-            else
-            {
-                IRValue* Value = CompileNode(Var->Value);
-                if (!Value || !Value->IsLValue()) return nullptr;
-
-                if (auto CastedValue = Builder.CreateCast(Value, VarType))
-                    Builder.CreateMemCpy(VarValue, CastedValue);
-                else
-                    return nullptr;
-            }
-        }
-        else if (Var->Value)
-        {
-            IRValue* Value = CompileToRValue(Var->Value);
-            if (!Value) return nullptr;
-
-            if (auto CastedValue = Builder.CreateCast(Value, VarType))
-                Builder.CreateStore(CastedValue, Alloca);
-            else
-                return nullptr;
-        }
-        else if (Var->ResolvedConstructor)
+        if (Var->ResolvedConstructor)
             Builder.CreateCall(Var->ResolvedConstructor->Function, { Alloca });
+        else if (Var->Value)
+            Assign(VarValue, Var->Value);
 
         DeclareVariable(Var->Name, VarValue);
-
         return nullptr;
     }
 
@@ -944,6 +917,50 @@ namespace Volt
             VoltUnreachableFmt("Function definition '{}' is unknown", Name.str());
 
         FunctionBlocks.Emplace(Name, Body, Func, ReturnType, ThisType, Params);
+    }
+
+    IRValue* LLVMCompiler::Assign(IRValue *Var, ASTNode *Value)
+    {
+        DataType* VarType = Var->GetDataType();
+
+        if (auto ArrayTy = Cast<ArrayType>(VarType))
+        {
+            if (auto Arr = Cast<ArrayNode>(Value))
+            {
+                if (ArrayTy->GetLength() < Arr->Elements.size())
+                    VoltUnreachable("Too many elements in array initializer");
+                FillArray(Arr, cast<llvm::AllocaInst>(Var->GetValue()));
+
+                return Var;
+            }
+        }
+
+        if (VarType->IsArrayType() || VarType->IsClassType())
+        {
+            IRValue* Val = CompileNode(Value);
+            if (!Val) return nullptr;
+
+            VoltAssert(Var->IsLValue() && "Cannot assign r-value to this type");
+
+            if (auto CastedValue = Builder.CreateCast(Val, VarType))
+                Builder.CreateMemCpy(Var, CastedValue);
+            else
+                VoltUnreachableFmt("Cannot convert {} to {}",
+                    Val->GetDataType()->ToString(), VarType->ToString());
+
+            return Val;
+        }
+
+        IRValue* Val = CompileToRValue(Value);
+        if (!Val) return nullptr;
+
+        if (auto CastedValue = Builder.CreateCast(Val, VarType))
+            Builder.CreateStore(CastedValue, Var->GetValue());
+        else
+            VoltUnreachableFmt("Cannot convert {} to {}",
+                Val->GetDataType()->ToString(), VarType->ToString());
+
+        return Val;
     }
 
     void LLVMCompiler::CompileFunctionBodies()
