@@ -1,19 +1,29 @@
-class Vec2
+class A
 {
-    x: i32;
-    y: i32;
-
-    Vec2(i32 x, i32 y)
+    num: i32;
+    fun:void Hello()
     {
-        this.x = x;
-        this.y = y;
-
-        Out("Vec2\n");
+        this.num = 51;
+        OutLine(this.num);
     }
+}
+
+class B
+{
+    num: i32;
+    impl a: A;
+}
+
+class C
+{
+    impl b: B;
 }
 
 fun:i32 Main()
 {
-    let:Vec2 Vec = Vec2(4, 5);
+    let:B b;
+    b.Hello();
+    let:C c;
+    c.Hello();
     return 0;
 }

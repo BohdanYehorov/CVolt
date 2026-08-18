@@ -461,10 +461,12 @@ namespace Volt
     public:
         DataTypeNodeBase* Type;
         llvm::StringRef Name;
+        bool IsImplemented;
 
-        FieldNode(DataTypeNodeBase* Type, llvm::StringRef Name,
+        FieldNode(DataTypeNodeBase* Type, llvm::StringRef Name, bool IsImplemented,
             size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Type(Type), Name(Name) {}
+            : ASTNode(Pos, Line, Column), Type(Type),
+            Name(Name), IsImplemented(IsImplemented) {}
     };
 
     class ClassNode : public ASTNode

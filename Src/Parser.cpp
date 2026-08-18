@@ -629,19 +629,20 @@ namespace Volt
                         break;
                     }
 
-                    Consume();
-                    Expect(TokenType::Colon);
+                    ASTNode* Field = ParseField();
+                    if (!IsValidNode(Field))
+                        continue;
 
-                    ASTNode* Type = ParseDataType();
-                    if (!Type)
-                        SendError(ParseErrorType::ExpectedDataType);
+                    Fields.push_back(StaticCast<FieldNode>(Field));
+                    break;
+                }
+                case TokenType::KwImpl:
+                {
+                    ASTNode* Field = ParseField();
+                    if (!IsValidNode(Field))
+                        continue;
 
-                    if (IsErrorNode(Type)) return Type;
-                    Expect(TokenType::Semicolon);
-                    SkipSemicolons();
-
-                    Fields.push_back(NodesArena.Create<FieldNode>(
-                        StaticCast<DataTypeNodeBase>(Type), Lexeme, Tok.Pos, Tok.Line, Tok.Column));
+                    Fields.push_back(StaticCast<FieldNode>(Field));
                     break;
                 }
                 default:
@@ -657,6 +658,38 @@ namespace Volt
         return NodesArena.Create<ClassNode>(Name, std::move(Fields), std::move(Methods),
                                             std::move(Constructors), FirstTokPtr->Pos,
                                             FirstTokPtr->Line, FirstTokPtr->Column);
+    }
+
+    ASTNode* Parser::ParseField()
+    {
+        const Token* FirstTok;
+        bool Implemented = ConsumeIf(TokenType::KwImpl, FirstTok);
+
+        const Token* FieldNameTok;
+        if (!ConsumeIf(TokenType::Identifier, FieldNameTok))
+        {
+            SendError(ParseErrorType::ExpectedDeclaratorName);
+            return CreateErrorNodeOnCurrentOrEndToken();
+        }
+
+        llvm::StringRef Name = GetTokenLexeme(*FieldNameTok);
+
+        if (!Implemented)
+            FirstTok = FieldNameTok;
+
+        Expect(TokenType::Colon);
+
+        ASTNode* Type = ParseDataType();
+        if (!Type)
+            SendError(ParseErrorType::ExpectedDataType);
+
+        if (IsErrorNode(Type)) return Type;
+        Expect(TokenType::Semicolon);
+        SkipSemicolons();
+
+        return NodesArena.Create<FieldNode>(
+            StaticCast<DataTypeNodeBase>(Type), Name, Implemented,
+            FirstTok->Pos, FirstTok->Line, FirstTok->Column);
     }
 
     ASTNode* Parser::ParseIf()

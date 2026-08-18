@@ -95,6 +95,7 @@ namespace Volt
         ASTNode* ParseFunction();
         ASTNode* ParseVariable();
         ASTNode* ParseClass();
+        ASTNode* ParseField();
         ASTNode* ParseIf();
         ASTNode* ParseWhile();
         ASTNode* ParseFor();

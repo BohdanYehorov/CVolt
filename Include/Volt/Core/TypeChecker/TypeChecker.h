@@ -160,7 +160,7 @@ namespace Volt
         ExprAddress* VisitToLValue(ASTNode* Node);
         ExprAddress* VisitToLValueAndCheckConst(ASTNode* Node);
 
-        FunctionCallee* CreateFunction(FunctionNode* Function, ArgsVector<QualType>& Params, QualType ThisType = {});
+        CalleeBase* CreateFunction(FunctionNode* Function, ArgsVector<QualType>& Params, ClassType* Owner = nullptr);
 
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 

@@ -8,7 +8,9 @@
 #include "DataType.h"
 #include "Volt/ADT/Array.h"
 #include "Volt/Core/Functions/FunctionCallee.h"
+#include "Volt/Core/Functions/MethodCallee.h"
 #include "Volt/Core/Functions/FunctionTable.h"
+#include "Volt/Core/Memory/Arena.h"
 
 namespace Volt
 {
@@ -30,6 +32,8 @@ namespace Volt
         Array<Field> Fields;
         MethodTable Methods;
         FuncOverloadTable Constructors;
+        llvm::DenseMap<ClassType*, size_t> ImplementedClassTypes;
+
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;
 
@@ -56,12 +60,13 @@ namespace Volt
 
         [[nodiscard]] size_t GetFieldIndex(llvm::StringRef Name);
         [[nodiscard]] const Field& GetField(size_t Index) const { return Fields[Index]; }
+        [[nodiscard]] size_t GetFieldOffset(size_t Index) const { return Fields[Index].Offset; }
         [[nodiscard]] size_t GetFieldsCount() const { return Fields.Length(); }
 
         [[nodiscard]] const MethodTable& GetMethods() const { return Methods; }
 
         [[nodiscard]] llvm::StringRef GetName() { return Name; }
-        [[nodiscard]] const FunctionOverload* FindBestMethodOverload(
+        [[nodiscard]] const MethodOverload* FindBestMethodOverload(
             llvm::StringRef Name, llvm::ArrayRef<QualType> Params) const
         {
             return Methods.FindBestFunctionOverload(Name, Params);
@@ -73,13 +78,22 @@ namespace Volt
             return Constructors.FindBestOverload(Params);
         }
 
+        [[nodiscard]] size_t GetImplementedFieldIndexByType(ClassType* Type) const
+        {
+            if (auto Iter = ImplementedClassTypes.find(Type); Iter != ImplementedClassTypes.end())
+                return Iter->second;
+            return Fields.Length();
+        }
+
+        [[nodiscard]] size_t GetImplementedFieldOffset(ClassType* Owner) const;
+
         void AddField(llvm::StringRef Name, QualType Type)
         {
             VoltAssert(!ClassInitialized && "Cannot add field to initialized class");
             Fields.Emplace(Name, Type);
         }
 
-        void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
+        void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, MethodCallee* Callee)
         {
             Methods.AddFunction(Name, std::move(Params), Callee, this);
         }
@@ -88,6 +102,8 @@ namespace Volt
         {
             Constructors.AddOverload(std::move(Params), Callee);
         }
+
+        void ImplementField(size_t FieldIndex);
 
         void FinishInitializing()
         {

@@ -100,6 +100,7 @@ namespace Volt
 		KwSizeOf,
 		KwAlignOf,
 		KwTypeOf,
+		KwImpl,
 
 		TypeConst,
 		TypeVoid,

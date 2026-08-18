@@ -443,6 +443,14 @@ namespace Volt
             llvm::Value* Value;
             ClassType* ClassTy;
             if (!GetClassFromMemberAccess(MemberAccess, Value, ClassTy)) return nullptr;
+            auto* Callee = StaticCast<MethodCallee>(Call->ResolvedCallee);
+            if (Callee->Owner != ClassTy)
+            {
+                size_t Offset = ClassTy->GetImplementedFieldOffset(Callee->Owner);
+                if (Offset != 0)
+                    Value = Builder.CreateGEP(CContext.GetLLVMType(Callee->Owner), Value,
+            { Builder.GetInt64(0), Builder.GetInt64(Offset) });
+            }
 
             LLVMArgs.reserve(Args.size() + 1);
             LLVMArgs.push_back(Value);
@@ -471,6 +479,11 @@ namespace Volt
                 return nullptr;
 
             LLVMArgs.push_back(ArgValue->GetValue());
+        }
+
+        if (auto Method = Cast<MethodCallee>(Call->ResolvedCallee))
+        {
+            return Create<IRValue>(Builder.CreateCall(Method->Function, LLVMArgs), Method->ReturnType.GetType());
         }
 
         if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))

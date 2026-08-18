@@ -95,6 +95,7 @@ namespace Volt
 			GEN_CASE_TO_STRING(KwSizeOf)
 			GEN_CASE_TO_STRING(KwAlignOf)
 			GEN_CASE_TO_STRING(KwTypeOf)
+			GEN_CASE_TO_STRING(KwImpl)
 			GEN_CASE_TO_STRING(TypeConst)
 			GEN_CASE_TO_STRING(TypeVoid)
 			GEN_CASE_TO_STRING(TypeBool)

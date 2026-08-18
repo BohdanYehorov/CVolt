@@ -4,6 +4,7 @@
 
 #include "Volt/Core/TypeChecker/TypeChecker.h"
 
+#include "Volt/Core/Functions/MethodCallee.h"
 #include "Volt/Core/TypeChecker/ExprAddress.h"
 #include "Volt/Support/ErrorHandling.h"
 
@@ -528,8 +529,8 @@ namespace Volt
 
                 size_t ArgsCount = Call->Arguments.size();
                 ArgsVector<QualType> ArgTypes;
-                ArgTypes.reserve(ArgsCount + 1);
-                ArgTypes.push_back(CContext.GetPointerType(ClassTy));
+                ArgTypes.reserve(ArgsCount);
+                // ArgTypes.push_back(CContext.GetPointerType(ClassTy));
 
                 for (auto Arg : Call->Arguments)
                 {
@@ -549,7 +550,7 @@ namespace Volt
                     Call->ResolvedCallee = Overload->Callee;
 
                     for (size_t i = 0; i < ArgsCount; i++)
-                        Call->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
+                        Call->Arguments[i]->ExpectedType = Overload->Args[i].GetType();
 
                     return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
                 }
@@ -812,7 +813,7 @@ namespace Volt
     SemaResult *TypeChecker::VisitFunction(FunctionNode *Function)
     {
         ArgsVector<QualType> Params;
-        FunctionCallee* FuncCallee = CreateFunction(Function, Params);
+        CalleeBase* FuncCallee = CreateFunction(Function, Params);
 
         Functions.AddFunction(Function->Name, std::move(Params), FuncCallee);
         FunctionBodies.Emplace(Function->Name, Function->Body,
@@ -824,9 +825,8 @@ namespace Volt
     {
         ArgsVector<QualType> Params;
 
-        FunctionCallee* FuncCallee = CreateFunction(Method, Params,
-                                                 CContext.GetPointerType(Type));
-        Type->AddMethod(Method->Name, std::move(Params), FuncCallee);
+        CalleeBase* FuncCallee = CreateFunction(Method, Params, Type);
+        Type->AddMethod(Method->Name, std::move(Params), StaticCast<MethodCallee>(FuncCallee));
         FunctionBodies.Emplace(Method->Name, Method->Body, FuncCallee->ReturnType,
             CContext.GetPointerType(Type), Method->Params);
     }
@@ -1101,16 +1101,10 @@ namespace Volt
         return Addr;
     }
 
-    FunctionCallee* TypeChecker::CreateFunction(FunctionNode *Function,
-        ArgsVector<QualType>& Params, QualType ThisType)
+    CalleeBase* TypeChecker::CreateFunction(FunctionNode *Function,
+        ArgsVector<QualType>& Params, ClassType* Owner)
     {
-        if (ThisType)
-        {
-            Params.reserve(Function->Params.size() + 1);
-            Params.push_back(ThisType);
-        }
-        else
-            Params.reserve(Function->Params.size());
+        Params.reserve(Function->Params.size());
 
         for (auto* Param : Function->Params)
         {
@@ -1120,10 +1114,12 @@ namespace Volt
 
         QualType ReturnType = VisitType(Function->ReturnType);
 
-        auto FuncCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
-        Function->ResolvedCallee = FuncCallee;
+        if (Owner)
+            Function->ResolvedCallee = MainArena.Create<MethodCallee>(ReturnType, nullptr, Owner);
+        else
+            Function->ResolvedCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
 
-        return FuncCallee;
+        return Function->ResolvedCallee;
     }
 
     bool TypeChecker::ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column)
@@ -1213,8 +1209,14 @@ namespace Volt
         {
             ClassType* ClassTy = Data.ClassTy;
 
+            size_t FieldIndex = 0;
             for (auto Field : Data.Fields)
+            {
                 ClassTy->AddField(Field->Name, VisitType(Field->Type));
+                if (Field->IsImplemented)
+                    ClassTy->ImplementField(FieldIndex);
+                ++FieldIndex;
+            }
             ClassTy->FinishInitializing();
 
             for (auto* Method : Data.Methods)
@@ -1234,8 +1236,8 @@ namespace Volt
             ArgsVector<QualType> Params;
             if (Data.ThisType)
             {
-                Params.reserve(Data.Params.size() + 1);
-                Params.push_back(Data.ThisType);
+                Params.reserve(Data.Params.size());
+                // Params.push_back(Data.ThisType);
                 DeclareVariable("this", MainArena.Create<ExprAddress>(
                                 ExprResult::CreateEmpty(Data.ThisType, MainArena)));
             }

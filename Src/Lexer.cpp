@@ -77,7 +77,8 @@ namespace Volt
 		{ "type",     TokenType::KwType },
 		{ "sizeof",   TokenType::KwSizeOf },
 		{ "alignof",  TokenType::KwAlignOf },
-		{ "typeof",   TokenType::KwTypeOf }
+		{ "typeof",   TokenType::KwTypeOf },
+		{ "impl",     TokenType::KwImpl }
 	};
 
 	llvm::StringMap<TokenType> Lexer::DataTypes = {

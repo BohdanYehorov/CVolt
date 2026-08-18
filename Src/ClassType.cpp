@@ -3,8 +3,8 @@
 //
 
 #include "Volt/Core/Types/ClassType.h"
-#include "Volt/Core/TypeDefs/TypeDefs.h"
 #include <iostream>
+#include <queue>
 
 namespace Volt
 {
@@ -61,5 +61,51 @@ namespace Volt
                 return i;
 
         return Fields.Length();
+    }
+
+    size_t ClassType::GetImplementedFieldOffset(ClassType *Owner) const
+    {
+        if (this == Owner) return 0;
+
+        std::queue<std::pair<ClassType*, size_t>> FieldsQueue;
+        for (auto [Type, Index] : ImplementedClassTypes)
+        {
+            if (Type == Owner)
+                return Fields[Index].Offset;
+            FieldsQueue.emplace(Type, Fields[Index].Offset);
+        }
+
+        while (!FieldsQueue.empty())
+        {
+            const auto& F = FieldsQueue.front();
+            FieldsQueue.pop();
+
+            ClassType* CurType = F.first;
+            size_t CurOffset = F.second;
+
+            for (auto [Type, Index] : CurType->ImplementedClassTypes)
+            {
+                size_t NewOffset = CurOffset + CurType->Fields[Index].Offset;
+                if (Type == Owner)
+                    return NewOffset;
+                FieldsQueue.emplace(Type, NewOffset);
+            }
+        }
+
+        VoltUnreachableFmt("This class {} not implemented to {}", ToString(), Owner->ToString());
+    }
+
+    void ClassType::ImplementField(size_t FieldIndex)
+    {
+        VoltAssert(FieldIndex < Fields.Length());
+        const Field& F = Fields[FieldIndex];
+        auto ClassTy = F.Type.CastAs<ClassType>();
+        VoltAssert(ClassTy && "Cannot implement field with non-class type");
+
+        for (const auto& [Name, Overload] : ClassTy->Methods)
+        {
+            Methods.AddFunction(Name, Overload.Args, Overload.Callee, ClassTy);
+            ImplementedClassTypes[ClassTy] = FieldIndex;
+        }
     }
 }
