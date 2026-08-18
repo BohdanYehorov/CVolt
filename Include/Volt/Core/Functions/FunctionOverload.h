@@ -19,5 +19,13 @@ namespace Volt
         FunctionOverload(ArgsVector<QualType> Args, CalleeBase* Callee)
             : Args(std::move(Args)), Callee(Callee) {}
     };
+
+    struct MethodOverload : FunctionOverload
+    {
+        class ClassType* ThisType;
+
+        MethodOverload(ArgsVector<QualType> Args, CalleeBase* Callee, ClassType* ThisType)
+            : FunctionOverload(std::move(Args), Callee), ThisType(ThisType) {}
+    };
 }
 #endif //CVOLT_FUNCTIONOVERLOAD_H
