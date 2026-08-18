@@ -848,7 +848,7 @@ namespace Volt
 
         QualType ReturnType = CContext.GetVoidType();
 
-        auto ConstructorCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
+        auto ConstructorCallee = MainArena.Create<FunctionCallee>(ReturnType);
         Constructor->ResolvedCallee = ConstructorCallee;
 
         Type->AddConstructor(std::move(Params), ConstructorCallee);
@@ -1115,9 +1115,9 @@ namespace Volt
         QualType ReturnType = VisitType(Function->ReturnType);
 
         if (Owner)
-            Function->ResolvedCallee = MainArena.Create<MethodCallee>(ReturnType, nullptr, Owner);
+            Function->ResolvedCallee = MainArena.Create<MethodCallee>(ReturnType, Owner);
         else
-            Function->ResolvedCallee = MainArena.Create<FunctionCallee>(ReturnType, nullptr);
+            Function->ResolvedCallee = MainArena.Create<FunctionCallee>(ReturnType);
 
         return Function->ResolvedCallee;
     }
@@ -1237,7 +1237,6 @@ namespace Volt
             if (Data.ThisType)
             {
                 Params.reserve(Data.Params.size());
-                // Params.push_back(Data.ThisType);
                 DeclareVariable("this", MainArena.Create<ExprAddress>(
                                 ExprResult::CreateEmpty(Data.ThisType, MainArena)));
             }

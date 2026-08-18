@@ -482,9 +482,8 @@ namespace Volt
         }
 
         if (auto Method = Cast<MethodCallee>(Call->ResolvedCallee))
-        {
-            return Create<IRValue>(Builder.CreateCall(Method->Function, LLVMArgs), Method->ReturnType.GetType());
-        }
+            return Create<IRValue>(Builder.CreateCall(
+                Method->Function, LLVMArgs), Method->ReturnType.GetType());
 
         if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
         {

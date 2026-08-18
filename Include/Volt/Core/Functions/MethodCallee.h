@@ -15,8 +15,8 @@ namespace Volt
     public:
         class ClassType* Owner;
 
-        MethodCallee(QualType Type, llvm::Function* Function, ClassType* Owner)
-            : FunctionCallee(Type, Function), Owner(Owner) {}
+        MethodCallee(QualType Type, ClassType* Owner)
+            : FunctionCallee(Type), Owner(Owner) {}
     };
 }
 
