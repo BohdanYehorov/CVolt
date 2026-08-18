@@ -130,6 +130,7 @@ namespace Volt
 
     using FunctionTable = FuncTableImpl<FunctionOverload>;
     using MethodTable = FuncTableImpl<MethodOverload>;
+    using BuiltinFuncTable = FuncTableImpl<BuiltinFunctionOverload>;
 
     template<typename T>
     const T* FuncTableImpl<T>::FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const

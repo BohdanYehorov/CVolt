@@ -19,7 +19,7 @@ namespace Volt
 	class BuiltinFunctionTable
 	{
 	private:
-		FunctionTable Functions;
+		BuiltinFuncTable Functions;
 		CompilationContext& CContext;
 		Arena& MainArena;
 
@@ -39,7 +39,7 @@ namespace Volt
 		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
 
-		[[nodiscard]] const FunctionTable& GetFunctionTable() const { return Functions; }
+		[[nodiscard]] const BuiltinFuncTable& GetFunctionTable() const { return Functions; }
 
 	private:
 		template <typename T, typename ...Rest>

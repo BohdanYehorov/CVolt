@@ -10,9 +10,7 @@ namespace Volt
 	{
 		for (const auto& [Name, Overload] : Functions)
 		{
-			auto BuiltinCallee = Cast<BuiltinFuncCallee>(Overload.Callee);
-			VoltAssert(BuiltinCallee != nullptr);
-
+			auto* BuiltinCallee = Overload.Callee;
 			llvm::Type* RetType = CContext.GetLLVMType(BuiltinCallee->ReturnType.GetType());
 			SmallVec8<llvm::Type*> LLVMParams;
 			LLVMParams.reserve(Overload.Args.size());
@@ -30,9 +28,6 @@ namespace Volt
 	void BuiltinFunctionTable::GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap &SymbolMap)
 	{
 		for (const auto& [Name, Overload] : Functions)
-		{
-			const auto& BuiltinCallee = StaticCast<BuiltinFuncCallee>(Overload.Callee);
-			SymbolMap[Jit->mangleAndIntern(BuiltinCallee->BaseName)] = BuiltinCallee->SymbolDef;
-		}
+			SymbolMap[Jit->mangleAndIntern(Overload.Callee->BaseName)] = Overload.Callee->SymbolDef;
 	}
 }
