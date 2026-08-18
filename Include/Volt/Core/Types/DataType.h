@@ -72,6 +72,11 @@ namespace Volt
             return Category == TypeCategory::Integer ? !IsSignedIntegerType() : false;
         }
 
+        [[nodiscard]] bool IsAggregateType() const
+        {
+            return Category == TypeCategory::Array || Category == TypeCategory::Class;
+        }
+
         [[nodiscard]] TypeCategory GetCategory() const { return Category; }
 
         template <typename ...Args_>

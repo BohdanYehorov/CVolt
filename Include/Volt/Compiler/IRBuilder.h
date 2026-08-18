@@ -107,6 +107,9 @@ namespace Volt
             return Builder.CreateCall(Callee, Args);
         }
 
+        llvm::CallInst* CreateCall(CalleeBase* Callee, llvm::ArrayRef<llvm::Value*> Args,
+            std::unique_ptr<llvm::Module>& Module);
+
         llvm::Value* CreateStructGEP(llvm::Type* Ty,
             llvm::Value* Ptr, unsigned Idx)
         {
@@ -127,6 +130,11 @@ namespace Volt
         IRValue* CreateCastOrBind(IRValue* V, DataType* DestTy);
 
         llvm::CallInst* CreateMemCpy(IRValue* Dst, IRValue* Src);
+        llvm::CallInst* CreateMemCpy(llvm::Value* Dst, llvm::MaybeAlign DstAlign,
+            llvm::Value* Src, llvm::MaybeAlign SrcAlign, size_t Size)
+        {
+            return Builder.CreateMemCpy(Dst, DstAlign, Src, SrcAlign, Size);
+        }
     };
 }
 #endif //CVOLT_IRBUILDER_H

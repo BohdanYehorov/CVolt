@@ -325,6 +325,24 @@ namespace Volt
         VoltUnreachableFmt("Cannot create GEP to this type: {}", Type->ToString());
     }
 
+    llvm::CallInst *IRBuilder::CreateCall(CalleeBase *Callee, llvm::ArrayRef<llvm::Value *> Args,
+        std::unique_ptr<llvm::Module>& Module)
+    {
+        if (auto Method = Cast<MethodCallee>(Callee))
+            return Builder.CreateCall(Method->Function, Args);
+
+        if (auto Func = Cast<FunctionCallee>(Callee))
+            return Builder.CreateCall(Func->Function, Args);
+
+        if (auto BuiltinFunc = Cast<BuiltinFuncCallee>(Callee))
+        {
+            llvm::Function* LLVMFunc = Module->getFunction(BuiltinFunc->BaseName);
+            return Builder.CreateCall(LLVMFunc, Args);
+        }
+
+        VoltUnreachable("Invalid Callee");
+    }
+
     IRValue *IRBuilder::CreateCastOrBind(IRValue *V, DataType *DestTy)
     {
         if (DestTy->IsReferenceType())

@@ -1114,11 +1114,8 @@ namespace Volt
 
         QualType ReturnType = VisitType(Function->ReturnType);
 
-        if (Owner)
-            Function->ResolvedCallee = MainArena.Create<MethodCallee>(ReturnType, Owner);
-        else
-            Function->ResolvedCallee = MainArena.Create<FunctionCallee>(ReturnType);
-
+            Function->ResolvedCallee = Owner ? MainArena.Create<MethodCallee>(ReturnType, Owner) :
+                                               MainArena.Create<FunctionCallee>(ReturnType);
         return Function->ResolvedCallee;
     }
 

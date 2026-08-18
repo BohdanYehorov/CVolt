@@ -137,6 +137,10 @@ namespace Volt
         }
 
         IRValue* Assign(IRValue* Var, ASTNode* Value);
+        IRValue* CallMethod(MemberAccessNode* Target, MethodCallee* Callee, llvm::ArrayRef<ASTNode*> ArgNodes);
+        IRValue* CallConstructor(IdentifierNode* Target, FunctionCallee* Callee, llvm::ArrayRef<ASTNode*> ArgNodes);
+
+        llvm::AllocaInst* CreateRetValueForAggregateType(DataType* RetType, ArgsVector<llvm::Value*>& Args) const;
 
         void CompileFunctionBodies();
 
@@ -146,6 +150,7 @@ namespace Volt
         void ExitScope();
 
         void FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca);
+        void FillArgs(llvm::ArrayRef<ASTNode*> ParamNodes, ArgsVector<llvm::Value*>& Params);
 
         template <typename T, typename ...Args_>
         [[nodiscard]] T *Create(Args_&&... Args) { return CompilerArena.Create<T>(std::forward<Args_>(Args)...); }
