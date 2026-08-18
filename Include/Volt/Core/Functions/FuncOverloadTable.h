@@ -16,17 +16,18 @@ namespace Volt
     class OverloadTableImpl
     {
     public:
-        using Iterator = FuncOverloadVector::iterator;
-        using ConstIterator = FuncOverloadVector::const_iterator;
         using OverloadVector = SmallVec8<T>;
+        using Iterator = OverloadVector::iterator;
+        using ConstIterator = OverloadVector::const_iterator;
 
     private:
         OverloadVector Overloads;
 
     public:
-        void AddOverload(ArgsVector<QualType> Args, CalleeBase* Callee)
+        template <typename ...ArgsTy>
+        void AddOverload(ArgsTy&&... Args)
         {
-            Overloads.emplace_back(std::move(Args), Callee);
+            Overloads.emplace_back(std::forward<ArgsTy>(Args)...);
         }
 
         [[nodiscard]] const T* FindBestOverload(llvm::ArrayRef<QualType> Args) const;

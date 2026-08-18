@@ -114,9 +114,10 @@ namespace Volt
         FuncMap<T> Functions;
 
     public:
-        void AddFunction(llvm::StringRef Name, ArgsVector<QualType> Params, CalleeBase* Callee)
+        template <typename ...ArgsTy>
+        void AddFunction(llvm::StringRef Name, ArgsTy&&... Args)
         {
-            Functions[Name].AddOverload(std::move(Params), Callee);
+            Functions[Name].AddOverload(std::forward<ArgsTy>(Args)...);
         }
 
         const T* FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const;

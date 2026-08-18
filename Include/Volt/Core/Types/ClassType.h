@@ -28,7 +28,7 @@ namespace Volt
     private:
         llvm::StringRef Name;
         Array<Field> Fields;
-        FunctionTable Methods;
+        MethodTable Methods;
         FuncOverloadTable Constructors;
         mutable size_t Size = 0;
         mutable size_t Alignment = 0;
@@ -58,7 +58,7 @@ namespace Volt
         [[nodiscard]] const Field& GetField(size_t Index) const { return Fields[Index]; }
         [[nodiscard]] size_t GetFieldsCount() const { return Fields.Length(); }
 
-        [[nodiscard]] const FunctionTable& GetMethods() const { return Methods; }
+        [[nodiscard]] const MethodTable& GetMethods() const { return Methods; }
 
         [[nodiscard]] llvm::StringRef GetName() { return Name; }
         [[nodiscard]] const FunctionOverload* FindBestMethodOverload(
@@ -81,7 +81,7 @@ namespace Volt
 
         void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, FunctionCallee* Callee)
         {
-            Methods.AddFunction(Name, std::move(Params), Callee);
+            Methods.AddFunction(Name, std::move(Params), Callee, this);
         }
 
         void AddConstructor(ArgsVector<QualType> Params, FunctionCallee* Callee)
