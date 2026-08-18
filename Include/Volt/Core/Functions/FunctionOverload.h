@@ -8,40 +8,21 @@
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Core/Types/DataType.h"
 #include "BuiltinFuncCallee.h"
-#include "Callee.h"
 
 namespace Volt
 {
-    struct OverloadBase
+    template <typename CalleeType>
+    struct FuncOverloadImpl
     {
         ArgsVector<QualType> Args;
+        CalleeType* Callee;
 
-        OverloadBase(ArgsVector<QualType> Args)
-            : Args(std::move(Args)) {}
+        FuncOverloadImpl(ArgsVector<QualType> Args, CalleeType* Callee)
+            : Args(std::move(Args)), Callee(Callee) {}
     };
 
-    struct FunctionOverload : OverloadBase
-    {
-        CalleeBase* Callee;
-
-        FunctionOverload(ArgsVector<QualType> Args, CalleeBase* Callee)
-            : OverloadBase(std::move(Args)), Callee(Callee) {}
-    };
-
-    struct MethodOverload : FunctionOverload
-    {
-        class ClassType* ThisType;
-
-        MethodOverload(ArgsVector<QualType> Args, CalleeBase* Callee, ClassType* ThisType)
-            : FunctionOverload(std::move(Args), Callee), ThisType(ThisType) {}
-    };
-
-    struct BuiltinFunctionOverload : OverloadBase
-    {
-        BuiltinFuncCallee* Callee;
-
-        BuiltinFunctionOverload(ArgsVector<QualType> Args, BuiltinFuncCallee* Callee)
-            : OverloadBase(std::move(Args)), Callee(Callee) {}
-    };
+    using FunctionOverload        = FuncOverloadImpl<FunctionCallee>;
+    using MethodOverload          = FuncOverloadImpl<MethodCallee>;
+    using BuiltinFunctionOverload = FuncOverloadImpl<BuiltinFuncCallee>;
 }
 #endif //CVOLT_FUNCTIONOVERLOAD_H

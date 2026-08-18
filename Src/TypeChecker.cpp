@@ -751,7 +751,7 @@ namespace Volt
             auto* ClassTy = StaticCast<ClassType>(VarType.GetType());
             if (auto* Constructor = ClassTy->FindBestConstructorOverload(
                 { CContext.GetPointerType(ClassTy) }))
-                Variable->ResolvedConstructor = StaticCast<FunctionCallee>(Constructor->Callee);
+                Variable->ResolvedConstructor = Constructor->Callee;
         }
 
         if (Value && !Value->GetType().ImplicitCast(VarType))
@@ -798,7 +798,7 @@ namespace Volt
 
         if (auto* Overload = ClassTy->FindBestConstructorOverload(Args))
         {
-            Construct->ResolvedCallee = StaticCast<FunctionCallee>(Overload->Callee);
+            Construct->ResolvedCallee = Overload->Callee;
 
             for (size_t i = 0; i < Construct->Arguments.size(); i++)
                 Construct->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
@@ -815,7 +815,7 @@ namespace Volt
         ArgsVector<QualType> Params;
         CalleeBase* FuncCallee = CreateFunction(Function, Params);
 
-        Functions.AddFunction(Function->Name, std::move(Params), FuncCallee);
+        Functions.AddFunction(Function->Name, std::move(Params), StaticCast<FunctionCallee>(FuncCallee));
         FunctionBodies.Emplace(Function->Name, Function->Body,
             FuncCallee->ReturnType, nullptr, Function->Params);
         return nullptr;

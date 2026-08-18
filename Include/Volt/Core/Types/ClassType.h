@@ -95,7 +95,7 @@ namespace Volt
 
         void AddMethod(llvm::StringRef Name, ArgsVector<QualType> Params, MethodCallee* Callee)
         {
-            Methods.AddFunction(Name, std::move(Params), Callee, this);
+            Methods.AddFunction(Name, std::move(Params), Callee);
         }
 
         void AddConstructor(ArgsVector<QualType> Params, FunctionCallee* Callee)

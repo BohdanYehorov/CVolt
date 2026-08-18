@@ -104,7 +104,7 @@ namespace Volt
 
         for (const auto& [Name, Overload] : ClassTy->Methods)
         {
-            Methods.AddFunction(Name, Overload.Args, Overload.Callee, ClassTy);
+            Methods.AddFunction(Name, Overload.Args, Overload.Callee);
             ImplementedClassTypes[ClassTy] = FieldIndex;
         }
     }
