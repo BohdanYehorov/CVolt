@@ -40,11 +40,27 @@ namespace Volt
         return nullptr;
     }
 
+    template<typename To, typename From>
+    const To* Cast(const From* Obj)
+    {
+        if (Obj && Obj->Object_IsA(To::Object_StaticType()))
+            return static_cast<const To*>(Obj);
+        return nullptr;
+    }
+
     template <typename To, typename From>
     To* StaticCast(From* Obj)
     {
         if (Obj && Obj->Object_IsA(To::Object_StaticType()))
             return static_cast<To*>(Obj);
+        VoltUnreachable("Invalid cast");
+    }
+
+    template <typename To, typename From>
+    const To* StaticCast(const From* Obj)
+    {
+        if (Obj && Obj->Object_IsA(To::Object_StaticType()))
+            return static_cast<const To*>(Obj);
         VoltUnreachable("Invalid cast");
     }
 

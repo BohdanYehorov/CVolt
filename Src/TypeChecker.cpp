@@ -19,83 +19,79 @@ namespace Volt
 
     SemaResult* TypeChecker::VisitNode(ASTNode *Node)
     {
-        if (auto Sequence = Cast<SequenceNode>(Node))
+        switch (Node->GetNodeKind())
         {
-            VisitSequence(Sequence);
-            return nullptr;
+            case NodeKind::SequenceNode:
+                VisitSequence(StaticCast<SequenceNode>(Node));
+                return nullptr;
+            case NodeKind::BlockNode:
+                VisitBlock(StaticCast<BlockNode>(Node));
+                return nullptr;
+            case NodeKind::IntegerNode:
+                return VisitInt(StaticCast<IntegerNode>(Node));
+            case NodeKind::FloatingPointNode:
+                return VisitFloat(StaticCast<FloatingPointNode>(Node));
+            case NodeKind::BoolNode:
+                return VisitBool(StaticCast<BoolNode>(Node));
+            case NodeKind::CharNode:
+                return VisitChar(StaticCast<CharNode>(Node));
+            case NodeKind::StringNode:
+                return VisitString(StaticCast<StringNode>(Node));
+            case NodeKind::ArrayNode:
+                return VisitArray(StaticCast<ArrayNode>(Node));
+            case NodeKind::NullPointerNode:
+                return VisitNullPointer(StaticCast<NullPointerNode>(Node));
+            case NodeKind::IdentifierNode:
+                return VisitIdentifier(StaticCast<IdentifierNode>(Node));
+            case NodeKind::RefNode:
+                return VisitRef(StaticCast<RefNode>(Node));
+            case NodeKind::UnrefNode:
+                return VisitUnref(StaticCast<UnrefNode>(Node));
+            case NodeKind::SuffixOpNode:
+                return VisitSuffix(StaticCast<SuffixOpNode>(Node));
+            case NodeKind::PrefixOpNode:
+                return VisitPrefix(StaticCast<PrefixOpNode>(Node));
+            case NodeKind::UnaryOpNode:
+                return VisitUnary(StaticCast<UnaryOpNode>(Node));
+            case NodeKind::AssignmentNode:
+                return VisitAssignment(StaticCast<AssignmentNode>(Node));
+            case NodeKind::ComparisonNode:
+                return VisitComparison(StaticCast<ComparisonNode>(Node));
+            case NodeKind::BinaryOpNode:
+            case NodeKind::LogicalNode:
+                return VisitBinary(StaticCast<BinaryOpNode>(Node));
+            case NodeKind::CallNode:
+                return VisitCall(StaticCast<CallNode>(Node));
+            case NodeKind::SubscriptNode:
+                return VisitSubscript(StaticCast<SubscriptNode>(Node));
+            case NodeKind::ExplicitCastNode:
+                return VisitExplicitCast(StaticCast<ExplicitCastNode>(Node));
+            case NodeKind::SizeOfNode:
+                return VisitSizeOf(StaticCast<SizeOfNode>(Node));
+            case NodeKind::AlignOfNode:
+                return VisitAlignOf(StaticCast<AlignOfNode>(Node));
+            case NodeKind::VariableNode:
+                return VisitVariable(StaticCast<VariableNode>(Node));
+            case NodeKind::VariableConstructNode:
+                return VisitVariableConstruct(StaticCast<VariableConstructNode>(Node));
+            case NodeKind::FunctionNode:
+                return VisitFunction(StaticCast<FunctionNode>(Node));
+            case NodeKind::ClassNode:
+                return VisitClass(StaticCast<ClassNode>(Node));
+            case NodeKind::MemberAccessNode:
+                return VisitMemberAccess(StaticCast<MemberAccessNode>(Node));
+            case NodeKind::IfNode:
+                return VisitIf(StaticCast<IfNode>(Node));
+            case NodeKind::WhileNode:
+                return VisitWhile(StaticCast<WhileNode>(Node));
+            case NodeKind::ForNode:
+                return VisitFor(StaticCast<ForNode>(Node));
+            case NodeKind::ReturnNode:
+                return VisitReturn(StaticCast<ReturnNode>(Node));
+            case NodeKind::BreakNode:
+            case NodeKind::ContinueNode:
+                return nullptr;
         }
-
-        if (auto Block = Cast<BlockNode>(Node))
-        {
-            VisitBlock(Block);
-            return nullptr;
-        }
-
-        if (auto Int = Cast<IntegerNode>(Node))
-            return VisitInt(Int);
-        if (auto Float = Cast<FloatingPointNode>(Node))
-            return VisitFloat(Float);
-        if (auto Bool = Cast<BoolNode>(Node))
-            return VisitBool(Bool);
-        if (auto Char = Cast<CharNode>(Node))
-            return VisitChar(Char);
-        if (auto String = Cast<StringNode>(Node))
-            return VisitString(String);
-        if (auto Array = Cast<ArrayNode>(Node))
-            return VisitArray(Array);
-        if (auto NullPtr = Cast<NullPointerNode>(Node))
-            return VisitNullPointer(NullPtr);
-        if (auto Identifier = Cast<IdentifierNode>(Node))
-            return VisitIdentifier(Identifier);
-        if (auto Ref = Cast<RefNode>(Node))
-            return VisitRef(Ref);
-        if (auto Unref = Cast<UnrefNode>(Node))
-            return VisitUnref(Unref);
-        if (auto Suffix = Cast<SuffixOpNode>(Node))
-            return VisitSuffix(Suffix);
-        if (auto Prefix = Cast<PrefixOpNode>(Node))
-            return VisitPrefix(Prefix);
-        if (auto Unary = Cast<UnaryOpNode>(Node))
-            return VisitUnary(Unary);
-        if (auto Assignment = Cast<AssignmentNode>(Node))
-            return VisitAssignment(Assignment);
-        if (auto Comparison = Cast<ComparisonNode>(Node))
-            return VisitComparison(Comparison);
-        if (auto Binary = Cast<BinaryOpNode>(Node))
-            return VisitBinary(Binary);
-        if (auto Call = Cast<CallNode>(Node))
-            return VisitCall(Call);
-        if (auto Subscript = Cast<SubscriptNode>(Node))
-            return VisitSubscript(Subscript);
-        if (auto ECast = Cast<ExplicitCastNode>(Node))
-            return VisitExplicitCast(ECast);
-        if (auto SizeOf = Cast<SizeOfNode>(Node))
-            return VisitSizeOf(SizeOf);
-        if (auto AlignOf = Cast<AlignOfNode>(Node))
-            return VisitAlignOf(AlignOf);
-        // if (auto Construct = Cast<ConstructNode>(Node))
-        //     return VisitConstruct(Construct);
-        if (auto Variable = Cast<VariableNode>(Node))
-            return VisitVariable(Variable);
-        if (auto VarConstruct = Cast<VariableConstructNode>(Node))
-            return VisitVariableConstruct(VarConstruct);
-        if (auto Function = Cast<FunctionNode>(Node))
-            return VisitFunction(Function);
-        if (auto Class = Cast<ClassNode>(Node))
-            return VisitClass(Class);
-        if (auto MemberAccess = Cast<MemberAccessNode>(Node))
-            return VisitMemberAccess(MemberAccess);
-        if (auto If = Cast<IfNode>(Node))
-            return VisitIf(If);
-        if (auto While = Cast<WhileNode>(Node))
-            return VisitWhile(While);
-        if (auto For = Cast<ForNode>(Node))
-            return VisitFor(For);
-        if (auto Return = Cast<ReturnNode>(Node))
-            return VisitReturn(Return);
-
-        if (Cast<BreakNode>(Node)) return nullptr;
-        if (Cast<ContinueNode>(Node)) return nullptr;
 
         return nullptr;
     }
@@ -1005,62 +1001,73 @@ namespace Volt
 
     QualType TypeChecker::VisitType(DataTypeNodeBase *Type)
     {
-        if (auto Primitive = Cast<PrimitiveTypeNode>(Type))
+        switch (Type->GetNodeKind())
         {
-            Primitive->ResolvedType = Primitive->Type;
-            return { Primitive->Type, 0 };
-        }
-        if (auto Ptr = Cast<PointerTypeNode>(Type))
-        {
-            Ptr->ResolvedType = CContext.GetPointerType(VisitType(Ptr->BaseType));
-            return { Ptr->ResolvedType, 0 };
-        }
-        if (auto Ref = Cast<ReferenceTypeNode>(Type))
-        {
-            Ref->ResolvedType = CContext.GetReferenceType(VisitType(Ref->BaseType));
-            return { Ref->ResolvedType, 0 };
-        }
-        if (auto Array = Cast<ArrayTypeNode>(Type))
-        {
-            ExprResult* Length = VisitToRValue(Array->Length);
-            if (Length && Length->GetType()->IsIntegerType())
+            case NodeKind::PrimitiveTypeNode:
             {
-                UInt64 Len = Length->GetType()->IsSignedIntegerType() ?
-                    static_cast<UInt64>(Length->GetInt()) : Length->GetUInt();
-                Array->ResolvedType = CContext.GetArrayType(VisitType(Array->BaseType), Len);
-                return { Array->ResolvedType, 0 };
+                auto Primitive = StaticCast<PrimitiveTypeNode>(Type);
+                Primitive->ResolvedType = Primitive->Type;
+                return { Primitive->Type, 0 };
             }
-
-            VoltUnreachable("Array length mast be defined in compiler time");
-        }
-        if (auto Class = Cast<ClassTypeNode>(Type))
-        {
-            auto ClassTy = CContext.GetClassType(Class->Name);
-            if (!ClassTy)
+            case NodeKind::PointerTypeNode:
             {
+                auto Ptr = StaticCast<PointerTypeNode>(Type);
+                Ptr->ResolvedType = CContext.GetPointerType(VisitType(Ptr->BaseType));
+                return { Ptr->ResolvedType, 0 };
+            }
+            case NodeKind::ReferenceTypeNode:
+            {
+                auto Ref = StaticCast<ReferenceTypeNode>(Type);
+                Ref->ResolvedType = CContext.GetReferenceType(VisitType(Ref->BaseType));
+                return { Ref->ResolvedType, 0 };
+            }
+            case NodeKind::ArrayTypeNode:
+            {
+                auto Arr = StaticCast<ArrayTypeNode>(Type);
+                ExprResult* Length = VisitToRValue(Arr->Length);
+                if (Length && Length->GetType()->IsIntegerType())
+                {
+                    UInt64 Len = Length->GetType()->IsSignedIntegerType() ?
+                        static_cast<UInt64>(Length->GetInt()) : Length->GetUInt();
+                    Arr->ResolvedType = CContext.GetArrayType(VisitType(Arr->BaseType), Len);
+                    return { Arr->ResolvedType, 0 };
+                }
+
                 // SendError
-                return nullptr;
+                return {};
             }
+            case NodeKind::ClassTypeNode:
+            {
+                auto Class = StaticCast<ClassTypeNode>(Type);
+                auto ClassTy = CContext.GetClassType(Class->Name);
+                if (!ClassTy)
+                {
+                    // SendError
+                    return {};
+                }
 
-            Class->ResolvedType = ClassTy;
-            return { ClassTy, 0 };
+                Class->ResolvedType = ClassTy;
+                return { ClassTy, 0 };
+            }
+            case NodeKind::QualTypeNode:
+            {
+                auto QualTy = StaticCast<QualTypeNode>(Type);
+                QualType QType = VisitType(QualTy->Type);
+                QualTy->ResolvedType = QType.GetType();
+                QType.AddQualifiers(QualTy->Quals);
+                return QType;
+            }
+            case NodeKind::TypeOfNode:
+            {
+                auto TypeOf = StaticCast<TypeOfNode>(Type);
+                SemaResult* Value = VisitNode(TypeOf->Target);
+                if (!Value) return nullptr;
+                TypeOf->ResolvedType = Value->GetType().GetType();
+                return Value->GetType();
+            }
+            default:
+                VoltUnreachableFmt("Cannot resolve type node: {}", Type->GetName());
         }
-        if (auto QualTy = Cast<QualTypeNode>(Type))
-        {
-            QualType QType = VisitType(QualTy->Type);
-            QualTy->ResolvedType = QType.GetType();
-            QType.AddQualifiers(QualTy->Quals);
-            return QType;
-        }
-        if (auto TypeOf = Cast<TypeOfNode>(Type))
-        {
-            SemaResult* Value = VisitNode(TypeOf->Target);
-            if (!Value) return nullptr;
-            TypeOf->ResolvedType = Value->GetType().GetType();
-            return Value->GetType();
-        }
-
-        return {};
     }
 
     ExprResult* TypeChecker::GetRValue(SemaResult *Value)

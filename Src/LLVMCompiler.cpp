@@ -52,79 +52,78 @@ namespace Volt
         if (IRValue* CompileTimeValue = GetCompileTimeValue(Node))
             return CompileTimeValue;
 
-        if (auto Sequence = Cast<const SequenceNode>(Node))
+        switch (Node->GetNodeKind())
         {
-            for (auto Statement : Sequence->Statements)
-                CompileNode(Statement);
-
-            return nullptr;
+            case NodeKind::SequenceNode:
+                for (auto Statement : StaticCast<SequenceNode>(Node)->Statements)
+                    CompileNode(Statement);
+                return nullptr;
+            case NodeKind::BlockNode:
+                CompileBlock(StaticCast<BlockNode>(Node));
+                return nullptr;
+            case NodeKind::IntegerNode:
+                return CompileInt(StaticCast<IntegerNode>(Node));
+            case NodeKind::FloatingPointNode:
+                return CompileFloat(StaticCast<FloatingPointNode>(Node));
+            case NodeKind::BoolNode:
+                return CompileBool(StaticCast<BoolNode>(Node));
+            case NodeKind::CharNode:
+                return CompileChar(StaticCast<CharNode>(Node));
+            case NodeKind::StringNode:
+                return CompileString(StaticCast<StringNode>(Node));
+            case NodeKind::ArrayNode:
+                return CompileArray(StaticCast<ArrayNode>(Node));
+            case NodeKind::NullPointerNode:
+                return CompileNullPointer(StaticCast<NullPointerNode>(Node));
+            case NodeKind::IdentifierNode:
+                return CompileIdentifier(StaticCast<IdentifierNode>(Node));
+            case NodeKind::RefNode:
+                return CompileRef(StaticCast<RefNode>(Node));
+            case NodeKind::UnrefNode:
+                return CompileUnref(StaticCast<UnrefNode>(Node));
+            case NodeKind::SuffixOpNode:
+                return CompileSuffix(StaticCast<SuffixOpNode>(Node));
+            case NodeKind::PrefixOpNode:
+                return CompilePrefix(StaticCast<PrefixOpNode>(Node));
+            case NodeKind::UnaryOpNode:
+                return CompileUnary(StaticCast<UnaryOpNode>(Node));
+            case NodeKind::AssignmentNode:
+                return CompileAssignment(StaticCast<AssignmentNode>(Node));
+            case NodeKind::ComparisonNode:
+                return CompileComparison(StaticCast<ComparisonNode>(Node));
+            case NodeKind::LogicalNode:
+                return CompileLogical(StaticCast<LogicalNode>(Node));
+            case NodeKind::BinaryOpNode:
+                return CompileBinary(StaticCast<BinaryOpNode>(Node));
+            case NodeKind::CallNode:
+                return CompileCall(StaticCast<CallNode>(Node));
+            case NodeKind::SubscriptNode:
+                return CompileSubscript(StaticCast<SubscriptNode>(Node));
+            case NodeKind::ExplicitCastNode:
+                return CompileExplicitCast(StaticCast<ExplicitCastNode>(Node));
+            case NodeKind::VariableNode:
+                return CompileVariable(StaticCast<VariableNode>(Node));
+            case NodeKind::VariableConstructNode:
+                return CompileVariableConstruct(StaticCast<VariableConstructNode>(Node));
+            case NodeKind::FunctionNode:
+                return CompileFunction(StaticCast<FunctionNode>(Node));
+            case NodeKind::ClassNode:
+                return CompileClass(StaticCast<ClassNode>(Node));
+            case NodeKind::MemberAccessNode:
+                return CompileMemberAccess(StaticCast<MemberAccessNode>(Node));
+            case NodeKind::IfNode:
+                return CompileIf(StaticCast<IfNode>(Node));
+            case NodeKind::WhileNode:
+                return CompileWhile(StaticCast<WhileNode>(Node));
+            case NodeKind::ForNode:
+                return CompileFor(StaticCast<ForNode>(Node));
+            case NodeKind::ReturnNode:
+                return CompileReturn(StaticCast<ReturnNode>(Node));
+            case NodeKind::BreakNode:
+                return CompileBreak();
+            case NodeKind::ContinueNode:
+                return CompileContinue();
         }
-        if (const auto Block = Cast<const BlockNode>(Node))
-            return CompileBlock(Block);
-        if (const auto Char = Cast<const CharNode>(Node))
-            return CompileChar(Char);
-        if (const auto Int = Cast<const IntegerNode>(Node))
-            return CompileInt(Int);
-        if (const auto Bool = Cast<const BoolNode>(Node))
-            return CompileBool(Bool);
-        if (const auto Float = Cast<const FloatingPointNode>(Node))
-            return CompileFloat(Float);
-        if (const auto String = Cast<const StringNode>(Node))
-            return CompileString(String);
-        if (const auto Array = Cast<const ArrayNode>(Node))
-            return CompileArray(Array);
-        if (const auto NullPointer = Cast<const NullPointerNode>(Node))
-            return CompileNullPointer(NullPointer);
-        if (const auto Identifier = Cast<const IdentifierNode>(Node))
-            return CompileIdentifier(Identifier);
-        if (const auto Ref = Cast<const RefNode>(Node))
-            return CompileRef(Ref);
-        if (const auto Unref = Cast<const UnrefNode>(Node))
-            return CompileUnref(Unref);
-        if (const auto Prefix = Cast<const PrefixOpNode>(Node))
-            return CompilePrefix(Prefix);
-        if (const auto Suffix = Cast<const SuffixOpNode>(Node))
-            return CompileSuffix(Suffix);
-        if (const auto Unary = Cast<const UnaryOpNode>(Node))
-            return CompileUnary(Unary);
-        if (const auto Comparison = Cast<const ComparisonNode>(Node))
-            return CompileComparison(Comparison);
-        if (const auto Logical = Cast<const LogicalNode>(Node))
-            return CompileLogical(Logical);
-        if (const auto AssignOp = Cast<const AssignmentNode>(Node))
-            return CompileAssignment(AssignOp);
-        if (const auto BinaryOp = Cast<const BinaryOpNode>(Node))
-            return CompileBinary(BinaryOp);
-        if (const auto Call = Cast<const CallNode>(Node))
-            return CompileCall(Call);
-        if (const auto Subscript = Cast<const SubscriptNode>(Node))
-            return CompileSubscript(Subscript);
-        if (const auto ExplicitCast = Cast<const ExplicitCastNode>(Node))
-            return CompileExplicitCast(ExplicitCast);
-        if (const auto Construct = Cast<const ConstructNode>(Node))
-            return CompileConstruct(Construct);
-        if (const auto Var = Cast<const VariableNode>(Node))
-            return CompileVariable(Var);
-        if (const auto VarConstruct = Cast<const VariableConstructNode>(Node))
-            return CompileVariableConstruct(VarConstruct);
-        if (const auto Function = Cast<const FunctionNode>(Node))
-            return CompileFunction(Function);
-        if (const auto Class = Cast<const ClassNode>(Node))
-            return CompileClass(Class);
-        if (const auto MemberAccess = Cast<const MemberAccessNode>(Node))
-            return CompileMemberAccess(MemberAccess);
-        if (const auto Return = Cast<const ReturnNode>(Node))
-            return CompileReturn(Return);
-        if (const auto If = Cast<const IfNode>(Node))
-            return CompileIf(If);
-        if (const auto While = Cast<const WhileNode>(Node))
-            return CompileWhile(While);
-        if (const auto For = Cast<const ForNode>(Node))
-            return CompileFor(For);
-        if (IsA<const BreakNode>(Node))
-            return CompileBreak();
-        if (IsA<const ContinueNode>(Node))
-            return CompileContinue();
 
         VoltUnreachableFmt("Cannot resolve node: '{}'", Node->GetName());
     }
