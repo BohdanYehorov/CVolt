@@ -9,6 +9,7 @@
 #include "Volt/Core/Parser/Operators/Operator.h"
 #include "Volt/Core/Functions/Callee.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
+#include "Volt/Core/Enums/NodeKind.h"
 #include "Volt/ADT/Array.h"
 #include <llvm/ADT/TinyPtrVector.h>
 #include <string>
@@ -16,6 +17,10 @@
 
 namespace Volt
 {
+#define GENERATED_NODE_BODY(Obj, Base) \
+    GENERATED_BODY(Obj, Base) \
+    [[nodiscard]] virtual NodeKind GetNodeKind() const override { return NodeKind::Obj; }
+
     class SemaResult;
 
     class ASTNode : public Object
@@ -27,11 +32,13 @@ namespace Volt
         size_t Pos, Line, Column;
         ASTNode(size_t Pos, size_t Line, size_t Column)
             : Pos(Pos), Line(Line), Column(Column) {}
+
+        [[nodiscard]] virtual NodeKind GetNodeKind() const = 0;
     };
 
     class SequenceNode : public ASTNode
     {
-        GENERATED_BODY(SequenceNode, ASTNode);
+        GENERATED_NODE_BODY(SequenceNode, ASTNode);
     public:
         Array<ASTNode*> Statements;
         SequenceNode() : ASTNode(0, 0, 0) {}
@@ -39,7 +46,7 @@ namespace Volt
 
     class BlockNode : public ASTNode
     {
-        GENERATED_BODY(BlockNode, ASTNode);
+        GENERATED_NODE_BODY(BlockNode, ASTNode);
     public:
         Array<ASTNode*> Statements;
         BlockNode(size_t Pos, size_t Line, size_t Column) :
@@ -48,7 +55,7 @@ namespace Volt
 
     class ErrorNode : public ASTNode
     {
-        GENERATED_BODY(ErrorNode, ASTNode);
+        GENERATED_NODE_BODY(ErrorNode, ASTNode);
     public:
         ErrorNode(size_t Pos, size_t Line, size_t Column) :
             ASTNode(Pos, Line, Column) {}
@@ -56,7 +63,7 @@ namespace Volt
 
     class IdentifierNode : public ASTNode
     {
-        GENERATED_BODY(IdentifierNode, ASTNode);
+        GENERATED_NODE_BODY(IdentifierNode, ASTNode);
     public:
         llvm::StringRef Value;
         IdentifierNode(llvm::StringRef Value, size_t Pos, size_t Line, size_t Column)
@@ -65,7 +72,7 @@ namespace Volt
 
     class IntegerNode : public ASTNode
     {
-        GENERATED_BODY(IntegerNode, ASTNode)
+        GENERATED_NODE_BODY(IntegerNode, ASTNode)
     public:
         size_t BitWidth;
         Int64 Value;
@@ -78,7 +85,7 @@ namespace Volt
 
     class FloatingPointNode : public ASTNode
     {
-        GENERATED_BODY(FloatingPointNode, ASTNode)
+        GENERATED_NODE_BODY(FloatingPointNode, ASTNode)
     public:
         size_t BitWidth;
         double Value;
@@ -88,7 +95,7 @@ namespace Volt
 
     class BoolNode : public ASTNode
     {
-        GENERATED_BODY(BoolNode, ASTNode)
+        GENERATED_NODE_BODY(BoolNode, ASTNode)
     public:
         bool Value;
         BoolNode(bool Value, size_t Pos, size_t Line, size_t Column)
@@ -97,7 +104,7 @@ namespace Volt
 
     class CharNode : public ASTNode
     {
-        GENERATED_BODY(CharNode, ASTNode)
+        GENERATED_NODE_BODY(CharNode, ASTNode)
     public:
         char Value;
         CharNode(char Value, size_t Pos, size_t Line, size_t Column)
@@ -106,7 +113,7 @@ namespace Volt
 
     class StringNode : public ASTNode
     {
-        GENERATED_BODY(StringNode, ASTNode)
+        GENERATED_NODE_BODY(StringNode, ASTNode)
     public:
         llvm::StringRef Value;
         StringNode(llvm::StringRef Value, size_t Pos, size_t Line, size_t Column)
@@ -115,7 +122,7 @@ namespace Volt
 
     class ArrayNode : public ASTNode
     {
-        GENERATED_BODY(ArrayNode, ASTNode)
+        GENERATED_NODE_BODY(ArrayNode, ASTNode)
     public:
         SmallVec16<ASTNode*> Elements;
         ArrayNode(SmallVec16<ASTNode*>&& Elements, size_t Pos, size_t Line, size_t Column)
@@ -124,7 +131,7 @@ namespace Volt
 
     class NullPointerNode : public ASTNode
     {
-        GENERATED_BODY(NullPointerNode, ASTNode)
+        GENERATED_NODE_BODY(NullPointerNode, ASTNode)
     public:
         NullPointerNode(size_t Pos, size_t Line, size_t Column)
             :  ASTNode(Pos, Line, Column) {}
@@ -132,7 +139,7 @@ namespace Volt
 
     class RefNode : public ASTNode
     {
-        GENERATED_BODY(RefNode, ASTNode)
+        GENERATED_NODE_BODY(RefNode, ASTNode)
     public:
         ASTNode* Target;
         RefNode(ASTNode* Target, size_t Pos, size_t Line, size_t Column)
@@ -141,7 +148,7 @@ namespace Volt
 
     class UnrefNode : public ASTNode
     {
-        GENERATED_BODY(UnrefNode, ASTNode)
+        GENERATED_NODE_BODY(UnrefNode, ASTNode)
     public:
         ASTNode* Target;
         UnrefNode(ASTNode* Target, size_t Pos, size_t Line, size_t Column)
@@ -150,7 +157,7 @@ namespace Volt
 
     class UnaryOpNode : public ASTNode
     {
-        GENERATED_BODY(UnaryOpNode, ASTNode)
+        GENERATED_NODE_BODY(UnaryOpNode, ASTNode)
     public:
         OperatorType Type;
         ASTNode* Operand;
@@ -161,7 +168,7 @@ namespace Volt
 
     class PrefixOpNode : public UnaryOpNode
     {
-        GENERATED_BODY(PrefixOpNode, UnaryOpNode)
+        GENERATED_NODE_BODY(PrefixOpNode, UnaryOpNode)
     public:
         PrefixOpNode(OperatorType Type, ASTNode* Operand,
             size_t Pos, size_t Line, size_t Column)
@@ -170,7 +177,7 @@ namespace Volt
 
     class SuffixOpNode : public UnaryOpNode
     {
-        GENERATED_BODY(SuffixOpNode, UnaryOpNode)
+        GENERATED_NODE_BODY(SuffixOpNode, UnaryOpNode)
     public:
         SuffixOpNode(OperatorType Type, ASTNode* Operand,
             size_t Pos, size_t Line, size_t Column)
@@ -179,7 +186,7 @@ namespace Volt
 
     class BinaryOpNode : public ASTNode
     {
-        GENERATED_BODY(BinaryOpNode, ASTNode)
+        GENERATED_NODE_BODY(BinaryOpNode, ASTNode)
     public:
         DataType* LeftOperandType = nullptr;
         DataType* RightOperandType = nullptr;
@@ -194,7 +201,7 @@ namespace Volt
 
     class ComparisonNode : public BinaryOpNode
     {
-        GENERATED_BODY(ComparisonNode, BinaryOpNode)
+        GENERATED_NODE_BODY(ComparisonNode, BinaryOpNode)
     public:
         ComparisonNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)
@@ -203,7 +210,7 @@ namespace Volt
 
     class LogicalNode : public BinaryOpNode
     {
-        GENERATED_BODY(LogicalNode, BinaryOpNode)
+        GENERATED_NODE_BODY(LogicalNode, BinaryOpNode)
     public:
         LogicalNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)
@@ -212,7 +219,7 @@ namespace Volt
 
     class AssignmentNode : public BinaryOpNode
     {
-        GENERATED_BODY(AssignmentNode, BinaryOpNode)
+        GENERATED_NODE_BODY(AssignmentNode, BinaryOpNode)
     public:
         AssignmentNode(OperatorType Type, ASTNode* Left, ASTNode* Right,
             size_t Pos, size_t Line, size_t Column)
@@ -221,7 +228,7 @@ namespace Volt
 
     class CallNode : public ASTNode
     {
-        GENERATED_BODY(CallNode, ASTNode)
+        GENERATED_NODE_BODY(CallNode, ASTNode)
     public:
         CalleeBase* ResolvedCallee = nullptr;
 
@@ -233,7 +240,7 @@ namespace Volt
 
     class SubscriptNode : public ASTNode
     {
-        GENERATED_BODY(SubscriptNode, ASTNode)
+        GENERATED_NODE_BODY(SubscriptNode, ASTNode)
     public:
         DataType* TargetType = nullptr;
 
@@ -246,7 +253,7 @@ namespace Volt
 
     class SizeOfNode : public ASTNode
     {
-        GENERATED_BODY(SizeOfNode, ASTNode)
+        GENERATED_NODE_BODY(SizeOfNode, ASTNode)
     public:
         ASTNode* Target;
 
@@ -256,7 +263,7 @@ namespace Volt
 
     class AlignOfNode : public ASTNode
     {
-        GENERATED_BODY(AlignOfNode, ASTNode)
+        GENERATED_NODE_BODY(AlignOfNode, ASTNode)
     public:
         ASTNode* Target;
 
@@ -266,7 +273,7 @@ namespace Volt
 
     class DataTypeNodeBase : public ASTNode
     {
-        GENERATED_BODY(DataTypeNodeBase, ASTNode)
+        GENERATED_NODE_BODY(DataTypeNodeBase, ASTNode)
     public:
         DataType* ResolvedType = nullptr;
 
@@ -276,7 +283,7 @@ namespace Volt
 
     class QualTypeNode : public DataTypeNodeBase
     {
-        GENERATED_BODY(QualTypeNode, DataTypeNodeBase)
+        GENERATED_NODE_BODY(QualTypeNode, DataTypeNodeBase)
     public:
         DataTypeNodeBase* Type;
         UInt32 Quals;
@@ -287,7 +294,7 @@ namespace Volt
 
     class PrimitiveTypeNode : public DataTypeNodeBase
     {
-        GENERATED_BODY(PrimitiveTypeNode, DataTypeNodeBase)
+        GENERATED_NODE_BODY(PrimitiveTypeNode, DataTypeNodeBase)
     public:
         PrimitiveDataType* Type;
         PrimitiveTypeNode(PrimitiveDataType* Type, size_t Pos, size_t Line, size_t Column)
@@ -296,7 +303,7 @@ namespace Volt
 
     class DerivedTypeNode : public DataTypeNodeBase
     {
-        GENERATED_BODY(DerivedTypeNode, DataTypeNodeBase)
+        GENERATED_NODE_BODY(DerivedTypeNode, DataTypeNodeBase)
     public:
         DataTypeNodeBase* BaseType;
 
@@ -306,7 +313,7 @@ namespace Volt
 
     class PointerTypeNode : public DerivedTypeNode
     {
-        GENERATED_BODY(PointerTypeNode, DerivedTypeNode)
+        GENERATED_NODE_BODY(PointerTypeNode, DerivedTypeNode)
     public:
         PointerTypeNode(DataTypeNodeBase* BaseType, size_t Pos, size_t Line, size_t Column)
             : DerivedTypeNode(BaseType, Pos, Line, Column) {}
@@ -314,7 +321,7 @@ namespace Volt
 
     class ReferenceTypeNode : public DerivedTypeNode
     {
-        GENERATED_BODY(ReferenceTypeNode, DerivedTypeNode)
+        GENERATED_NODE_BODY(ReferenceTypeNode, DerivedTypeNode)
     public:
         ReferenceTypeNode(DataTypeNodeBase* BaseType, size_t Pos, size_t Line, size_t Column)
             : DerivedTypeNode(BaseType, Pos, Line, Column) {}
@@ -322,7 +329,7 @@ namespace Volt
 
     class ArrayTypeNode : public DerivedTypeNode
     {
-        GENERATED_BODY(ArrayTypeNode, DerivedTypeNode)
+        GENERATED_NODE_BODY(ArrayTypeNode, DerivedTypeNode)
     public:
         ASTNode* Length;
         ArrayTypeNode(DataTypeNodeBase* BaseType, ASTNode* Length, size_t Pos, size_t Line, size_t Column)
@@ -331,7 +338,7 @@ namespace Volt
 
     class ClassTypeNode : public DataTypeNodeBase
     {
-        GENERATED_BODY(ClassTypeNode, DataTypeNodeBase)
+        GENERATED_NODE_BODY(ClassTypeNode, DataTypeNodeBase)
     public:
         llvm::StringRef Name;
         ClassTypeNode(llvm::StringRef Name, size_t Pos, size_t Line, size_t Column)
@@ -340,7 +347,7 @@ namespace Volt
 
     class TypeOfNode : public DataTypeNodeBase
     {
-        GENERATED_BODY(TypeOfNode, DataTypeNodeBase)
+        GENERATED_NODE_BODY(TypeOfNode, DataTypeNodeBase)
     public:
         ASTNode* Target;
 
@@ -350,7 +357,7 @@ namespace Volt
 
     class ConstructNode : public ASTNode
     {
-        GENERATED_BODY(ConstructNode, ASTNode)
+        GENERATED_NODE_BODY(ConstructNode, ASTNode)
     public:
         CalleeBase* ResolvedCallee = nullptr;
 
@@ -363,7 +370,7 @@ namespace Volt
 
     class ExplicitCastNode : public ASTNode
     {
-        GENERATED_BODY(ExplicitCastNode, ASTNode)
+        GENERATED_NODE_BODY(ExplicitCastNode, ASTNode)
     public:
         DataTypeNodeBase* Type;
         ASTNode* Target;
@@ -377,7 +384,7 @@ namespace Volt
 
     class VariableNode : public ASTNode
     {
-        GENERATED_BODY(VariableNode, ASTNode)
+        GENERATED_NODE_BODY(VariableNode, ASTNode)
     public:
         class FunctionCallee* ResolvedConstructor = nullptr;
 
@@ -391,7 +398,7 @@ namespace Volt
 
     class VariableConstructNode : public ASTNode
     {
-        GENERATED_BODY(VariableConstructNode, ASTNode)
+        GENERATED_NODE_BODY(VariableConstructNode, ASTNode)
     public:
         class FunctionCallee* ResolvedCallee = nullptr;
 
@@ -405,7 +412,7 @@ namespace Volt
 
     class ParamNode : public ASTNode
     {
-        GENERATED_BODY(ParamNode, ASTNode)
+        GENERATED_NODE_BODY(ParamNode, ASTNode)
     public:
         DataTypeNodeBase* Type;
         llvm::StringRef Name;
@@ -417,7 +424,7 @@ namespace Volt
 
     class FunctionNode : public ASTNode
     {
-        GENERATED_BODY(FunctionNode, ASTNode)
+        GENERATED_NODE_BODY(FunctionNode, ASTNode)
     public:
         CalleeBase* ResolvedCallee = nullptr;
 
@@ -434,7 +441,7 @@ namespace Volt
 
     class ConstructorNode : public ASTNode
     {
-        GENERATED_BODY(ConstructorNode, ASTNode)
+        GENERATED_NODE_BODY(ConstructorNode, ASTNode)
     public:
         CalleeBase* ResolvedCallee = nullptr;
 
@@ -448,7 +455,7 @@ namespace Volt
 
     class ReturnNode : public ASTNode
     {
-        GENERATED_BODY(ReturnNode, ASTNode)
+        GENERATED_NODE_BODY(ReturnNode, ASTNode)
     public:
         ASTNode* ReturnValue;
         ReturnNode(ASTNode* ReturnValue, size_t Pos, size_t Line, size_t Column)
@@ -457,7 +464,7 @@ namespace Volt
 
     class FieldNode : public ASTNode
     {
-        GENERATED_BODY(FieldNode, ASTNode)
+        GENERATED_NODE_BODY(FieldNode, ASTNode)
     public:
         DataTypeNodeBase* Type;
         llvm::StringRef Name;
@@ -471,7 +478,7 @@ namespace Volt
 
     class ClassNode : public ASTNode
     {
-        GENERATED_BODY(ClassNode, ASTNode)
+        GENERATED_NODE_BODY(ClassNode, ASTNode)
     public:
         llvm::StringRef Name;
         SmallVec4<FieldNode*> Fields;
@@ -489,7 +496,7 @@ namespace Volt
 
     class MemberAccessNode : public ASTNode
     {
-        GENERATED_BODY(MemberAccessNode, ASTNode)
+        GENERATED_NODE_BODY(MemberAccessNode, ASTNode)
     public:
         size_t ResolvedMemberIndex = 0;
         ASTNode* Target;
@@ -501,7 +508,7 @@ namespace Volt
 
     class IfNode : public ASTNode
     {
-        GENERATED_BODY(IfNode, ASTNode)
+        GENERATED_NODE_BODY(IfNode, ASTNode)
     public:
         ASTNode* Condition;
         ASTNode* Branch;
@@ -514,7 +521,7 @@ namespace Volt
 
     class WhileNode : public ASTNode
     {
-        GENERATED_BODY(WhileNode, ASTNode)
+        GENERATED_NODE_BODY(WhileNode, ASTNode)
     public:
         ASTNode* Condition;
         ASTNode* Branch;
@@ -526,7 +533,7 @@ namespace Volt
 
     class ForNode : public ASTNode
     {
-        GENERATED_BODY(ForNode, ASTNode)
+        GENERATED_NODE_BODY(ForNode, ASTNode)
     public:
         ASTNode* Initialization;
         ASTNode* Condition;
@@ -540,7 +547,7 @@ namespace Volt
 
     class BreakNode : public ASTNode
     {
-        GENERATED_BODY(BreakNode, ASTNode)
+        GENERATED_NODE_BODY(BreakNode, ASTNode)
     public:
         BreakNode(size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column) {}
@@ -548,7 +555,7 @@ namespace Volt
 
     class ContinueNode : public ASTNode
     {
-        GENERATED_BODY(ContinueNode, ASTNode)
+        GENERATED_NODE_BODY(ContinueNode, ASTNode)
     public:
         ContinueNode(size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column) {}
