@@ -527,11 +527,8 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileConstruct(const ConstructNode *Construct)
     {
-        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        IRBuilder TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin(), CContext);
-
         DataType* ClassTy = Construct->CompileTimeValue->GetType().GetType();
-        llvm::AllocaInst* ClassAlloca = TmpBuilder.CreateAlloca(ClassTy);
+        llvm::AllocaInst* ClassAlloca = Builder.CreateAlloca(ClassTy);
 
         ArgsVector<llvm::Value*> LLVMArgs;
         LLVMArgs.reserve(Construct->Args.size() + 1);
@@ -584,11 +581,6 @@ namespace Volt
             return nullptr;
         }
 
-        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-
-        IRBuilder TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin(), CContext);
-        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(VarType);
-
         if (VarType->IsReferenceType())
         {
             IRValue* Value = CompileNode(Var->Value);
@@ -599,6 +591,7 @@ namespace Volt
             return nullptr;
         }
 
+        llvm::AllocaInst* Alloca = Builder.CreateAlloca(VarType);
         IRValue* VarValue = Create<IRValue>(Alloca, VarType, true);
 
         if (Var->ResolvedConstructor)
@@ -614,11 +607,7 @@ namespace Volt
     {
         DataType* VarType = Construct->Type->ResolvedType;
         VoltAssert(VarType->IsClassType());
-
-        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-
-        IRBuilder TmpBuilder(&Func->getEntryBlock(), Func->getEntryBlock().begin(), CContext);
-        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(VarType);
+        llvm::AllocaInst* Alloca = Builder.CreateAlloca(VarType);
 
         ArgsVector<llvm::Value*> LLVMArgs;
         LLVMArgs.reserve(Construct->Arguments.size() + 1);
@@ -1029,10 +1018,6 @@ namespace Volt
 
         ArgsVector<llvm::Value*> Args;
 
-        llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-        IRBuilder TmpBuilder(&Func->getEntryBlock(),
-            Func->getEntryBlock().begin(), CContext);
-
         llvm::AllocaInst* Alloca = Builder.CreateAlloca(ClassTy);
         Args.reserve(Args.size() + 1);
         Args.push_back(Alloca);
@@ -1042,13 +1027,10 @@ namespace Volt
     }
 
     llvm::AllocaInst *LLVMCompiler::CreateRetValueForAggregateType(
-        DataType *RetType, ArgsVector<llvm::Value *> &Args) const
+        DataType *RetType, ArgsVector<llvm::Value *> &Args)
     {
         if (!RetType->IsAggregateType()) return nullptr;
-        IRBuilder TmpBuilder(Builder.GetInsertBlock(),
-            Builder.GetInsertBlock()->begin(), CContext);
-
-        llvm::AllocaInst* Alloca = TmpBuilder.CreateAlloca(RetType);
+        llvm::AllocaInst* Alloca = Builder.CreateAlloca(RetType);
         Args.push_back(Alloca);
         return Alloca;
     }

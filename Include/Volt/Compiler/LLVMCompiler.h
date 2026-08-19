@@ -140,7 +140,7 @@ namespace Volt
         IRValue* CallMethod(MemberAccessNode* Target, MethodCallee* Callee, llvm::ArrayRef<ASTNode*> ArgNodes);
         IRValue* CallConstructor(IdentifierNode* Target, FunctionCallee* Callee, llvm::ArrayRef<ASTNode*> ArgNodes);
 
-        llvm::AllocaInst* CreateRetValueForAggregateType(DataType* RetType, ArgsVector<llvm::Value*>& Args) const;
+        llvm::AllocaInst* CreateRetValueForAggregateType(DataType* RetType, ArgsVector<llvm::Value*>& Args);
 
         void CompileFunctionBodies();
 

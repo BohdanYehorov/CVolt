@@ -8,8 +8,15 @@ namespace Volt
 {
     llvm::AllocaInst *IRBuilder::CreateAlloca(DataType *Type)
     {
+        llvm::BasicBlock* CurBlock = Builder.GetInsertBlock();
+        llvm::BasicBlock::iterator CurPoint = Builder.GetInsertPoint();
+        llvm::Function* Func = CurBlock->getParent();
+        llvm::BasicBlock& EntryBlock = Func->getEntryBlock();
+
+        Builder.SetInsertPoint(&EntryBlock, EntryBlock.begin());
         llvm::AllocaInst* Alloca = Builder.CreateAlloca(CContext.GetLLVMType(Type));
         Alloca->setAlignment(llvm::Align(Type->GetAlignment()));
+        Builder.SetInsertPoint(CurBlock, CurPoint);
         return Alloca;
     }
 
