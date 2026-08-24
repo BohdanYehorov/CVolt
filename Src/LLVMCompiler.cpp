@@ -451,7 +451,7 @@ namespace Volt
         return Create<IRValue>(RetAlloca == nullptr ? RetVal : RetAlloca,
             Call->ResolvedCallee->ReturnType.GetType());
 
-        return nullptr;
+        return CallFunction(Call->ResolvedCallee, Call->Arguments);
     }
 
     IRValue *LLVMCompiler::CompileMemberAccess(const MemberAccessNode *MemberAccess)
@@ -926,35 +926,18 @@ namespace Volt
             }
         }
 
-        if (auto ClassTy = Cast<ClassType>(VarType))
+        if (auto Call = Cast<CallNode>(Value))
         {
-            if (auto Call = Cast<CallNode>(Value))
-            {
-                if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
-                {
-                    if (Identifier->Value == ClassTy->GetName())
-                    {
-                        ArgsVector<llvm::Value*> Args;
-                        Args.reserve(Call->Arguments.size() + 1);
-                        Args.push_back(Var->GetValue());
+            if (auto MemberAccess = Cast<MemberAccessNode>(Call->Callee))
+                return CallMethod(MemberAccess, StaticCast<MethodCallee>(Call->ResolvedCallee),
+                    Call->Arguments, Var->GetValue());
 
-                        for (const auto Arg : Call->Arguments)
-                        {
-                            IRValue* ArgValue = Builder.CreateCastOrBind(CompileNode(Arg), Arg->ExpectedType);
-                            if (!ArgValue)
-                                return nullptr;
+            if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
+                if (auto Ret = CallConstructor(Identifier,
+                    StaticCast<FunctionCallee>(Call->ResolvedCallee), Call->Arguments, Var->GetValue()))
+                    return Ret;
 
-                            Args.push_back(ArgValue->GetValue());
-                        }
-
-                        if (auto Func = Cast<FunctionCallee>(Call->ResolvedCallee))
-                        {
-                            Builder.CreateCall(Func->Function, Args);
-                            return Var;
-                        }
-                    }
-                }
-            }
+            return CallFunction(Call->ResolvedCallee, Call->Arguments, Var->GetValue());
         }
 
         if (VarType->IsArrayType() || VarType->IsClassType())
@@ -985,53 +968,87 @@ namespace Volt
         return Val;
     }
 
-    IRValue *LLVMCompiler::CallMethod(MemberAccessNode *Target, MethodCallee *Callee, llvm::ArrayRef<ASTNode*> ArgNodes)
+    IRValue *LLVMCompiler::CallMethod(MemberAccessNode *Target, MethodCallee *Callee,
+        llvm::ArrayRef<ASTNode*> ArgNodes, llvm::Value* ValueToStoreRet)
     {
         ArgsVector<llvm::Value*> Args;
+        llvm::Value* ThisValue = GetMethodCallTarget(Target, Callee);
 
-        llvm::Value* Value;
-        ClassType* ClassTy;
-        if (!GetClassFromMemberAccess(Target, Value, ClassTy)) return nullptr;
-        if (Callee->Owner != ClassTy)
-        {
-            size_t Offset = ClassTy->GetImplementedFieldOffset(Callee->Owner);
-            if (Offset != 0)
-                Value = Builder.CreateGEP(CContext.GetLLVMType(Callee->Owner), Value,
-        { Builder.GetInt64(0), Builder.GetInt64(Offset) });
-        }
-
-        Args.reserve(Args.size() + 1 + Callee->ReturnType->IsAggregateType());
-        llvm::Value* RetAlloca = CreateRetValueForAggregateType(Callee->ReturnType.GetType(), Args);
-        Args.push_back(Value);
-        FillArgs(ArgNodes, Args);
-        llvm::Value* RetVal = Builder.CreateCall(Callee->Function, Args);
-
-        return Create<IRValue>(RetAlloca == nullptr ? RetVal : RetAlloca, Callee->ReturnType.GetType());
+        return CallImpl(Callee, ArgNodes, ValueToStoreRet, ThisValue);
     }
 
     IRValue * LLVMCompiler::CallConstructor(IdentifierNode *Target, FunctionCallee *Callee,
-        llvm::ArrayRef<ASTNode *> ArgNodes)
+        llvm::ArrayRef<ASTNode *> ArgNodes, llvm::Value* ValueToStoreRet)
     {
         ClassType* ClassTy = CContext.GetClassType(Target->Value);
         if (!ClassTy) return nullptr;
 
         ArgsVector<llvm::Value*> Args;
 
-        llvm::AllocaInst* Alloca = Builder.CreateAlloca(ClassTy);
+        llvm::Value* Obj = ValueToStoreRet ? ValueToStoreRet : Builder.CreateAlloca(ClassTy);
         Args.reserve(Args.size() + 1);
-        Args.push_back(Alloca);
+        Args.push_back(Obj);
         FillArgs(ArgNodes, Args);
         Builder.CreateCall(Callee->Function, Args);
-        return Create<IRValue>(Alloca, ClassTy, true);
+        if (ValueToStoreRet) return nullptr;
+
+        return Create<IRValue>(Obj, ClassTy, true);
     }
 
-    llvm::AllocaInst *LLVMCompiler::CreateRetValueForAggregateType(
-        DataType *RetType, ArgsVector<llvm::Value *> &Args)
+    IRValue *LLVMCompiler::CallFunction(CalleeBase *Callee,
+        llvm::ArrayRef<ASTNode *> ArgNodes, llvm::Value* ValueToStoreRet)
+    {
+        return CallImpl(Callee, ArgNodes, ValueToStoreRet);
+    }
+
+    llvm::Value * LLVMCompiler::CreateRetValueForAggregateType(
+        DataType *RetType, ArgsVector<llvm::Value *> &Args,
+        llvm::Value *ValueToStoreRet)
     {
         if (!RetType->IsAggregateType()) return nullptr;
-        llvm::AllocaInst* Alloca = Builder.CreateAlloca(RetType);
-        Args.push_back(Alloca);
-        return Alloca;
+        llvm::Value* RetPtr = ValueToStoreRet ? ValueToStoreRet : Builder.CreateAlloca(RetType);
+        Args.push_back(RetPtr);
+        return RetPtr;
+    }
+
+    llvm::Value* LLVMCompiler::GetMethodCallTarget(MemberAccessNode *MemberAccess, MethodCallee* Callee)
+    {
+        llvm::Value* Value;
+        ClassType* ClassTy;
+        if (!GetClassFromMemberAccess(MemberAccess, Value, ClassTy)) return nullptr;
+        if (Callee->Owner != ClassTy)
+        {
+            size_t Offset = ClassTy->GetImplementedFieldOffset(Callee->Owner);
+            if (Offset != 0)
+                return Builder.CreateGEP(CContext.GetLLVMType(Callee->Owner), Value,
+        { Builder.GetInt64(0), Builder.GetInt64(Offset) });
+        }
+        return Value;
+    }
+
+    IRValue *LLVMCompiler::CallImpl(CalleeBase *Callee, llvm::ArrayRef<ASTNode *> ArgNodes,
+        llvm::Value *ValueToStoreRet, llvm::Value *ThisVal)
+    {
+        DataType* RetType = Callee->ReturnType.GetType();
+
+        ArgsVector<llvm::Value*> Args;
+        Args.reserve(ArgNodes.size() + RetType->IsAggregateType() + (ThisVal != nullptr));
+        llvm::Value* RetAlloca = CreateRetValueForAggregateType(RetType, Args, ValueToStoreRet);
+        if (ThisVal) Args.push_back(ThisVal);
+        FillArgs(ArgNodes, Args);
+
+        llvm::Value* RetVal = Builder.CreateCall(Callee, Args, Module);
+        auto* Ret = Create<IRValue>(RetAlloca == nullptr ? RetVal :
+            RetAlloca, RetType);
+
+        if (ValueToStoreRet)
+        {
+            if (!RetType->IsAggregateType())
+                Builder.CreateStore(Ret, ValueToStoreRet);
+            return nullptr;
+        }
+
+        return Ret;
     }
 
     void LLVMCompiler::CompileFunctionBodies()

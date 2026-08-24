@@ -137,10 +137,19 @@ namespace Volt
         }
 
         IRValue* Assign(IRValue* Var, ASTNode* Value);
-        IRValue* CallMethod(MemberAccessNode* Target, MethodCallee* Callee, llvm::ArrayRef<ASTNode*> ArgNodes);
-        IRValue* CallConstructor(IdentifierNode* Target, FunctionCallee* Callee, llvm::ArrayRef<ASTNode*> ArgNodes);
+        IRValue* CallMethod(MemberAccessNode* Target, MethodCallee* Callee,
+            llvm::ArrayRef<ASTNode*> ArgNodes, llvm::Value* AllocaToStoreRet = nullptr);
+        IRValue* CallConstructor(IdentifierNode* Target, FunctionCallee* Callee,
+            llvm::ArrayRef<ASTNode*> ArgNodes, llvm::Value* AllocaToStoreRet = nullptr);
+        IRValue* CallFunction(CalleeBase* Callee, llvm::ArrayRef<ASTNode*> ArgNodes,
+            llvm::Value* AllocaToStoreRet = nullptr);
 
-        llvm::AllocaInst* CreateRetValueForAggregateType(DataType* RetType, ArgsVector<llvm::Value*>& Args);
+        llvm::Value* CreateRetValueForAggregateType(DataType* RetType,
+            ArgsVector<llvm::Value*>& Args, llvm::Value* ValueToStoreRet = nullptr);
+        llvm::Value* GetMethodCallTarget(MemberAccessNode* MemberAccess, MethodCallee* Callee);
+
+        IRValue* CallImpl(CalleeBase* Callee, llvm::ArrayRef<ASTNode*> ArgNodes,
+            llvm::Value* ValueToStoreRet = nullptr, llvm::Value* ThisVal = nullptr);
 
         void CompileFunctionBodies();
 

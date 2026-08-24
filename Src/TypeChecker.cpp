@@ -19,6 +19,8 @@ namespace Volt
 
     SemaResult* TypeChecker::VisitNode(ASTNode *Node)
     {
+        if (!Node) return nullptr;
+
         switch (Node->GetNodeKind())
         {
             case NodeKind::SequenceNode:
