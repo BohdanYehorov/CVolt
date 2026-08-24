@@ -30,6 +30,17 @@ namespace Volt
         NullPointer
     };
 
+    enum class CastKind : UInt8
+    {
+        Exact,
+        Ext,
+        Trunc,
+        CategoryConv,
+
+        Explicit = 254,
+        Invalid = 255
+    };
+
     class alignas(8) DataType : public Object
     {
         GENERATED_BODY(DataType, Object)
@@ -50,7 +61,14 @@ namespace Volt
         virtual size_t GetAlignment() const = 0;
         virtual std::string GetIRName() const = 0;
 
-        virtual bool CastTo(DataType* To, bool Explicit) const = 0;
+        bool CastTo(DataType* To, bool Explicit) const
+        {
+            CastKind Rank = CastTo(To);
+            if (Rank == CastKind::Invalid) return false;
+            if (Rank == CastKind::Explicit) return Explicit;
+            return true;
+        }
+        virtual CastKind CastTo(DataType* To) const = 0;
 
         [[nodiscard]] bool ImplicitCast(DataType* To) const { return CastTo(To, false); }
         [[nodiscard]] bool ExplicitCast(DataType* To) const { return CastTo(To, true); }
@@ -200,7 +218,7 @@ namespace Volt
         size_t GetAlignment() const override { VoltUnreachable("Void type has not alignment"); }
         std::string GetIRName() const override { return "v"; }
 
-        bool CastTo(DataType *To, bool Explicit) const override { return false; }
+        CastKind CastTo(DataType *To) const override { return CastKind::Invalid; }
     };
 
     class BoolType : public PrimitiveDataType
@@ -221,7 +239,7 @@ namespace Volt
         size_t GetAlignment() const override { return 1; }
         std::string GetIRName() const override { return "b"; }
 
-        bool CastTo(DataType* To, bool Explicit) const override;
+        CastKind CastTo(DataType *To) const override;
     };
 
     class CharType : public PrimitiveDataType
@@ -242,7 +260,7 @@ namespace Volt
         size_t GetAlignment() const override { return 1; }
         std::string GetIRName() const override { return "c"; }
 
-        bool CastTo(DataType *To, bool Explicit) const override;
+        CastKind CastTo(DataType *To) const override;
     };
 
     class IntegerType : public PrimitiveDataType
@@ -268,7 +286,7 @@ namespace Volt
         size_t GetAlignment() const override { return BitWidth/8; }
         std::string GetIRName() const override;
 
-        bool CastTo(DataType *To, bool Explicit) const override;
+        CastKind CastTo(DataType *To) const override;
 
         [[nodiscard]] size_t GetBitWidth() const { return BitWidth; }
         [[nodiscard]] size_t IsSigned() const { return bIsSigned; }
@@ -292,7 +310,7 @@ namespace Volt
         size_t GetAlignment() const override { return BitWidth/8; }
         std::string GetIRName() const override;
 
-        bool CastTo(DataType *To, bool Explicit) const override;
+        CastKind CastTo(DataType *To) const override;
 
         [[nodiscard]] size_t GetBitWidth() const { return BitWidth; }
     };
@@ -330,7 +348,7 @@ namespace Volt
             ID.AddInteger(Pointee.GetQuals());
         }
 
-        bool CastTo(DataType *To, bool Explicit) const override;
+        CastKind CastTo(DataType *To) const override;
 
         [[nodiscard]] QualType GetBaseType() const { return BaseType; }
     };
@@ -351,7 +369,10 @@ namespace Volt
         size_t GetAlignment() const override { return 8; }
         std::string GetIRName() const override { return "n"; }
 
-        bool CastTo(DataType *To, bool Explicit) const override { return this == To || To->IsPointerType(); }
+        CastKind CastTo(DataType *To) const override
+        {
+            return this == To || To->IsPointerType() ? CastKind::Exact : CastKind::Invalid;
+        }
     };
 
     class ReferenceType : public DataType, public llvm::FoldingSetNode
@@ -389,7 +410,7 @@ namespace Volt
             ID.AddInteger(BaseType.GetQuals());
         }
 
-        bool CastTo(DataType *To, bool Explicit) const override;
+        CastKind CastTo(DataType *To) const override { return BaseType->CastTo(To); }
 
         [[nodiscard]] QualType GetBaseType() const { return BaseType; }
     };
@@ -442,7 +463,7 @@ namespace Volt
             ID.AddBoolean(LengthInit);
         }
 
-        bool CastTo(DataType *To, bool Explicit) const override;
+        CastKind CastTo(DataType *To) const override;
 
         [[nodiscard]] QualType GetBaseType() const { return BaseType; }
         [[nodiscard]] size_t GetLength() const { return Length; }

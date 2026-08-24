@@ -56,7 +56,8 @@ namespace Volt
         std::string GetIRName() const override { return std::to_string(Name.size()) + Name.str(); }
 
         void ComputeLayout() const;
-        bool CastTo(DataType *To, bool Explicit) const override { return this == To; }
+
+        CastKind CastTo(DataType *To) const override { return this == To ? CastKind::Exact : CastKind::Invalid; }
 
         [[nodiscard]] size_t GetFieldIndex(llvm::StringRef Name);
         [[nodiscard]] const Field& GetField(size_t Index) const { return Fields[Index]; }
