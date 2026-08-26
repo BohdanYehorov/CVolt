@@ -11,16 +11,14 @@
 
 namespace Volt
 {
-	class BuiltinFuncCallee : public CalleeBase
+	class BuiltinFuncCallee : public FunctionCallee
 	{
 		GENERATED_BODY(BuiltinFuncCallee, CalleeBase)
 	public:
 		std::string BaseName;
-		llvm::orc::ExecutorAddr ExeAddr;
-		llvm::orc::ExecutorSymbolDef SymbolDef;
 
-		BuiltinFuncCallee(FunctionType* FuncType, llvm::StringRef BaseName, llvm::orc::ExecutorAddr ExeAddr)
-			: CalleeBase(FuncType), BaseName(BaseName), ExeAddr(ExeAddr) {}
+		BuiltinFuncCallee(FunctionType* FuncType, llvm::StringRef BaseName)
+			: FunctionCallee(FuncType), BaseName(BaseName) {}
 	};
 }
 

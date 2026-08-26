@@ -35,8 +35,6 @@ namespace Volt
 
 		template <typename T, typename ...ArgsTy>
 		void AddFunctionOverloads(llvm::StringRef Name, T Fun, ArgsTy... Args);
-
-		void CreateLLVMFunctions(llvm::Module *Module, llvm::LLVMContext& Context);
 		void GenSymbolMap(const llvm::orc::LLJIT *Jit, llvm::orc::SymbolMap& SymbolMap);
 
 		[[nodiscard]] const BuiltinFuncTable& GetFunctionTable() const { return Functions; }
@@ -65,10 +63,11 @@ namespace Volt
 		for (const auto& Param : Params)
 			NameBuilder.AddParam(Param);
 
-		auto* Callee = MainArena.Create<BuiltinFuncCallee>(CContext.GetFunctionType(RetType, Params),
-			NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
+			CContext.GetFunctionType(RetType, Params), NameBuilder.GetIRName());
 
-		Functions.AddFunction(Name, std::move(Params), Callee);
+		Functions.AddFunction(Name, std::move(Params), Callee,
+			llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 	}
 
 	template<typename Ret>
@@ -78,10 +77,11 @@ namespace Volt
 		IRNameBuilder NameBuilder(IRNameKind::Function);
 		NameBuilder.AddName(Name);
 
-		auto* Callee = MainArena.Create<BuiltinFuncCallee>(CContext.GetFunctionType(RetType, {}),
-			NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
+			CContext.GetFunctionType(RetType, {}), NameBuilder.GetIRName());
 
-		Functions.AddFunction(Name, ArgsVector<QualType>(), Callee);
+		Functions.AddFunction(Name, ArgsVector<QualType>(), Callee,
+			llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 	}
 
 	template<typename T, typename ... ArgsTy>

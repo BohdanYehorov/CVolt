@@ -58,8 +58,6 @@ namespace Volt
         ASTNode* ASTTree;
 
         GlobalVariableTable GlobalVariables;
-
-        BuiltinFunctionTable& BuiltinFuncTable;
         VariableTable SymbolTable;
 
         Array<Array<ScopeEntry>> ScopeStack;
@@ -72,14 +70,10 @@ namespace Volt
         bool InFunction = false;
 
     public:
-        LLVMCompiler(CompilationContext& CContext, BuiltinFunctionTable& BuiltinFuncTable)
+        LLVMCompiler(CompilationContext& CContext)
             : CContext(CContext), Context(CContext.Context),
             Module(CContext.Module), Builder(CContext),
-            CompilerArena(CContext.MainArena), ASTTree(CContext.ASTTree),
-            BuiltinFuncTable(BuiltinFuncTable)
-        {
-            BuiltinFuncTable.CreateLLVMFunctions(Module.get(), Context);
-        }
+            CompilerArena(CContext.MainArena), ASTTree(CContext.ASTTree) { }
 
         void Compile();
 

@@ -114,7 +114,7 @@ int main(int Argc, char* Argv[])
         return -1;
     }
 
-    Volt::LLVMCompiler MyCompiler(CContext, FuncTable);
+    Volt::LLVMCompiler MyCompiler(CContext);
     MyCompiler.Compile();
 
 #ifdef _DEBUG

@@ -53,6 +53,12 @@ namespace Volt
 
     using FunctionOverload        = FuncOverloadImpl<FunctionCallee>;
     using MethodOverload          = FuncOverloadImpl<MethodCallee>;
-    using BuiltinFunctionOverload = FuncOverloadImpl<BuiltinFuncCallee>;
+    struct BuiltinFunctionOverload : FuncOverloadImpl<BuiltinFuncCallee>
+    {
+        llvm::orc::ExecutorAddr ExeAddr;
+        BuiltinFunctionOverload(ArgsVector<QualType> Args,
+            BuiltinFuncCallee* Callee, llvm::orc::ExecutorAddr ExeAddr)
+                : FuncOverloadImpl(std::move(Args), Callee), ExeAddr(ExeAddr) {}
+    };
 }
 #endif //CVOLT_FUNCTIONOVERLOAD_H

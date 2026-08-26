@@ -338,14 +338,20 @@ namespace Volt
         if (auto Method = Cast<MethodCallee>(Callee))
             return Builder.CreateCall(Method->Function, Args);
 
-        if (auto Func = Cast<FunctionCallee>(Callee))
-            return Builder.CreateCall(Func->Function, Args);
-
         if (auto BuiltinFunc = Cast<BuiltinFuncCallee>(Callee))
         {
-            llvm::Function* LLVMFunc = Module->getFunction(BuiltinFunc->BaseName);
-            return Builder.CreateCall(LLVMFunc, Args);
+            if (!BuiltinFunc->Function)
+            {
+                auto* FuncTy = llvm::cast<llvm::FunctionType>(
+                    CContext.GetLLVMType(BuiltinFunc->FuncType));
+                BuiltinFunc->Function = llvm::cast<llvm::Function>(Module->getOrInsertFunction(
+                   BuiltinFunc->BaseName, FuncTy).getCallee());
+            }
+            return Builder.CreateCall(BuiltinFunc->Function, Args);
         }
+
+        if (auto Func = Cast<FunctionCallee>(Callee))
+            return Builder.CreateCall(Func->Function, Args);
 
         VoltUnreachable("Invalid Callee");
     }

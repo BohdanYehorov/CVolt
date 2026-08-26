@@ -1,9 +1,5 @@
-fun:void f(void* ptr)
-{}
-
 fun:i32 Main()
 {
-    let:i32* p = null;
-    f(p);
+    Out("Hello, World\n");
     return 0;
 }
