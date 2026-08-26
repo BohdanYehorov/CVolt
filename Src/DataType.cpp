@@ -282,4 +282,25 @@ namespace Volt
 
 		return CastKind::Invalid;
 	}
+
+	std::string FunctionType::ToString() const
+	{
+		std::string Result = ReturnType.ToString() + "(";
+		for (size_t i = 0; i < Params.size(); i++)
+		{
+			if (i == Params.size() - 1)
+				Result += Params[i].ToString();
+			else
+				Result += Params[i].ToString() + ", ";
+		}
+		return Result + ")";
+	}
+
+	std::string FunctionType::GetIRName() const
+	{
+		std::string Result = "F" + ReturnType.GetIRName();
+		for (QualType Param : Params)
+			Result += Param.GetIRName();
+		return Result + "E";
+	}
 }

@@ -9,6 +9,7 @@
 
 #include "Volt/Core/Object/Object.h"
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
+#include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Support/ErrorHandling.h"
 #include <llvm/IR/Type.h>
 #include <llvm/ADT/FoldingSet.h>
@@ -27,7 +28,8 @@ namespace Volt
         Reference,
         Array,
         Class,
-        NullPointer
+        NullPointer,
+        Function
     };
 
     enum class CastKind : UInt8
@@ -476,6 +478,52 @@ namespace Volt
         [[nodiscard]] QualType GetBaseType() const { return BaseType; }
         [[nodiscard]] size_t GetLength() const { return Length; }
         [[nodiscard]] bool IsLengthInit() const { return LengthInit; }
+    };
+
+    class FunctionType : public DataType, public llvm::FoldingSetNode
+    {
+    private:
+        QualType ReturnType;
+        ArgsVector<QualType> Params;
+
+    public:
+        FunctionType(QualType ReturnType, llvm::ArrayRef<QualType> Params)
+            : DataType(TypeCategory::Function), ReturnType(ReturnType), Params(Params) {}
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            ArgsVector<llvm::Type*> LLVMParams;
+            LLVMParams.reserve(Params.size());
+            for (QualType Param : Params)
+                LLVMParams.push_back(Param->GetLLVMOrCachedType(Context));
+            return llvm::FunctionType::get(ReturnType->GetLLVMOrCachedType(Context),
+                LLVMParams, false);
+        }
+
+        int GetRank() const override { return -1; }
+        std::string ToString() const override;
+        std::string GetIRName() const override;
+
+        size_t GetSize() const override { VoltUnreachable("Cannot get size from FunctionType"); }
+        size_t GetAlignment() const override { VoltUnreachable("Cannot get alignment from FunctionType"); }
+
+        CastKind CastTo(DataType *To) const override { return CastKind::Invalid; }
+
+        [[nodiscard]] QualType GetReturnType() const { return ReturnType; }
+        [[nodiscard]] llvm::ArrayRef<QualType> GetParams() const { return Params; }
+
+        void Profile(llvm::FoldingSetNodeID& ID) const
+        {
+            Profile(ID, ReturnType, Params);
+        }
+
+        static void Profile(llvm::FoldingSetNodeID& ID,
+            QualType ReturnType, llvm::ArrayRef<QualType> Params)
+        {
+            ID.AddInteger(ReturnType.RawValue());
+            for (QualType Param : Params)
+                ID.AddInteger(Param.RawValue());
+        }
     };
 }
 
