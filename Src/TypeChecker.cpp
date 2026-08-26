@@ -477,7 +477,7 @@ namespace Volt
                 for (size_t i = 0; i < ArgsCount; i++)
                     Call->Arguments[i]->ExpectedType = Overload->Args[i].GetType();
 
-                return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
+                return ExprResult::CreateEmpty(Overload->Callee->FuncType->GetReturnType(), MainArena);
             }
 
             BuiltinFuncTable::OverloadResult BuiltinFuncOverloadRes =
@@ -490,7 +490,7 @@ namespace Volt
                 for (size_t i = 0; i < ArgsCount; i++)
                     Call->Arguments[i]->ExpectedType = Overload->Args[i].GetType();
 
-                return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
+                return ExprResult::CreateEmpty(Overload->Callee->FuncType->GetReturnType(), MainArena);
             }
 
             Array<std::string> ErrorContext = { Name.str() };
@@ -557,7 +557,7 @@ namespace Volt
                     for (size_t i = 0; i < ArgsCount; i++)
                         Call->Arguments[i]->ExpectedType = Overload->Args[i].GetType();
 
-                    return ExprResult::CreateEmpty(Overload->Callee->ReturnType, MainArena);
+                    return ExprResult::CreateEmpty(Overload->Callee->FuncType->GetReturnType(), MainArena);
                 }
 
                 Array<std::string> ErrorContext = { ClassTy->GetName().str() + "." + FieldName.str() };
@@ -827,7 +827,7 @@ namespace Volt
 
         Functions.AddFunction(Function->Name, std::move(Params), StaticCast<FunctionCallee>(FuncCallee));
         FunctionBodies.Emplace(Function->Name, Function->Body,
-            FuncCallee->ReturnType, nullptr, Function->Params);
+            FuncCallee->FuncType->GetReturnType(), nullptr, Function->Params);
         return nullptr;
     }
 
@@ -837,7 +837,7 @@ namespace Volt
 
         CalleeBase* FuncCallee = CreateFunction(Method, Params, Type);
         Type->AddMethod(Method->Name, std::move(Params), StaticCast<MethodCallee>(FuncCallee));
-        FunctionBodies.Emplace(Method->Name, Method->Body, FuncCallee->ReturnType,
+        FunctionBodies.Emplace(Method->Name, Method->Body, FuncCallee->FuncType->GetReturnType(),
             CContext.GetPointerType(Type), Method->Params);
     }
 
@@ -858,7 +858,7 @@ namespace Volt
 
         QualType ReturnType = CContext.GetVoidType();
 
-        auto ConstructorCallee = MainArena.Create<FunctionCallee>(ReturnType);
+        auto ConstructorCallee = MainArena.Create<FunctionCallee>(CContext.GetFunctionType(ReturnType, Params));
         Constructor->ResolvedCallee = ConstructorCallee;
 
         Type->AddConstructor(std::move(Params), ConstructorCallee);
@@ -1135,8 +1135,10 @@ namespace Volt
 
         QualType ReturnType = VisitType(Function->ReturnType);
 
-            Function->ResolvedCallee = Owner ? MainArena.Create<MethodCallee>(ReturnType, Owner) :
-                                               MainArena.Create<FunctionCallee>(ReturnType);
+        FunctionType* FuncType = CContext.GetFunctionType(ReturnType, Params);
+
+        Function->ResolvedCallee = Owner ? MainArena.Create<MethodCallee>(FuncType, Owner) :
+                                           MainArena.Create<FunctionCallee>(FuncType);
         return Function->ResolvedCallee;
     }
 

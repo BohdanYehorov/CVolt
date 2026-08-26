@@ -65,8 +65,8 @@ namespace Volt
 		for (const auto& Param : Params)
 			NameBuilder.AddParam(Param);
 
-		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
-			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+		auto* Callee = MainArena.Create<BuiltinFuncCallee>(CContext.GetFunctionType(RetType, Params),
+			NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 
 		Functions.AddFunction(Name, std::move(Params), Callee);
 	}
@@ -78,8 +78,8 @@ namespace Volt
 		IRNameBuilder NameBuilder(IRNameKind::Function);
 		NameBuilder.AddName(Name);
 
-		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
-			RetType, NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
+		auto* Callee = MainArena.Create<BuiltinFuncCallee>(CContext.GetFunctionType(RetType, {}),
+			NameBuilder.GetIRName(), llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
 
 		Functions.AddFunction(Name, ArgsVector<QualType>(), Callee);
 	}

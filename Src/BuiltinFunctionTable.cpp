@@ -11,7 +11,7 @@ namespace Volt
 		for (const auto& [Name, Overload] : Functions)
 		{
 			auto* BuiltinCallee = Overload.Callee;
-			llvm::Type* RetType = CContext.GetLLVMType(BuiltinCallee->ReturnType.GetType());
+			llvm::Type* RetType = CContext.GetLLVMType(BuiltinCallee->FuncType->GetReturnType().GetType());
 			SmallVec8<llvm::Type*> LLVMParams;
 			LLVMParams.reserve(Overload.Args.size());
 			for (const auto& Param : Overload.Args)

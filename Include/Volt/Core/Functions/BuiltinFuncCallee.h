@@ -19,8 +19,8 @@ namespace Volt
 		llvm::orc::ExecutorAddr ExeAddr;
 		llvm::orc::ExecutorSymbolDef SymbolDef;
 
-		BuiltinFuncCallee(QualType RetType, llvm::StringRef BaseName, llvm::orc::ExecutorAddr ExeAddr)
-			: CalleeBase(RetType), BaseName(BaseName), ExeAddr(ExeAddr) {}
+		BuiltinFuncCallee(FunctionType* FuncType, llvm::StringRef BaseName, llvm::orc::ExecutorAddr ExeAddr)
+			: CalleeBase(FuncType), BaseName(BaseName), ExeAddr(ExeAddr) {}
 	};
 }
 

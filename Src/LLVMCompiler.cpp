@@ -442,15 +442,6 @@ namespace Volt
                 if (auto RetVal = CallConstructor(Identifier, FuncCallee, ArgNodes))
                     return RetVal;
 
-        ArgsVector<llvm::Value*> Args;
-        Args.reserve(ArgNodes.size() + Call->ResolvedCallee->ReturnType->IsAggregateType());
-        llvm::Value* RetAlloca = CreateRetValueForAggregateType(
-            Call->ResolvedCallee->ReturnType.GetType(), Args);
-        FillArgs(ArgNodes, Args);
-        llvm::Value* RetVal = Builder.CreateCall(Call->ResolvedCallee, Args, Module);
-        return Create<IRValue>(RetAlloca == nullptr ? RetVal : RetAlloca,
-            Call->ResolvedCallee->ReturnType.GetType());
-
         return CallFunction(Call->ResolvedCallee, Call->Arguments);
     }
 
@@ -1029,7 +1020,7 @@ namespace Volt
     IRValue *LLVMCompiler::CallImpl(CalleeBase *Callee, llvm::ArrayRef<ASTNode *> ArgNodes,
         llvm::Value *ValueToStoreRet, llvm::Value *ThisVal)
     {
-        DataType* RetType = Callee->ReturnType.GetType();
+        DataType* RetType = Callee->FuncType->GetReturnType().GetType();
 
         ArgsVector<llvm::Value*> Args;
         Args.reserve(ArgNodes.size() + RetType->IsAggregateType() + (ThisVal != nullptr));
