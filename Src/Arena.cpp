@@ -46,7 +46,7 @@ namespace Volt
     Arena::~Arena()
     {
         for (auto& D : Destructors)
-            D.first(D.second);
+            D.Destructor(D.Obj, D.Count);
     }
 
     void * Arena::Alloc(size_t Size, size_t Align)

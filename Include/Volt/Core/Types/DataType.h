@@ -113,6 +113,12 @@ namespace Volt
         friend class CompilationContext;
         template<typename T>
         friend class Hash;
+
+    public:
+        static bool IsImplicitCastKind(CastKind Kind)
+        {
+            return Kind != CastKind::Invalid && Kind != CastKind::Explicit;
+        }
     };
 
     class QualType
@@ -186,6 +192,8 @@ namespace Volt
         [[nodiscard]] bool CastTo(QualType To, bool Explicit) const;
         [[nodiscard]] bool ImplicitCast(QualType To) const { return CastTo(To, false); }
         [[nodiscard]] bool ExplicitCast(QualType To) const { return CastTo(To, true); }
+
+        [[nodiscard]] CastKind CastTo(QualType To) const;
 
         [[nodiscard]] QualType GetNotReferenceType() const;
 

@@ -8,12 +8,15 @@
 #include "ArrayAllocator.h"
 #include "ArrayIterator.h"
 #include <initializer_list>
+#include <llvm/ADT/ArrayRef.h>
 
 namespace Volt
 {
 	template <typename T, typename Alloca = ArrayAllocator<T>>
 	class Array
 	{
+		friend class Arena;
+
 	public:
 		using ValueType = T;
 		using SizeType = size_t;
@@ -89,6 +92,8 @@ namespace Volt
 
 		[[nodiscard]] ValueType& operator[](SizeType Index) { return Data[Index]; }
 		[[nodiscard]] const ValueType& operator[](SizeType Index) const { return Data[Index]; }
+
+		operator llvm::ArrayRef<T>() const { return llvm::ArrayRef<T>(Data, Len); }
 
 		[[nodiscard]] SizeType Length() const { return Len; }
 		[[nodiscard]] SizeType Capacity() const { return Cap; }

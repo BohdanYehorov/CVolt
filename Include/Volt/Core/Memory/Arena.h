@@ -5,7 +5,7 @@
 #ifndef CVOLT_ARENA_H
 #define CVOLT_ARENA_H
 
-#include "Volt/Core/Object/Object.h"
+#include "Volt/ADT/Array.h"
 
 namespace Volt
 {
@@ -41,6 +41,9 @@ namespace Volt
         [[nodiscard]] bool CanFit(size_t Size, size_t Align) const;
 
     private:
+        ArenaAllocator(void* Data, size_t Size, size_t Pos)
+            : Data(static_cast<char *>(Data)), Size(Size), Pos(Pos) {}
+
         [[nodiscard]] size_t CalculatePadding(size_t Align) const
         {
             return CalculatePadding(Align, GetGlobalPos());
@@ -53,12 +56,24 @@ namespace Volt
         }
 
         [[nodiscard]] uintptr_t GetGlobalPos() const { return reinterpret_cast<uintptr_t>(Data) + Pos; }
+
+        friend class Arena;
     };
 
     class Arena
     {
+        struct DestructorEntry
+        {
+            void(*Destructor)(void*, size_t);
+            void* Obj;
+            size_t Count;
+
+            DestructorEntry(void(*Destructor)(void*, size_t), void* Obj, size_t Count)
+                : Destructor(Destructor), Obj(Obj), Count(Count) {}
+        };
+
         std::vector<ArenaAllocator> Blocks;
-        std::vector<std::pair<void(*)(void*), void*>> Destructors;
+        std::vector<DestructorEntry> Destructors;
 
         size_t BlockSize = 64 * 1024;
 
@@ -68,6 +83,9 @@ namespace Volt
         template <typename T, typename ...Args_>
         T *Create(Args_&&... Args);
         void *Alloc(size_t Size, size_t Align);
+
+        template <typename T>
+        llvm::ArrayRef<T> AllocStaticArray(Array<T>&& Arr);
     };
 
     template<typename T, typename ... Args_>
@@ -78,12 +96,33 @@ namespace Volt
 
         if (!std::is_trivially_destructible_v<T>)
         {
-            Destructors.push_back(std::make_pair([](void* Ptr) {
+            Destructors.emplace_back([](void* Ptr, size_t) {
                 static_cast<T*>(Ptr)->~T();
-            }, Ptr));
+            }, Ptr, 1);
         }
 
         return Ptr;
+    }
+
+    template<typename T>
+    llvm::ArrayRef<T> Arena::AllocStaticArray(Array<T> &&Arr)
+    {
+        size_t Len = Arr.Len;
+        T* Data = Arr.Data;
+        ArenaAllocator Alloc(Data, Arr.Cap, Len);
+        Arr.Reset();
+
+        ArenaAllocator& Block = Blocks.emplace_back(std::move(Alloc));
+
+        if constexpr (!std::is_trivially_destructible_v<T>)
+        {
+            Destructors.emplace_back([](void* Ptr, size_t Len) {
+                for (size_t i = 0; i < Len; i++)
+                    (static_cast<T*>(Ptr) + i)->~T();
+            }, Block.Data, Len);
+        }
+
+        return llvm::ArrayRef<T>(Data, Len);
     }
 }
 

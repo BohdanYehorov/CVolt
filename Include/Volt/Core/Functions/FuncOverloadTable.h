@@ -7,6 +7,7 @@
 
 #include "Volt/Core/Functions/FunctionOverload.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
+#include "Volt/Core/Memory/Arena.h"
 
 namespace Volt
 {
@@ -16,6 +17,28 @@ namespace Volt
     class OverloadTableImpl
     {
     public:
+        struct OverloadData
+        {
+            const T* Overload;
+            llvm::ArrayRef<CastKind> CastKinds;
+
+            OverloadData(const T* Overload, llvm::ArrayRef<CastKind> CastKinds)
+                : Overload(Overload), CastKinds(CastKinds) {}
+        };
+
+        struct OverloadResult
+        {
+            enum OverloadResultKind : UInt8
+            {
+                Valid,
+                Ambiguous,
+                NotAvailable
+            };
+
+            const T* FirstOverload;
+            OverloadResultKind Kind;
+        };
+
         using OverloadVector = SmallVec8<T>;
         using Iterator = OverloadVector::iterator;
         using ConstIterator = OverloadVector::const_iterator;
@@ -30,7 +53,7 @@ namespace Volt
             Overloads.emplace_back(std::forward<ArgsTy>(Args)...);
         }
 
-        [[nodiscard]] const T* FindBestOverload(llvm::ArrayRef<QualType> Args) const;
+        [[nodiscard]] OverloadResult FindBestOverload(llvm::ArrayRef<QualType> Args) const;
 
         [[nodiscard]] Iterator begin() { return Overloads.begin(); }
         [[nodiscard]] Iterator end() { return Overloads.end(); }
@@ -38,59 +61,36 @@ namespace Volt
         [[nodiscard]] ConstIterator end() const { return Overloads.end(); }
     };
 
-    template<typename T>
-    const T * OverloadTableImpl<T>::FindBestOverload(llvm::ArrayRef<QualType> Args) const
-    {
-        size_t ArgsCount = Args.size();
-        size_t MinCasts = ArgsCount;
-        int BestRank = std::numeric_limits<int>::max();
-        const T* BestOverload = nullptr;
+    [[nodiscard]] bool Dominates(llvm::ArrayRef<CastKind> A, llvm::ArrayRef<CastKind> B);
 
+    template<typename T>
+    OverloadTableImpl<T>::OverloadResult OverloadTableImpl<T>::FindBestOverload(llvm::ArrayRef<QualType> Args) const
+    {
+        SmallVec4<OverloadData> BestOverloads;
+        Arena CastKindsArena;
         for (const T& Overload : Overloads)
         {
-            if (Overload.Args.size() != ArgsCount) continue;
+            Array<CastKind> CastKinds;
+            if (!Overload.GetCastKindsAndCheckIsValidCasts(Args, CastKinds))
+                continue;
 
-            int RankDiff = 0;
-            size_t Casts = 0;
-            bool Valid = true;
-            for (size_t i = 0; i < ArgsCount; i++)
-            {
-                QualType CandidateArgType = Overload.Args[i];
-                QualType ArgType = Args[i];
-
-                if (auto RefType = CandidateArgType.CastAs<ReferenceType>())
-                {
-                    if (RefType->CanBind(ArgType))
-                        continue;
-
-                    Valid = false;
-                    break;
-                }
-
-                if (!ArgType.ImplicitCast(CandidateArgType))
-                {
-                    Valid = false;
-                    break;
-                }
-
-                if (ArgType != CandidateArgType)
-                    Casts++;
-
-                RankDiff += std::abs(
-                    CandidateArgType->GetRank() - ArgType->GetRank());
-            }
-
-            if (!Valid) continue;
-
-            if (!BestOverload || Casts < MinCasts || (Casts == MinCasts && RankDiff < BestRank))
-            {
-                MinCasts = Casts;
-                BestRank = RankDiff;
-                BestOverload = &Overload;
-            }
+            bool ExistingDominates = false;
+            BestOverloads.erase(std::remove_if(BestOverloads.begin(), BestOverloads.end(),
+                [&](const OverloadData& Existing) {
+                    if (Dominates(CastKinds, Existing.CastKinds)) return true;
+                    if (Dominates(Existing.CastKinds, CastKinds)) ExistingDominates = true;
+                    return false;
+                }), BestOverloads.end());
+            if (!ExistingDominates)
+                BestOverloads.emplace_back(&Overload,
+                    CastKindsArena.AllocStaticArray(std::move(CastKinds)));
         }
 
-        return BestOverload;
+        if (BestOverloads.empty())
+            return OverloadResult{ nullptr, OverloadResult::NotAvailable };
+        if (BestOverloads.size() > 1)
+            return OverloadResult{ BestOverloads[0].Overload, OverloadResult::Ambiguous };
+        return OverloadResult{ BestOverloads[0].Overload, OverloadResult::Valid };
     }
 
     using FuncOverloadTable = OverloadTableImpl<FunctionOverload>;

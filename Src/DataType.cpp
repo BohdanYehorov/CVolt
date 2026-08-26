@@ -54,6 +54,14 @@ namespace Volt
 		return GetType()->CastTo(To.GetType(), Explicit);
 	}
 
+	CastKind QualType::CastTo(QualType To) const
+	{
+		if (*this == To)
+			return CastKind::Exact;
+
+		return GetType()->CastTo(To.GetType());
+	}
+
 	QualType QualType::GetNotReferenceType() const
 	{
 		if (auto RefType = CastAs<ReferenceType>())
@@ -199,7 +207,7 @@ namespace Volt
 				return To->IsSignedIntegerType() ? CastKind::CategoryConv :
 												   CastKind::Explicit;
 			case TypeCategory::FloatingPoint:
-				return CastKind::CategoryConv;
+				return To->GetSize() > GetSize() ? CastKind::Ext : CastKind::Trunc;
 			default:
 				return CastKind::Invalid;
 		}
@@ -219,13 +227,14 @@ namespace Volt
 
 		if (auto PtrType = Cast<PointerType>(To))
 		{
-			if (BaseType.HasQualifier(QualType::CONST) && !PtrType->BaseType.HasQualifier(QualType::CONST))
+			if (BaseType.HasQualifier(QualType::CONST) &&
+				!PtrType->BaseType.HasQualifier(QualType::CONST))
 				return CastKind::Invalid;
 
-			if (PtrType->BaseType->GetCategory() == TypeCategory::Void)
+			if (PtrType->BaseType->IsVoidType())
 				return CastKind::CategoryConv;
 
-			if (BaseType->GetCategory() == TypeCategory::Void)
+			if (BaseType->IsVoidType())
 				return CastKind::Explicit;
 
 			return CastKind::Invalid;
