@@ -3,7 +3,7 @@
 //
 
 #include "Volt/Core/Types/DataType.h"
-
+#include "Volt/Core/Types/ClassType.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Support/ErrorHandling.h"
 
@@ -299,6 +299,33 @@ namespace Volt
 	std::string FunctionType::GetIRName() const
 	{
 		std::string Result = "F" + ReturnType.GetIRName();
+		for (QualType Param : Params)
+			Result += Param.GetIRName();
+		return Result + "E";
+	}
+
+	std::string MethodType::ToString() const
+	{
+		auto* Type = ThisType->GetBaseType().CastAs<ClassType>();
+		VoltAssert(Type != nullptr && "ThisType must be pointer to ClassType");
+
+		std::string Result = Type->ToString() + "." + ReturnType.ToString() + "(";
+		for (size_t i = 0; i < Params.size(); i++)
+		{
+			if (i == Params.size() - 1)
+				Result += Params[i].ToString();
+			else
+				Result += Params[i].ToString() + ", ";
+		}
+		return Result + ")";
+	}
+
+	std::string MethodType::GetIRName() const
+	{
+		auto* Type = ThisType->GetBaseType().CastAs<ClassType>();
+		VoltAssert(Type != nullptr && "ThisType must be pointer to ClassType");
+
+		std::string Result = "M" + Type->GetIRName() + ReturnType.GetIRName();
 		for (QualType Param : Params)
 			Result += Param.GetIRName();
 		return Result + "E";

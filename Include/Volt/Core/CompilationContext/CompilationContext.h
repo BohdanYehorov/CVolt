@@ -34,6 +34,7 @@ namespace Volt
 		llvm::FoldingSet<ReferenceType> ReferenceTypes;
 		llvm::FoldingSet<ArrayType> ArrayTypes;
 		llvm::FoldingSet<FunctionType> FunctionTypes;
+		llvm::FoldingSet<MethodType> MethodTypes;
 
 		llvm::StringMap<ClassType*> ClassTypes;
 
@@ -75,6 +76,8 @@ namespace Volt
 		[[nodiscard]] ReferenceType* GetReferenceType(QualType BaseType);
 		[[nodiscard]] ArrayType* GetArrayType(QualType BaseType, size_t Length);
 		[[nodiscard]] FunctionType* GetFunctionType(QualType ReturnType, llvm::ArrayRef<QualType> Params);
+		[[nodiscard]] MethodType* GetMethodType(QualType ReturnType,
+			llvm::ArrayRef<QualType> Params, PointerType* ThisType);
 
 		ClassType* CreateClassType(llvm::StringRef Name, const Array<Field>& Fields);
 		ClassType* CreateClassType(llvm::StringRef Name);

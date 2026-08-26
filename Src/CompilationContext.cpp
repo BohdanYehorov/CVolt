@@ -132,6 +132,21 @@ namespace Volt
 		return Type;
 	}
 
+	MethodType * CompilationContext::GetMethodType(QualType ReturnType, llvm::ArrayRef<QualType> Params,
+		PointerType *ThisType)
+	{
+		llvm::FoldingSetNodeID ID;
+		MethodType::Profile(ID, ReturnType, Params, ThisType);
+
+		void* InsertPos = nullptr;
+		if (MethodType* Type = MethodTypes.FindNodeOrInsertPos(ID, InsertPos))
+			return Type;
+
+		auto Type = MainArena.Create<MethodType>(ReturnType, Params, ThisType);
+		MethodTypes.InsertNode(Type, InsertPos);
+		return Type;
+	}
+
 	ClassType* CompilationContext::CreateClassType(llvm::StringRef Name, const Array<Field> &Fields)
 	{
 		if (ClassTypes.contains(Name)) return nullptr;

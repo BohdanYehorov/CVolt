@@ -533,7 +533,6 @@ namespace Volt
                 size_t ArgsCount = Call->Arguments.size();
                 ArgsVector<QualType> ArgTypes;
                 ArgTypes.reserve(ArgsCount);
-                // ArgTypes.push_back(CContext.GetPointerType(ClassTy));
 
                 for (auto Arg : Call->Arguments)
                 {
@@ -1134,11 +1133,10 @@ namespace Volt
         }
 
         QualType ReturnType = VisitType(Function->ReturnType);
-
-        FunctionType* FuncType = CContext.GetFunctionType(ReturnType, Params);
-
-        Function->ResolvedCallee = Owner ? MainArena.Create<MethodCallee>(FuncType, Owner) :
-                                           MainArena.Create<FunctionCallee>(FuncType);
+        Function->ResolvedCallee = Owner ? MainArena.Create<MethodCallee>(CContext.GetMethodType(ReturnType, Params,
+                                  CContext.GetPointerType(Owner)), Owner) :
+                                           MainArena.Create<FunctionCallee>(
+                                           CContext.GetFunctionType(ReturnType, Params));
         return Function->ResolvedCallee;
     }
 

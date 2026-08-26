@@ -482,7 +482,8 @@ namespace Volt
 
     class FunctionType : public DataType, public llvm::FoldingSetNode
     {
-    private:
+        GENERATED_BODY(FunctionType, DataType)
+    protected:
         QualType ReturnType;
         ArgsVector<QualType> Params;
 
@@ -523,6 +524,47 @@ namespace Volt
             ID.AddInteger(ReturnType.RawValue());
             for (QualType Param : Params)
                 ID.AddInteger(Param.RawValue());
+        }
+    };
+
+    class MethodType : public FunctionType
+    {
+        GENERATED_BODY(MethodType, FunctionType)
+    private:
+        PointerType* ThisType;
+
+    public:
+        MethodType(QualType ReturnType, llvm::ArrayRef<QualType> Params, PointerType* ThisType)
+            : FunctionType(ReturnType, Params), ThisType(ThisType) {}
+
+        llvm::Type* ToLLVMType(llvm::LLVMContext &Context) const override
+        {
+            ArgsVector<llvm::Type*> LLVMParams;
+            LLVMParams.reserve(Params.size() + 1);
+            LLVMParams.push_back(ThisType->GetLLVMOrCachedType(Context));
+            for (QualType Param : Params)
+                LLVMParams.push_back(Param->GetLLVMOrCachedType(Context));
+            return llvm::FunctionType::get(ReturnType->GetLLVMOrCachedType(Context),
+                LLVMParams, false);
+        }
+
+        std::string ToString() const override;
+        std::string GetIRName() const override;
+
+        [[nodiscard]] PointerType* GetThisType() const { return ThisType; }
+
+        void Profile(llvm::FoldingSetNodeID& ID) const
+        {
+            Profile(ID, ReturnType, Params, ThisType);
+        }
+
+        static void Profile(llvm::FoldingSetNodeID& ID,
+            QualType ReturnType, llvm::ArrayRef<QualType> Params, PointerType* ThisType)
+        {
+            ID.AddInteger(ReturnType.RawValue());
+            for (QualType Param : Params)
+                ID.AddInteger(Param.RawValue());
+            ID.AddPointer(ThisType);
         }
     };
 }
