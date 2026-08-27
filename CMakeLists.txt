@@ -29,6 +29,8 @@ set(SOURCES
         Src/ClassInst.cpp
         Src/IRBuilder.cpp
         Src/FuncOverloadTable.cpp
+        Include/Volt/Core/Variables/VariableStack.h
+        Include/Volt/ADT/PointerIntPair.h
 )
 
 if (COMPILE_TO_LIB)
