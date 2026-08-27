@@ -469,9 +469,9 @@ namespace Volt
             }
 
             FunctionTable::OverloadResult FunctionOverloadRes = Functions.FindBestFunctionOverload(Name, ArgTypes);
-            if (FunctionOverloadRes.Kind != FunctionTable::OverloadResult::NotAvailable)
+            if (FunctionOverloadRes.GetKind() != FunctionTable::OverloadResult::NotAvailable)
             {
-                const FunctionOverload* Overload = FunctionOverloadRes.FirstOverload;
+                const FunctionOverload* Overload = FunctionOverloadRes.GetOverload();
                 Call->ResolvedCallee = Overload->Callee;
 
                 for (size_t i = 0; i < ArgsCount; i++)
@@ -482,9 +482,9 @@ namespace Volt
 
             BuiltinFuncTable::OverloadResult BuiltinFuncOverloadRes =
                 BuiltinFuncTable.GetFunctionTable().FindBestFunctionOverload(Name, ArgTypes);
-            if (BuiltinFuncOverloadRes.Kind != BuiltinFuncTable::OverloadResult::NotAvailable)
+            if (BuiltinFuncOverloadRes.GetKind() != BuiltinFuncTable::OverloadResult::NotAvailable)
             {
-                const BuiltinFunctionOverload* Overload = BuiltinFuncOverloadRes.FirstOverload;
+                const BuiltinFunctionOverload* Overload = BuiltinFuncOverloadRes.GetOverload();
                 Call->ResolvedCallee = Overload->Callee;
 
                 for (size_t i = 0; i < ArgsCount; i++)
@@ -548,9 +548,9 @@ namespace Volt
                 }
 
                 MethodTable::OverloadResult OverloadResult = ClassTy->FindBestMethodOverload(FieldName, ArgTypes);
-                if (OverloadResult.Kind != MethodTable::OverloadResult::NotAvailable)
+                if (OverloadResult.GetKind() != MethodTable::OverloadResult::NotAvailable)
                 {
-                    const MethodOverload* Overload = OverloadResult.FirstOverload;
+                    const MethodOverload* Overload = OverloadResult.GetOverload();
                     Call->ResolvedCallee = Overload->Callee;
 
                     for (size_t i = 0; i < ArgsCount; i++)
@@ -702,9 +702,9 @@ namespace Volt
             }
 
             FuncOverloadTable::OverloadResult OverloadResult = ClassTy->FindBestConstructorOverload(Arguments);
-            if (OverloadResult.Kind != FuncOverloadTable::OverloadResult::NotAvailable)
+            if (OverloadResult.GetKind() != FuncOverloadTable::OverloadResult::NotAvailable)
             {
-                const FunctionOverload* Overload = OverloadResult.FirstOverload;
+                const FunctionOverload* Overload = OverloadResult.GetOverload();
                 Construct->ResolvedCallee = Overload->Callee;
 
                 for (size_t i = 0; i < ArgsCount; i++)
@@ -746,8 +746,8 @@ namespace Volt
             auto* ClassTy = StaticCast<ClassType>(VarType.GetType());
             FuncOverloadTable::OverloadResult OverloadResult =  ClassTy->FindBestConstructorOverload(
                 { CContext.GetPointerType(ClassTy) });
-            if (OverloadResult.Kind != FuncOverloadTable::OverloadResult::NotAvailable)
-                Variable->ResolvedConstructor = OverloadResult.FirstOverload->Callee;
+            if (OverloadResult.GetKind() != FuncOverloadTable::OverloadResult::NotAvailable)
+                Variable->ResolvedConstructor = OverloadResult.GetOverload()->Callee;
         }
 
         if (Value && !Value->GetType().ImplicitCast(VarType))
@@ -793,9 +793,9 @@ namespace Volt
         }
 
         FuncOverloadTable::OverloadResult OverloadResult = ClassTy->FindBestConstructorOverload(Args);
-        if (OverloadResult.Kind != FuncOverloadTable::OverloadResult::NotAvailable)
+        if (OverloadResult.GetKind() != FuncOverloadTable::OverloadResult::NotAvailable)
         {
-            const FunctionOverload* Overload = OverloadResult.FirstOverload;
+            const FunctionOverload* Overload = OverloadResult.GetOverload();
             Construct->ResolvedCallee = Overload->Callee;
 
             for (size_t i = 0; i < Construct->Arguments.size(); i++)

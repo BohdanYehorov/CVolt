@@ -11,6 +11,7 @@
 #include "Volt/Core/TypeDefs/IntTypeDefs.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Support/ErrorHandling.h"
+#include "Volt/ADT/PointerIntPair.h"
 #include <llvm/IR/Type.h>
 #include <llvm/ADT/FoldingSet.h>
 
@@ -125,8 +126,6 @@ namespace Volt
 
     class QualType
     {
-        static_assert(alignof(DataType) >= 8);
-
     public:
         enum QualifierKind
         {
@@ -134,21 +133,16 @@ namespace Volt
         };
 
     private:
-        UIntPtrTy Value;
+        PointerIntPair<DataType, alignof(UInt64), UInt32> Value;
 
     public:
-        QualType() : Value(0) {}
+        QualType() = default;
 
         QualType(DataType* Type)
-        {
-            Value = reinterpret_cast<UIntPtrTy>(Type);
-        }
+            : Value(Type) {}
 
         QualType(DataType* Type, UInt32 Quals)
-        {
-            VoltAssert(Quals < alignof(DataType));
-            Value = reinterpret_cast<UIntPtrTy>(Type) | Quals;
-        }
+            : Value(Type, Quals) {}
 
         operator bool() const { return GetType() != nullptr; }
         DataType* operator->() const { return GetType(); }
@@ -163,12 +157,9 @@ namespace Volt
             return Value != Other.Value;
         }
 
-        [[nodiscard]] DataType* GetType() const
-        {
-            return reinterpret_cast<DataType*>(Value & ~(alignof(DataType) - 1));
-        }
+        [[nodiscard]] DataType* GetType() const { return Value.GetPointer(); }
 
-        [[nodiscard]] UIntPtrTy RawValue() const { return Value; }
+        [[nodiscard]] UIntPtrTy RawValue() const { return Value.GetRawValue(); }
 
         template <typename T>
         [[nodiscard]] T* CastAs() const
@@ -176,19 +167,19 @@ namespace Volt
             return Cast<T>(GetType());
         }
 
-        [[nodiscard]] UInt32 GetQuals() const { return Value & (alignof(DataType) - 1); }
-        [[nodiscard]] bool HasQualifier(QualifierKind Kind) const { return (Value & Kind) != 0; }
+        [[nodiscard]] UInt32 GetQuals() const { return Value.GetInt(); }
+        [[nodiscard]] bool HasQualifier(QualifierKind Kind) const { return (Value.GetInt() & Kind) != 0; }
 
         void AddQualifiers(UInt32 Qualifiers)
         {
             VoltAssert(Qualifiers < alignof(DataType));
-            Value |= Qualifiers;
+            Value.SetInt(Value.GetInt() | Qualifiers);
         }
 
         void RemoveQualifiers(UInt32 Qualifiers)
         {
             VoltAssert(Qualifiers < alignof(DataType));
-            Value &= ~Qualifiers;
+            Value.SetInt(Value.GetInt() & ~Qualifiers);
         }
 
         [[nodiscard]] bool CastTo(QualType To, bool Explicit) const;

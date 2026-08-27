@@ -25,6 +25,13 @@ namespace Volt
     public:
         PointerIntPair() = default;
 
+        PointerIntPair(PointerType Ptr)
+        {
+            UIntPtrTy PtrVal = reinterpret_cast<UIntPtrTy>(Ptr);
+            VoltAssert((PtrVal & (Align - 1)) == 0 && "Pointer is not aligned");
+            Value = PtrVal;
+        }
+
         PointerIntPair(PointerType Ptr, IntType Int)
         {
             SetPointerAndInt(Ptr, Int);
@@ -33,9 +40,10 @@ namespace Volt
         void SetPointerAndInt(PointerType Ptr, IntType Int)
         {
             UIntPtrTy PtrVal = reinterpret_cast<UIntPtrTy>(Ptr);
+            UIntPtrTy IntVal = static_cast<UIntPtrTy>(Int);
             VoltAssert((PtrVal & (Align - 1)) == 0 && "Pointer is not aligned");
-            VoltAssert(Int < Align && "Cannot write value grater or equal align");
-            Value = PtrVal | Int;
+            VoltAssert(IntVal < Align && "Cannot write value grater or equal align");
+            Value = PtrVal | IntVal;
         }
 
         void SetPointer(PointerType Ptr)
@@ -47,18 +55,26 @@ namespace Volt
 
         void SetInt(IntType Int)
         {
-            VoltAssert(Int < Align && "Cannot write value grater or equal align");
-            Value = Int | (Value & ~(Align - 1));
+            UIntPtrTy IntVal = static_cast<UIntPtrTy>(Int);
+            VoltAssert(IntVal < Align && "Cannot write value grater or equal align");
+            Value = IntVal | (Value & ~(Align - 1));
         }
 
         [[nodiscard]] PointerType GetPointer() const
         {
-            return reinterpret_cast<PointerType>(Value & Align - 1);
+            return reinterpret_cast<PointerType>(Value & ~(Align - 1));
         }
 
         [[nodiscard]] IntType GetInt() const
         {
-            return Value & ~(Align - 1);
+            return static_cast<IntType>(Value & Align - 1);
+        }
+
+        [[nodiscard]] UIntPtrTy GetRawValue() const { return Value; }
+
+        [[nodiscard]] bool operator==(const PointerIntPair &Other) const
+        {
+            return Value == Other.Value;
         }
     };
 }

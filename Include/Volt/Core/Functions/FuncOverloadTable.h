@@ -8,6 +8,7 @@
 #include "Volt/Core/Functions/FunctionOverload.h"
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Core/Memory/Arena.h"
+#include "Volt/ADT/PointerIntPair.h"
 
 namespace Volt
 {
@@ -35,8 +36,15 @@ namespace Volt
                 NotAvailable
             };
 
-            const T* FirstOverload;
-            OverloadResultKind Kind;
+        private:
+            PointerIntPair<const T, alignof(UInt32), OverloadResultKind> Value;
+
+        public:
+            OverloadResult(const T* Overload, OverloadResultKind Kind)
+                : Value(Overload, Kind) {}
+
+            [[nodiscard]] const T* GetOverload() const { return Value.GetPointer(); }
+            [[nodiscard]] OverloadResultKind GetKind() const { return Value.GetInt(); }
         };
 
         using OverloadVector = SmallVec8<T>;
