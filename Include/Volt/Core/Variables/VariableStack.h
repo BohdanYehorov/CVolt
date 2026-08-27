@@ -25,6 +25,7 @@ namespace Volt
                 : Name(Name), Prev(Prev) {}
         };
 
+    public:
         enum VariableDeclKind : UInt8
         {
             Valid = 0,
@@ -33,7 +34,7 @@ namespace Volt
 
     private:
         llvm::StringMap<T*> Variables;
-        std::vector<SmallVec8<T*>> ScopeStack;
+        std::vector<SmallVec8<ScopeEntry>> ScopeStack;
 
     public:
         void EnterScope() { ScopeStack.emplace_back(); }
@@ -54,7 +55,7 @@ namespace Volt
                 Variables.erase(Entry.Name);
         }
 
-        ScopeStack.pop();
+        ScopeStack.pop_back();
     }
 
     template<typename T>
@@ -84,7 +85,7 @@ namespace Volt
     T *VariableStack<T>::GetVariable(llvm::StringRef Name)
     {
         if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            return *Iter;
+            return Iter->getValue();
         return nullptr;
     }
 }

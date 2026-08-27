@@ -106,10 +106,10 @@ namespace Volt
 
     void TypeChecker::VisitBlock(BlockNode *Block)
     {
-        EnterScope();
+        Variables.EnterScope();
         for (auto Statement : Block->Statements)
             VisitNode(Statement);
-        ExitScope();
+        Variables.ExitScope();
     }
 
     SemaResult *TypeChecker::VisitInt(IntegerNode *Int)
@@ -193,7 +193,7 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        ExprAddress* VarAddr = GetVariable(Identifier->Value);
+        ExprAddress* VarAddr = Variables.GetVariable(Identifier->Value);
         if (VarAddr)
         {
             Identifier->CompileTimeValue = VarAddr->GetValue();
@@ -730,24 +730,13 @@ namespace Volt
         if (!VarType) return nullptr;
 
         llvm::StringRef Name = Variable->Name;
-        if (auto Iter = std::find_if(
-            ScopeStack.Back().Begin(), ScopeStack.Back().End(),
-            [&Name](const ScopeEntry& Entry) -> bool
-            {
-                return Entry.Name == Name;
-            });
-            Iter != ScopeStack.Back().End())
-        {
-            SendError(TypeErrorKind::DoubleVariableDeclaration, Variable, { Name.str() });
-            return nullptr;
-        }
 
         if (VarType->IsReferenceType())
         {
             ExprAddress* ValueAddr = VisitToLValue(Variable->Value);
             if (!ValueAddr) return nullptr;
 
-            DeclareVariable(Name, ValueAddr);
+            DeclareVariable(Name, ValueAddr, Variable);
             return nullptr;
         }
 
@@ -767,14 +756,14 @@ namespace Volt
                 Variable,{ Name.str(),
                 VarType->ToString(), Value->GetType()->ToString() });
             Value = ExprResult::CreateEmpty(VarType, MainArena);
-            DeclareVariable(Name, MainArena.Create<ExprAddress>(Value));
+            DeclareVariable(Name, MainArena.Create<ExprAddress>(Value), Variable);
             return nullptr;
         }
 
         if (!VarType.HasQualifier(QualType::CONST))
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
-        DeclareVariable(Name, MainArena.Create<ExprAddress>(Value));
+        DeclareVariable(Name, MainArena.Create<ExprAddress>(Value), Variable);
         return nullptr;
     }
 
@@ -814,7 +803,7 @@ namespace Volt
         }
 
         DeclareVariable(Construct->Name, MainArena.Create<ExprAddress>(
-            ExprResult::CreateEmpty(VarType, MainArena)));
+            ExprResult::CreateEmpty(VarType, MainArena)), Construct);
 
         return nullptr;
     }
@@ -962,7 +951,7 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitFor(ForNode *For)
     {
-        EnterScope();
+        Variables.EnterScope();
 
         VisitNode(For->Initialization);
 
@@ -982,7 +971,7 @@ namespace Volt
         VisitNode(For->Iteration);
         VisitNode(For->Body);
 
-        ExitScope();
+        Variables.ExitScope();
 
         return nullptr;
     }
@@ -1150,24 +1139,6 @@ namespace Volt
         return false;
     }
 
-    void TypeChecker::EnterScope()
-    {
-        ScopeStack.Emplace();
-    }
-
-    void TypeChecker::ExitScope()
-    {
-        for (const auto& Entry : ScopeStack.Back())
-        {
-            if (Entry.Prev)
-                Variables[Entry.Name] = Entry.Prev;
-            else
-                Variables.erase(Entry.Name);
-        }
-
-        ScopeStack.Pop();
-    }
-
     void TypeChecker::DeclareGlobalVariable(VariableNode *Variable)
     {
         QualType VarType = VisitType(Variable->Type);
@@ -1192,22 +1163,11 @@ namespace Volt
         GlobalVariables[Variable->Name] = MainArena.Create<ExprAddress>(Value);
     }
 
-    void TypeChecker::DeclareVariable(llvm::StringRef Name, ExprAddress* Addr)
+    void TypeChecker::DeclareVariable(llvm::StringRef Name, ExprAddress* Addr, ASTNode* VarNode)
     {
-        if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            ScopeStack.Back().Emplace(Name, Iter->second);
-        else
-            ScopeStack.Back().Emplace(Name, nullptr);
-
-        Variables[Name] = Addr;
-    }
-
-    ExprAddress* TypeChecker::GetVariable(llvm::StringRef Name)
-    {
-        if (auto Iter = Variables.find(Name); Iter != Variables.end())
-            return Iter->second;
-
-        return nullptr;
+        VariableStack::VariableDeclKind Kind = Variables.DeclareVariable(Name, Addr);
+        if (Kind == VariableStack::AlreadyExists)
+            SendError(TypeErrorKind::DoubleVariableDeclaration, VarNode, { Name.str() });
     }
 
     void TypeChecker::DeclareAndAddParams(llvm::ArrayRef<ParamNode *> ParamNodes, ArgsVector<QualType> &ParamTypes)
@@ -1216,7 +1176,7 @@ namespace Volt
         {
             QualType ParamType = VisitType(Param->Type);
             ParamTypes.push_back(ParamType);
-            DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
+            Variables.DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
                             ExprResult::CreateEmpty(ParamType, MainArena)));
         }
     }
@@ -1249,13 +1209,13 @@ namespace Volt
     {
         for (const auto& Data : FunctionBodies)
         {
-            EnterScope();
+            Variables.EnterScope();
 
             ArgsVector<QualType> Params;
             if (Data.ThisType)
             {
                 Params.reserve(Data.Params.size());
-                DeclareVariable("this", MainArena.Create<ExprAddress>(
+                Variables.DeclareVariable("this", MainArena.Create<ExprAddress>(
                                 ExprResult::CreateEmpty(Data.ThisType, MainArena)));
             }
             else
@@ -1265,7 +1225,7 @@ namespace Volt
             {
                 QualType ParamType = Param->Type->ResolvedType;
                 Params.push_back(ParamType);
-                DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
+                Variables.DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
                                 ExprResult::CreateEmpty(ParamType, MainArena)));
             }
 
@@ -1275,7 +1235,7 @@ namespace Volt
             FunctionReturnType = {};
             InFunction = false;
 
-            ExitScope();
+            Variables.ExitScope();
         }
     }
 }

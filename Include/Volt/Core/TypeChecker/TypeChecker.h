@@ -12,6 +12,7 @@
 #include "Volt/Core/TypeDefs/TypeDefs.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Core/Functions/FunctionTable.h"
+#include "Volt/Core/Variables/VariableStack.h"
 #include "ExprResult.h"
 #include "ExprAddress.h"
 
@@ -54,7 +55,7 @@ namespace Volt
                 : ClassTy(ClassTy), Fields(Fields), Methods(Methods), Constructors(Constructors) {}
         };
 
-        using VariableTable = llvm::StringMap<ExprAddress*>;
+        using VariableStack = VariableStack<ExprAddress>;
         using GlobalVariableTable = llvm::StringMap<ExprAddress*>;
 
     private:
@@ -70,12 +71,9 @@ namespace Volt
         GlobalVariableTable GlobalVariables;
 
         FunctionTable Functions;
-        VariableTable Variables;
-
-        Array<Array<ScopeEntry>> ScopeStack;
+        VariableStack Variables;
 
         Array<FunctionBodyData> FunctionBodies;
-
         Array<ClassData> Classes;
 
         QualType FunctionReturnType;
@@ -164,14 +162,9 @@ namespace Volt
 
         bool ImplicitCastOrError(DataType *&Src, DataType* Dst, size_t Line, size_t Column);
 
-        void EnterScope();
-        void ExitScope();
-
         void DeclareGlobalVariable(VariableNode* Variable);
 
-        void DeclareVariable(llvm::StringRef Name, ExprAddress* Addr);
-        ExprAddress* GetVariable(llvm::StringRef Name);
-
+        void DeclareVariable(llvm::StringRef Name, ExprAddress* Addr, ASTNode* VarNode);
         void DeclareAndAddParams(llvm::ArrayRef<ParamNode*> ParamNodes, ArgsVector<QualType>& ParamTypes);
 
         void VisitClassAndMethodDecls();
