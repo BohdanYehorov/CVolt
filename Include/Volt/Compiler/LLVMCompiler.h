@@ -31,21 +31,17 @@ namespace Volt
 
         struct FunctionBodyData
         {
+            const FunctionNodeBase* FuncNode;
             llvm::StringRef Name;
-            BlockNode* BodyNode;
             llvm::Function* Func;
             DataType* ReturnType;
             DataType* ThisType;
-            llvm::ArrayRef<ParamNode*> Params;
 
-            FunctionBodyData(llvm::StringRef Name, BlockNode* BodyNode,
-                llvm::Function* Func, DataType* ReturnType, DataType* ThisType, llvm::ArrayRef<ParamNode*> Params)
-                : Name(Name), BodyNode(BodyNode),
-                Func(Func), ReturnType(ReturnType), ThisType(ThisType), Params(Params) {}
+            FunctionBodyData(const FunctionNodeBase* FuncNode, llvm::StringRef Name,
+                llvm::Function* Func, DataType* ReturnType, DataType* ThisType)
+                : FuncNode(FuncNode), Name(Name), Func(Func),
+                ReturnType(ReturnType), ThisType(ThisType) {}
         };
-
-        using VariableTable = llvm::StringMap<IRValue*>;
-        using GlobalVariableTable = llvm::StringMap<IRValue*>;
 
     private:
         CompilationContext& CContext;
@@ -57,10 +53,6 @@ namespace Volt
 
         ASTNode* ASTTree;
 
-        GlobalVariableTable GlobalVariables;
-        VariableTable SymbolTable;
-
-        Array<Array<ScopeEntry>> ScopeStack;
         std::stack<llvm::BasicBlock*> LoopEndStack;
         std::stack<llvm::BasicBlock*> LoopHeaderStack;
 
@@ -119,9 +111,8 @@ namespace Volt
 
         bool GetClassFromMemberAccess(const MemberAccessNode* MemberAccess, llvm::Value*& Value, ClassType*& Type);
 
-        void CreateFunction(llvm::StringRef Name, llvm::ArrayRef<ParamNode*> Params,
-            DataType* ReturnType, BlockNode* Body, CalleeBase* Callee,
-            ArgsVector<llvm::Type*>& LLVMParams, DataType* ThisType = nullptr);
+        void CreateFunction(llvm::StringRef Name, const FunctionNodeBase* FuncNode, DataType *ReturnType,
+            ArgsVector<llvm::Type *> &LLVMParams, DataType *ThisType = nullptr);
 
         IRValue *CompileToRValue(const ASTNode* Node)
         {
@@ -133,7 +124,7 @@ namespace Volt
         IRValue* Assign(IRValue* Var, ASTNode* Value);
         IRValue* CallMethod(MemberAccessNode* Target, MethodCallee* Callee,
             llvm::ArrayRef<ASTNode*> ArgNodes, llvm::Value* AllocaToStoreRet = nullptr);
-        IRValue* CallConstructor(IdentifierNode* Target, FunctionCallee* Callee,
+        IRValue* CallConstructor(ClassType* ClassTy, FunctionCallee* Callee,
             llvm::ArrayRef<ASTNode*> ArgNodes, llvm::Value* AllocaToStoreRet = nullptr);
         IRValue* CallFunction(CalleeBase* Callee, llvm::ArrayRef<ASTNode*> ArgNodes,
             llvm::Value* AllocaToStoreRet = nullptr);
@@ -146,11 +137,6 @@ namespace Volt
             llvm::Value* ValueToStoreRet = nullptr, llvm::Value* ThisVal = nullptr);
 
         void CompileFunctionBodies();
-
-        void DeclareVariable(llvm::StringRef Name, IRValue *Var);
-
-        void EnterScope();
-        void ExitScope();
 
         void FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca);
         void FillArgs(llvm::ArrayRef<ASTNode*> ParamNodes, ArgsVector<llvm::Value*>& Params);

@@ -13,7 +13,7 @@ namespace Volt
 {
 	class BuiltinFuncCallee : public FunctionCallee
 	{
-		GENERATED_BODY(BuiltinFuncCallee, CalleeBase)
+		GENERATED_BODY(BuiltinFuncCallee, FunctionCallee)
 	public:
 		std::string BaseName;
 

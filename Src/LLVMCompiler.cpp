@@ -130,8 +130,6 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileBlock(const BlockNode *Block)
     {
-        EnterScope();
-
         for (auto Stmt : Block->Statements)
         {
             CompileNode(Stmt);
@@ -139,8 +137,6 @@ namespace Volt
             if (Builder.GetInsertBlock()->getTerminator())
                 break;
         }
-
-        ExitScope();
         return nullptr;
     }
 
@@ -218,15 +214,22 @@ namespace Volt
 
     IRValue *LLVMCompiler::CompileIdentifier(const IdentifierNode *Identifier)
     {
-        llvm::StringRef Value = Identifier->Value;
+        // llvm::StringRef Value = Identifier->Value;
+        //
+        // if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
+        //     return Iter->second;
+        //
+        // if (auto Iter = GlobalVariables.find(Value); Iter != GlobalVariables.end())
+        //     return Iter->second;
 
-        if (auto Iter = SymbolTable.find(Value); Iter != SymbolTable.end())
-            return Iter->second;
+        if (Identifier->ResolvedVarInfo)
+        {
+            if (Identifier->ResolvedVarInfo->CodeGenValue)
+                return Identifier->ResolvedVarInfo->CodeGenValue;
+            VoltUnreachableFmt("Variable {} doesn't exists in code gen yet", Identifier->Value.str());
+        }
 
-        if (auto Iter = GlobalVariables.find(Value); Iter != GlobalVariables.end())
-            return Iter->second;
-
-        VoltUnreachableFmt("Cannot resolve symbol: '{}'", Value.str());
+        VoltUnreachableFmt("Cannot resolve symbol: '{}'", Identifier->Value.str());
     }
 
     IRValue *LLVMCompiler::CompileRef(const RefNode *Ref)
@@ -439,8 +442,9 @@ namespace Volt
 
         if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
             if (auto FuncCallee = Cast<FunctionCallee>(Call->ResolvedCallee))
-                if (auto RetVal = CallConstructor(Identifier, FuncCallee, ArgNodes))
-                    return RetVal;
+                if (auto ClassTy = CContext.GetClassType(Identifier->Value))
+                    if (auto RetVal = CallConstructor(ClassTy, FuncCallee, ArgNodes))
+                        return RetVal;
 
         return CallFunction(Call->ResolvedCallee, Call->Arguments);
     }
@@ -567,7 +571,9 @@ namespace Volt
             auto GlobalVar = new llvm::GlobalVariable(*Module, Type,
                 false, llvm::GlobalVariable::ExternalLinkage, Constant, Var->Name);
 
-            GlobalVariables[Var->Name] = Create<IRValue>(GlobalVar, VarType, true);
+            auto* Value = Create<IRValue>(GlobalVar, VarType, true);
+            Var->ResolvedVarInfo->CodeGenValue = Value;
+            // GlobalVariables[Var->Name] = Create<IRValue>(GlobalVar, VarType, true);
             return nullptr;
         }
 
@@ -577,7 +583,8 @@ namespace Volt
             if (!Value || !Value->IsLValue())
                 return nullptr;
 
-            DeclareVariable(Var->Name, Value);
+            // DeclareVariable(Var->Name, Value);
+            Var->ResolvedVarInfo->CodeGenValue = Value;
             return nullptr;
         }
 
@@ -589,7 +596,8 @@ namespace Volt
         else if (Var->Value)
             Assign(VarValue, Var->Value);
 
-        DeclareVariable(Var->Name, VarValue);
+        // DeclareVariable(Var->Name, VarValue);
+        Var->ResolvedVarInfo->CodeGenValue = VarValue;
         return nullptr;
     }
 
@@ -617,17 +625,16 @@ namespace Volt
         else
             VoltUnreachable("Invalid Callee");
 
-        DeclareVariable(Construct->Name,
-            Create<IRValue>(Alloca, VarType, true));
-
+        // DeclareVariable(Construct->Name,
+        Construct->ResolvedVarInfo->CodeGenValue = Create<IRValue>(Alloca, VarType, true);
         return nullptr;
     }
 
     IRValue *LLVMCompiler::CompileFunction(const FunctionNode *Function)
     {
         ArgsVector<llvm::Type*> Params;
-        CreateFunction(Function->Name, Function->Params, Function->ReturnType->ResolvedType,
-            Function->Body, Function->ResolvedCallee, Params);
+        CreateFunction(Function->Name, Function,
+            Function->ReturnType->ResolvedType, Params);
         return nullptr;
     }
 
@@ -670,8 +677,8 @@ namespace Volt
         DataType* ThisType = CContext.GetPointerType(Type);
 
         ArgsVector<llvm::Type*> Params;
-        CreateFunction(Method->Name, Method->Params, Method->ReturnType->ResolvedType,
-            Method->Body, Method->ResolvedCallee, Params, ThisType);
+        CreateFunction(Method->Name, Method,
+            Method->ReturnType->ResolvedType, Params, ThisType);
 
         return nullptr;
     }
@@ -681,9 +688,8 @@ namespace Volt
         DataType* ThisType = CContext.GetPointerType(Type);
 
         ArgsVector<llvm::Type*> Params;
-        CreateFunction(Type->GetName(), Constructor->Params, CContext.GetVoidType(),
-            Constructor->Body, Constructor->ResolvedCallee, Params, ThisType);
-
+        CreateFunction(Type->GetName(), Constructor,
+            CContext.GetVoidType(), Params, ThisType);
         return nullptr;
     }
 
@@ -774,9 +780,6 @@ namespace Volt
     IRValue *LLVMCompiler::CompileFor(const ForNode *For)
     {
         llvm::Function* Func = Builder.GetInsertBlock()->getParent();
-
-        EnterScope();
-
         llvm::BasicBlock* InitializationBB = llvm::BasicBlock::Create(
             Context, "for.initialization", Func);
         Builder.CreateBr(InitializationBB);
@@ -816,7 +819,6 @@ namespace Volt
             EndBB->insertInto(Func);
         Builder.SetInsertPoint(EndBB);
 
-        ExitScope();
         return nullptr;
     }
 
@@ -858,15 +860,14 @@ namespace Volt
         return true;
     }
 
-    void LLVMCompiler::CreateFunction(llvm::StringRef Name, llvm::ArrayRef<ParamNode *> Params,
-        DataType *ReturnType, BlockNode* Body, CalleeBase* Callee,
-        ArgsVector<llvm::Type *> &LLVMParams, DataType *ThisType)
+    void LLVMCompiler::CreateFunction(llvm::StringRef Name, const FunctionNodeBase* FuncNode,
+    DataType *ReturnType, ArgsVector<llvm::Type *> &LLVMParams, DataType *ThisType)
     {
         IRNameBuilder NameBuilder(ThisType == nullptr ? IRNameKind::Function : IRNameKind::Method);
 
         bool IsAggregateRetType = ReturnType->IsAggregateType();
         llvm::Type* RetType = CContext.GetLLVMType(ReturnType);
-        LLVMParams.reserve(Params.size() + IsAggregateRetType + (ThisType != nullptr));
+        LLVMParams.reserve(FuncNode->Params.size() + IsAggregateRetType + (ThisType != nullptr));
 
         if (IsAggregateRetType)
             LLVMParams.push_back(llvm::PointerType::get(Context, 0));
@@ -877,10 +878,10 @@ namespace Volt
             NameBuilder.AddParam(ThisType);
         }
         else
-            LLVMParams.reserve(Params.size());
+            LLVMParams.reserve(FuncNode->Params.size());
 
         NameBuilder.AddName(Name);
-        for (const auto Param : Params)
+        for (const auto Param : FuncNode->Params)
         {
             DataType* ParamType = Param->Type->ResolvedType;
             NameBuilder.AddParam(ParamType);
@@ -893,12 +894,12 @@ namespace Volt
         llvm::Function* Func = llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage,
             NameBuilder.GetIRName(), Module.get());
 
-        if (auto FuncCallee = Cast<FunctionCallee>(Callee))
+        if (auto FuncCallee = Cast<FunctionCallee>(FuncNode->ResolvedCallee))
             FuncCallee->Function = Func;
         else
             VoltUnreachableFmt("Function definition '{}' is unknown", Name.str());
 
-        FunctionBlocks.Emplace(Name, Body, Func, ReturnType, ThisType, Params);
+        FunctionBlocks.Emplace(FuncNode, Name, Func, ReturnType, ThisType);
     }
 
     IRValue* LLVMCompiler::Assign(IRValue *Var, ASTNode *Value)
@@ -924,9 +925,10 @@ namespace Volt
                     Call->Arguments, Var->GetValue());
 
             if (auto Identifier = Cast<IdentifierNode>(Call->Callee))
-                if (auto Ret = CallConstructor(Identifier,
-                    StaticCast<FunctionCallee>(Call->ResolvedCallee), Call->Arguments, Var->GetValue()))
-                    return Ret;
+                if (auto ClassTy = CContext.GetClassType(Identifier->Value))
+                    if (auto Ret = CallConstructor(ClassTy,
+                        StaticCast<FunctionCallee>(Call->ResolvedCallee), Call->Arguments, Var->GetValue()))
+                        return Ret;
 
             return CallFunction(Call->ResolvedCallee, Call->Arguments, Var->GetValue());
         }
@@ -968,12 +970,9 @@ namespace Volt
         return CallImpl(Callee, ArgNodes, ValueToStoreRet, ThisValue);
     }
 
-    IRValue * LLVMCompiler::CallConstructor(IdentifierNode *Target, FunctionCallee *Callee,
+    IRValue * LLVMCompiler::CallConstructor(ClassType* ClassTy, FunctionCallee *Callee,
         llvm::ArrayRef<ASTNode *> ArgNodes, llvm::Value* ValueToStoreRet)
     {
-        ClassType* ClassTy = CContext.GetClassType(Target->Value);
-        if (!ClassTy) return nullptr;
-
         ArgsVector<llvm::Value*> Args;
 
         llvm::Value* Obj = ValueToStoreRet ? ValueToStoreRet : Builder.CreateAlloca(ClassTy);
@@ -981,7 +980,6 @@ namespace Volt
         Args.push_back(Obj);
         FillArgs(ArgNodes, Args);
         Builder.CreateCall(Callee->Function, Args);
-        if (ValueToStoreRet) return nullptr;
 
         return Create<IRValue>(Obj, ClassTy, true);
     }
@@ -1033,11 +1031,8 @@ namespace Volt
             RetAlloca, RetType);
 
         if (ValueToStoreRet)
-        {
             if (!RetType->IsAggregateType())
                 Builder.CreateStore(Ret, ValueToStoreRet);
-            return nullptr;
-        }
 
         return Ret;
     }
@@ -1046,15 +1041,16 @@ namespace Volt
     {
         for (const auto& Data : FunctionBlocks)
         {
-            EnterScope();
+            const FunctionNodeBase* FuncNode = Data.FuncNode;
+
             llvm::BasicBlock* Entry = llvm::BasicBlock::Create(Context, "entry", Data.Func);
             Builder.SetInsertPoint(Entry);
 
             bool IsAggregateRetType = Data.ReturnType->IsAggregateType();
             if (Data.ThisType)
             {
-                DeclareVariable("this", Create<IRValue>(Data.Func->args().begin() + IsAggregateRetType,
-                    Data.ThisType, Builder.Get()));
+                FuncNode->ResolvedThisParamVarInfo->CodeGenValue = Create<IRValue>(
+                    Data.Func->args().begin() + IsAggregateRetType, Data.ThisType, Builder.Get());
             }
 
             size_t Offset = (Data.ThisType != nullptr) + IsAggregateRetType;
@@ -1068,18 +1064,18 @@ namespace Volt
                     Context, llvm::Align(8)));
             }
 
-            for (size_t i = 0; i < Data.Params.size(); i++)
+            for (size_t i = 0; i < FuncNode->Params.size(); i++)
             {
-                DataType* ParamType = Data.Params[i]->Type->ResolvedType;
+                DataType* ParamType = FuncNode->Params[i]->Type->ResolvedType;
                 auto Arg = Data.Func->args().begin() + i + Offset;
-                Arg->setName(Data.Params[i]->Name);
-                DeclareVariable(Data.Params[i]->Name,
-                    Create<IRValue>(Arg, ParamType, Builder.Get()));
+                Arg->setName(FuncNode->Params[i]->Name);
+                FuncNode->Params[i]->ResolvedVarInfo->CodeGenValue = Create<IRValue>(
+                    Arg, ParamType, Builder.Get());
             }
 
             FunctionReturnType = Data.ReturnType;
             InFunction = true;
-            CompileBlock(Data.BodyNode);
+            CompileBlock(FuncNode->Body);
             FunctionReturnType = nullptr;
             InFunction = false;
 
@@ -1092,46 +1088,7 @@ namespace Volt
                 else
                     VoltUnreachableFmt("Function '{}' must return value", Data.Name.str());
             }
-
-            ExitScope();
         }
-    }
-
-    void LLVMCompiler::DeclareVariable(llvm::StringRef Name, IRValue *Var)
-    {
-        if (auto Iter = std::find_if(
-            ScopeStack.Back().Begin(), ScopeStack.Back().End(),
-            [&Name](const ScopeEntry& Entry) -> bool
-            {
-                return Entry.Name == Name;
-            });
-            Iter != ScopeStack.Back().End())
-            VoltUnreachableFmt("This variable: '{}' has already declared in this scope", Name.str());
-
-        if (auto Iter = SymbolTable.find(Name); Iter != SymbolTable.end())
-            ScopeStack.Back().Emplace(Name, Iter->second);
-        else
-            ScopeStack.Back().Emplace(Name, nullptr);
-
-        SymbolTable[Name] = Var;
-    }
-
-    void LLVMCompiler::EnterScope()
-    {
-        ScopeStack.Emplace();
-    }
-
-    void LLVMCompiler::ExitScope()
-    {
-        for (const auto& Entry : ScopeStack.Back())
-        {
-            if (Entry.Previous)
-                SymbolTable[Entry.Name] = Entry.Previous;
-            else
-                SymbolTable.erase(Entry.Name);
-        }
-
-        ScopeStack.Pop();
     }
 
     void LLVMCompiler::FillArray(const ArrayNode *Array, llvm::AllocaInst *Alloca)
