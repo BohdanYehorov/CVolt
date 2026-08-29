@@ -38,6 +38,8 @@ class UnitTests:
 
             exp = test.with_suffix(".exp")
             if not exp.exists():
+                self.out("[OK]", test_name, format_time)
+                self.handle_passed()
                 continue
 
             exp_text = exp.read_text().strip()
