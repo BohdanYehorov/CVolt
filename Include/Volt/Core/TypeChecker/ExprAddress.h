@@ -12,6 +12,13 @@ namespace Volt
     class ExprAddress : public SemaResult
     {
         GENERATED_BODY(ExprAddress, SemaResult)
+    public:
+        static ExprAddress* CreateEmpty(QualType Type, Arena& MainArena)
+        {
+            return MainArena.Create<ExprAddress>(
+                ExprResult::CreateEmpty(Type, MainArena));
+        }
+
     private:
         ExprResult* Value;
 

@@ -22,6 +22,8 @@ namespace Volt
     [[nodiscard]] virtual NodeKind GetNodeKind() const override { return NodeKind::Obj; }
 
     class SemaResult;
+    class FunctionCallee;
+    struct VarInfo;
 
     class ASTNode : public Object
     {
@@ -65,6 +67,8 @@ namespace Volt
     {
         GENERATED_NODE_BODY(IdentifierNode, ASTNode);
     public:
+        VarInfo* ResolvedVarInfo = nullptr;
+
         llvm::StringRef Value;
         IdentifierNode(llvm::StringRef Value, size_t Pos, size_t Line, size_t Column)
             : ASTNode(Pos, Line, Column), Value(Value) {}
@@ -382,75 +386,88 @@ namespace Volt
             Type(Type), Target(Value), IsBitCast(IsBitCast) {}
     };
 
-    class VariableNode : public ASTNode
+    class VariableNodeBase : public ASTNode
     {
-        GENERATED_NODE_BODY(VariableNode, ASTNode)
+        GENERATED_NODE_BODY(VariableNodeBase, ASTNode)
     public:
-        class FunctionCallee* ResolvedConstructor = nullptr;
+        VarInfo* ResolvedVarInfo = nullptr;
 
         DataTypeNodeBase* Type;
         llvm::StringRef Name;
+
+        VariableNodeBase(DataTypeNodeBase* Type, llvm::StringRef Name,
+            size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Type(Type), Name(Name) {}
+    };
+
+    class VariableNode : public VariableNodeBase
+    {
+        GENERATED_NODE_BODY(VariableNode, VariableNodeBase)
+    public:
+        FunctionCallee* ResolvedConstructor = nullptr;
+
         ASTNode* Value;
         VariableNode(DataTypeNodeBase* Type, llvm::StringRef Name, ASTNode* Value,
             size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Type(Type), Name(Name), Value(Value) {}
+            : VariableNodeBase(Type, Name, Pos, Line, Column), Value(Value) {}
     };
 
-    class VariableConstructNode : public ASTNode
+    class VariableConstructNode : public VariableNodeBase
     {
-        GENERATED_NODE_BODY(VariableConstructNode, ASTNode)
+        GENERATED_NODE_BODY(VariableConstructNode, VariableNodeBase)
     public:
-        class FunctionCallee* ResolvedCallee = nullptr;
+        FunctionCallee* ResolvedCallee = nullptr;
 
-        DataTypeNodeBase* Type;
-        llvm::StringRef Name;
         ArgsVector<ASTNode*> Arguments;
         VariableConstructNode(DataTypeNodeBase* Type, llvm::StringRef Name,
             ArgsVector<ASTNode*>&& Args, size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Type(Type), Name(Name), Arguments(std::move(Args)) {}
+            : VariableNodeBase(Type, Name, Pos, Line, Column), Arguments(std::move(Args)) {}
     };
 
-    class ParamNode : public ASTNode
+    class ParamNode : public VariableNodeBase
     {
-        GENERATED_NODE_BODY(ParamNode, ASTNode)
+        GENERATED_NODE_BODY(ParamNode, VariableNodeBase)
     public:
-        DataTypeNodeBase* Type;
-        llvm::StringRef Name;
         ASTNode* DefaultValue;
         ParamNode(DataTypeNodeBase* Type, llvm::StringRef Name, ASTNode* Value,
             size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), Type(Type), Name(Name), DefaultValue(Value) {}
+            : VariableNodeBase(Type, Name, Pos, Line, Column), DefaultValue(Value) {}
     };
 
-    class FunctionNode : public ASTNode
+    class FunctionNodeBase : public ASTNode
     {
-        GENERATED_NODE_BODY(FunctionNode, ASTNode)
+        GENERATED_NODE_BODY(FunctionNodeBase, ASTNode)
     public:
         CalleeBase* ResolvedCallee = nullptr;
+        VarInfo* ResolvedThisParamVarInfo = nullptr;
 
-        DataTypeNodeBase* ReturnType;
-        llvm::StringRef Name;
         ArgsVector<ParamNode*> Params;
         BlockNode* Body;
+        FunctionNodeBase(ArgsVector<ParamNode*>&& Params, BlockNode* Body,
+            size_t Pos, size_t Line, size_t Column)
+            : ASTNode(Pos, Line, Column), Params(Params), Body(Body) {}
+    };
+
+    class FunctionNode : public FunctionNodeBase
+    {
+        GENERATED_NODE_BODY(FunctionNode, FunctionNodeBase)
+    public:
+        DataTypeNodeBase* ReturnType;
+        llvm::StringRef Name;
         FunctionNode(DataTypeNodeBase* Type, llvm::StringRef Name,
             ArgsVector<ParamNode*>&& Params, BlockNode* Body,
             size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column), ReturnType(Type), Name(Name),
-            Params(std::move(Params)), Body(Body) {}
+            : FunctionNodeBase(std::move(Params), Body, Pos, Line, Column),
+            ReturnType(Type), Name(Name) {}
     };
 
-    class ConstructorNode : public ASTNode
+    class ConstructorNode : public FunctionNodeBase
     {
-        GENERATED_NODE_BODY(ConstructorNode, ASTNode)
+        GENERATED_NODE_BODY(ConstructorNode, FunctionNodeBase)
     public:
-        CalleeBase* ResolvedCallee = nullptr;
-
-        ArgsVector<ParamNode*> Params;
-        BlockNode* Body;
         ConstructorNode(ArgsVector<ParamNode*>&& Params,
             BlockNode* Body, size_t Pos, size_t Line, size_t Column)
-            : ASTNode(Pos, Line, Column),
-            Params(std::move(Params)), Body(Body) {}
+            : FunctionNodeBase(std::move(Params), Body, Pos, Line, Column) {}
     };
 
     class ReturnNode : public ASTNode

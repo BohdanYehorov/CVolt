@@ -5,7 +5,6 @@
 #ifndef CVOLT_TYPECHECKER_H
 #define CVOLT_TYPECHECKER_H
 
-#include "Volt/Core/Parser/Parser.h"
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/Errors/TypeError.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
@@ -13,6 +12,7 @@
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Core/Functions/FunctionTable.h"
 #include "Volt/Core/Variables/VariableStack.h"
+#include "Volt/Core/Variables/VarInfo.h"
 #include "ExprResult.h"
 #include "ExprAddress.h"
 
@@ -31,16 +31,15 @@ namespace Volt
 
         struct FunctionBodyData
         {
+            FunctionNodeBase* Function;
             llvm::StringRef Name;
-            BlockNode* Body;
             QualType ReturnType;
             QualType ThisType;
-            llvm::ArrayRef<ParamNode*> Params;
 
-            FunctionBodyData(llvm::StringRef Name, BlockNode* Body,
-                QualType ReturnType, QualType ThisType, llvm::ArrayRef<ParamNode*> Params)
-                : Name(Name), Body(Body),
-                ReturnType(ReturnType), ThisType(ThisType), Params(Params) {}
+            FunctionBodyData(FunctionNodeBase* Function, llvm::StringRef Name,
+                QualType ReturnType, QualType ThisType)
+                : Function(Function), Name(Name),
+                ReturnType(ReturnType), ThisType(ThisType) {}
         };
 
         struct ClassData
@@ -55,8 +54,8 @@ namespace Volt
                 : ClassTy(ClassTy), Fields(Fields), Methods(Methods), Constructors(Constructors) {}
         };
 
-        using VariableStack = VariableStack<ExprAddress>;
-        using GlobalVariableTable = llvm::StringMap<ExprAddress*>;
+        using VariableStack = VariableStack<VarInfo>;
+        using GlobalVariableTable = llvm::StringMap<VarInfo*>;
 
     private:
         CompilationContext& CContext;
@@ -164,7 +163,14 @@ namespace Volt
 
         void DeclareGlobalVariable(VariableNode* Variable);
 
-        void DeclareVariable(llvm::StringRef Name, ExprAddress* Addr, ASTNode* VarNode);
+        void DeclareVariable(VariableNodeBase* VarNode, ExprAddress* Addr);
+        void DeclareParam(VariableNodeBase* VarNode, QualType Type)
+        {
+            DeclareVariable(VarNode, ExprAddress::CreateEmpty(Type, MainArena));
+        }
+
+        void DeclareThisParam(QualType ThisType, FunctionNodeBase* Method);
+
         void DeclareAndAddParams(llvm::ArrayRef<ParamNode*> ParamNodes, ArgsVector<QualType>& ParamTypes);
 
         void VisitClassAndMethodDecls();

@@ -193,17 +193,19 @@ namespace Volt
 
     SemaResult *TypeChecker::VisitIdentifier(IdentifierNode *Identifier)
     {
-        ExprAddress* VarAddr = Variables.GetVariable(Identifier->Value);
-        if (VarAddr)
+        VarInfo* Info = Variables.GetVariable(Identifier->Value);
+        if (Info)
         {
-            Identifier->CompileTimeValue = VarAddr->GetValue();
-            return VarAddr;
+            Identifier->ResolvedVarInfo = Info;
+            Identifier->CompileTimeValue = Info->SemaValue;
+            return Info->SemaValue;
         }
 
         if (auto Iter = GlobalVariables.find(Identifier->Value); Iter != GlobalVariables.end())
         {
-            Identifier->CompileTimeValue = Iter->second;
-            return Iter->second;
+            Identifier->ResolvedVarInfo = Iter->second;
+            Identifier->CompileTimeValue = Iter->second->SemaValue;
+            return Iter->second->SemaValue;
         }
 
         SendError(TypeErrorKind::UndefinedVariable, Identifier, { Identifier->Value.str() });
@@ -736,7 +738,7 @@ namespace Volt
             ExprAddress* ValueAddr = VisitToLValue(Variable->Value);
             if (!ValueAddr) return nullptr;
 
-            DeclareVariable(Name, ValueAddr, Variable);
+            DeclareVariable(Variable, ValueAddr);
             return nullptr;
         }
 
@@ -756,14 +758,14 @@ namespace Volt
                 Variable,{ Name.str(),
                 VarType->ToString(), Value->GetType()->ToString() });
             Value = ExprResult::CreateEmpty(VarType, MainArena);
-            DeclareVariable(Name, MainArena.Create<ExprAddress>(Value), Variable);
+            DeclareVariable(Variable, MainArena.Create<ExprAddress>(Value));
             return nullptr;
         }
 
         if (!VarType.HasQualifier(QualType::CONST))
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
-        DeclareVariable(Name, MainArena.Create<ExprAddress>(Value), Variable);
+        DeclareVariable(Variable, MainArena.Create<ExprAddress>(Value));
         return nullptr;
     }
 
@@ -802,9 +804,7 @@ namespace Volt
                 Construct->Arguments[i]->ExpectedType = Overload->Args[i + 1].GetType();
         }
 
-        DeclareVariable(Construct->Name, MainArena.Create<ExprAddress>(
-            ExprResult::CreateEmpty(VarType, MainArena)), Construct);
-
+        DeclareVariable(Construct, ExprAddress::CreateEmpty(VarType, MainArena));
         return nullptr;
     }
 
@@ -814,8 +814,8 @@ namespace Volt
         CalleeBase* FuncCallee = CreateFunction(Function, Params);
 
         Functions.AddFunction(Function->Name, std::move(Params), StaticCast<FunctionCallee>(FuncCallee));
-        FunctionBodies.Emplace(Function->Name, Function->Body,
-            FuncCallee->FuncType->GetReturnType(), nullptr, Function->Params);
+        FunctionBodies.Emplace(Function, Function->Name,
+            FuncCallee->FuncType->GetReturnType(), nullptr);
         return nullptr;
     }
 
@@ -825,8 +825,8 @@ namespace Volt
 
         CalleeBase* FuncCallee = CreateFunction(Method, Params, Type);
         Type->AddMethod(Method->Name, std::move(Params), StaticCast<MethodCallee>(FuncCallee));
-        FunctionBodies.Emplace(Method->Name, Method->Body, FuncCallee->FuncType->GetReturnType(),
-            CContext.GetPointerType(Type), Method->Params);
+        FunctionBodies.Emplace(Method, Method->Name,
+            FuncCallee->FuncType->GetReturnType(), CContext.GetPointerType(Type));
     }
 
     void TypeChecker::VisitConstructor(ConstructorNode *Constructor, ClassType *Type)
@@ -846,12 +846,13 @@ namespace Volt
 
         QualType ReturnType = CContext.GetVoidType();
 
-        auto ConstructorCallee = MainArena.Create<FunctionCallee>(CContext.GetFunctionType(ReturnType, Params));
+        auto ConstructorCallee = MainArena.Create<FunctionCallee>(
+            CContext.GetFunctionType(ReturnType, Params));
         Constructor->ResolvedCallee = ConstructorCallee;
 
         Type->AddConstructor(std::move(Params), ConstructorCallee);
-        FunctionBodies.Emplace(Type->GetName(), Constructor->Body,
-            ReturnType, ThisType, Constructor->Params);
+        FunctionBodies.Emplace(Constructor,
+            Type->GetName(), ReturnType, ThisType);
     }
 
     SemaResult *TypeChecker::VisitClass(ClassNode *Class)
@@ -1153,21 +1154,39 @@ namespace Volt
                 VarType->ToString(), Value->GetType()->ToString() });
 
             Value = ExprResult::CreateEmpty(VarType, MainArena);
-            GlobalVariables[Variable->Name] = MainArena.Create<ExprAddress>(Value);
+            auto* Info = MainArena.Create<VarInfo>(
+                MainArena.Create<ExprAddress>(Value));
+            Variable->ResolvedVarInfo = Info;
+            GlobalVariables[Variable->Name] = Info;
             return;
         }
 
         if (!VarType.HasQualifier(QualType::CONST))
             Value = ExprResult::CreateEmpty(VarType, MainArena);
 
-        GlobalVariables[Variable->Name] = MainArena.Create<ExprAddress>(Value);
+        auto* Info = MainArena.Create<VarInfo>(
+            MainArena.Create<ExprAddress>(Value));
+        Variable->ResolvedVarInfo = Info;
+        GlobalVariables[Variable->Name] = Info;
     }
 
-    void TypeChecker::DeclareVariable(llvm::StringRef Name, ExprAddress* Addr, ASTNode* VarNode)
+    void TypeChecker::DeclareVariable(VariableNodeBase* VarNode, ExprAddress* Addr)
     {
-        VariableStack::VariableDeclKind Kind = Variables.DeclareVariable(Name, Addr);
+        auto* Info = MainArena.Create<VarInfo>(Addr);
+        VariableStack::VariableDeclKind Kind = Variables.DeclareVariable(VarNode->Name, Info);
+        VarNode->ResolvedVarInfo = Info;
         if (Kind == VariableStack::AlreadyExists)
-            SendError(TypeErrorKind::DoubleVariableDeclaration, VarNode, { Name.str() });
+            SendError(TypeErrorKind::DoubleVariableDeclaration,
+                VarNode, { VarNode->Name.str() });
+    }
+
+    void TypeChecker::DeclareThisParam(QualType ThisType, FunctionNodeBase *Method)
+    {
+        auto* Addr = MainArena.Create<ExprAddress>(
+            ExprResult::CreateEmpty(ThisType, MainArena));
+        auto* Info = MainArena.Create<VarInfo>(Addr);
+        Variables.DeclareVariable("this", Info);
+        Method->ResolvedThisParamVarInfo = Info;
     }
 
     void TypeChecker::DeclareAndAddParams(llvm::ArrayRef<ParamNode *> ParamNodes, ArgsVector<QualType> &ParamTypes)
@@ -1176,8 +1195,7 @@ namespace Volt
         {
             QualType ParamType = VisitType(Param->Type);
             ParamTypes.push_back(ParamType);
-            Variables.DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
-                            ExprResult::CreateEmpty(ParamType, MainArena)));
+            DeclareParam(Param, ParamType);
         }
     }
 
@@ -1211,27 +1229,23 @@ namespace Volt
         {
             Variables.EnterScope();
 
-            ArgsVector<QualType> Params;
-            if (Data.ThisType)
-            {
-                Params.reserve(Data.Params.size());
-                Variables.DeclareVariable("this", MainArena.Create<ExprAddress>(
-                                ExprResult::CreateEmpty(Data.ThisType, MainArena)));
-            }
-            else
-                Params.reserve(Data.Params.size());
+            FunctionNodeBase* Func = Data.Function;
 
-            for (auto* Param : Data.Params)
+            if (Data.ThisType)
+                DeclareThisParam(Data.ThisType, Func);
+
+            ArgsVector<QualType> Params;
+            Params.reserve(Func->Params.size());
+            for (auto* Param : Func->Params)
             {
                 QualType ParamType = Param->Type->ResolvedType;
                 Params.push_back(ParamType);
-                Variables.DeclareVariable(Param->Name, MainArena.Create<ExprAddress>(
-                                ExprResult::CreateEmpty(ParamType, MainArena)));
+                DeclareParam(Param, ParamType);
             }
 
             FunctionReturnType = Data.ReturnType;
             InFunction = true;
-            VisitBlock(Cast<BlockNode>(Data.Body));
+            VisitBlock(Cast<BlockNode>(Func->Body));
             FunctionReturnType = {};
             InFunction = false;
 
