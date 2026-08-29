@@ -7,7 +7,6 @@
 
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/Types/ClassType.h"
-#include "Volt/Core/Functions/FunctionSignature.h"
 
 namespace Volt
 {
@@ -29,20 +28,6 @@ namespace Volt
             IRName = Kind == IRNameKind::Function ? "F" : "M";
         }
 
-        IRNameBuilder(const FunctionSignature& Signature)
-            : IRName("F"), Kind(IRNameKind::Function)
-        {
-            AddSignature(Signature);
-        }
-
-        IRNameBuilder(ClassType* Type, const FunctionSignature& Signature)
-            : Kind(IRNameKind::Method)
-        {
-            IRName = "M" + std::to_string(Type->GetName().size());
-            IRName.append(Type->GetName().data(), Type->GetName().size());
-            AddSignature(Signature);
-        }
-
         void AddName(const llvm::StringRef Name)
         {
             IRName += std::to_string(Name.size());
@@ -60,14 +45,6 @@ namespace Volt
         void AddParams(CompilationContext& CContext);
 
         [[nodiscard]] const std::string& GetIRName() const { return IRName; }
-
-    private:
-        void AddSignature(const FunctionSignature& Signature)
-        {
-            AddName(Signature.Name);
-            for (const auto& Param : Signature.Params)
-                AddParam(Param);
-        }
     };
 
     template<typename T, typename ... ArgsTy>

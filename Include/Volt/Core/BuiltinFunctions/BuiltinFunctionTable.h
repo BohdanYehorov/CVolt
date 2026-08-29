@@ -6,7 +6,6 @@
 #define CVOLT_BUILTINFUNCTIONTABLE_H
 
 #include "Volt/Core/Types/DataType.h"
-#include "Volt/Core/Functions/FunctionSignature.h"
 #include "Volt/Core/Types/TypeConv.h"
 #include "Volt/Core/Functions/BuiltinFuncCallee.h"
 #include "Volt/Utils/IRNameBuilder.h"
