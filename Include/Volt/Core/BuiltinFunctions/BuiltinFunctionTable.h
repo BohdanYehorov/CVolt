@@ -8,7 +8,7 @@
 #include "Volt/Core/Types/DataType.h"
 #include "Volt/Core/Types/TypeConv.h"
 #include "Volt/Core/Functions/BuiltinFuncCallee.h"
-#include "Volt/Utils/IRNameBuilder.h"
+#include "Volt/Utils/NameMangler.h"
 #include "Volt/Core/Functions/FunctionTable.h"
 #include <llvm/ExecutionEngine/Orc/CoreContainers.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
@@ -57,13 +57,9 @@ namespace Volt
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
 		ArgsVector<QualType> Params;
 		FillParams<Args...>(Params);
-		IRNameBuilder NameBuilder(IRNameKind::Function);
-		NameBuilder.AddName(Name);
-		for (const auto& Param : Params)
-			NameBuilder.AddParam(Param);
 
 		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
-			CContext.GetFunctionType(RetType, Params), NameBuilder.GetIRName());
+			CContext.GetFunctionType(RetType, Params), NameMangler::Mangle<Args...>(Name, CContext));
 
 		Functions.AddFunction(Name, std::move(Params), Callee,
 			llvm::orc::ExecutorAddr::fromPtr(FuncPtr));
@@ -73,11 +69,9 @@ namespace Volt
 	void BuiltinFunctionTable::AddFunction(llvm::StringRef Name, Ret(*FuncPtr)())
 	{
 		QualType RetType = TypeConv::GetDataType<Ret>(CContext);
-		IRNameBuilder NameBuilder(IRNameKind::Function);
-		NameBuilder.AddName(Name);
 
 		auto* Callee = MainArena.Create<BuiltinFuncCallee>(
-			CContext.GetFunctionType(RetType, {}), NameBuilder.GetIRName());
+			CContext.GetFunctionType(RetType, {}), NameMangler::Mangle(Name, CContext));
 
 		Functions.AddFunction(Name, ArgsVector<QualType>(), Callee,
 			llvm::orc::ExecutorAddr::fromPtr(FuncPtr));

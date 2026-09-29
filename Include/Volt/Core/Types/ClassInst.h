@@ -8,7 +8,7 @@
 #include "ClassType.h"
 #include "TypeConv.h"
 #include "Volt/Core/CompilationContext/CompilationContext.h"
-#include "Volt/Utils/IRNameBuilder.h"
+#include "Volt/Utils/NameMangler.h"
 
 namespace Volt
 {
@@ -111,19 +111,13 @@ namespace Volt
     template<typename RetTy, typename ... ArgsTy>
     ClassMethod<RetTy, ArgsTy...> ClassInstBase::GetMethodAddr(llvm::StringRef Name)
     {
-        IRNameBuilder NameBuilder(IRNameKind::Method);
-        NameBuilder.AddName(Type->GetName());
-        NameBuilder.AddName(Name);
+        std::string MangledName = NameMangler::Mangle<ArgsTy...>(Name, CContext, Type);
 
-        NameBuilder.AddParam(CContext.GetPointerType(Type));
-        if constexpr (sizeof...(ArgsTy) > 0)
-            NameBuilder.AddParams<ArgsTy...>(CContext);
-
-        if (auto Iter = Methods.find(NameBuilder.GetIRName()); Iter != Methods.end())
+        if (auto Iter = Methods.find(MangledName); Iter != Methods.end())
             return ClassMethod<RetTy, ArgsTy...>(
                 Data, reinterpret_cast<MethodTy<RetTy, ArgsTy...>>(Iter->second));
 
-        VoltUnreachableFmt("Cannot find method '{}'", NameBuilder.GetIRName());
+        VoltUnreachableFmt("Cannot find method '{}'", MangledName);
     }
 
     template<typename RetTy, typename ... ArgsTy>

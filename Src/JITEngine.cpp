@@ -55,15 +55,9 @@ namespace Volt
 
 		for (const auto& [FuncName, Overload] : Type->GetMethods())
 		{
-			IRNameBuilder NameBuilder(IRNameKind::Method);
-			NameBuilder.AddName(Type->GetName());
-			NameBuilder.AddName(FuncName);
-
-			for (QualType Arg : Overload.Args)
-				NameBuilder.AddParam(Arg);
-
-			if (void* Method = GetRawFuncAddr(NameBuilder.GetIRName()))
-				Inst.Methods[NameBuilder.GetIRName()] = Method;
+			std::string MangledName = NameMangler::Mangle(FuncName, Overload.Callee);
+			if (void* Method = GetRawFuncAddr(MangledName))
+				Inst.Methods[MangledName] = Method;
 		}
 	}
 

@@ -79,16 +79,6 @@ int main(int Argc, char* Argv[])
     FuncTable.AddFunction("MemFree", MemFree);
     FuncTable.AddFunction("MemCpy", MemCpy);
 
-    Volt::FunctionTable FTable;
-
-    for (const auto& [Name, Overload] : FTable)
-    {
-        std::cout << Name.str() << '(';
-        for (Volt::QualType Arg : Overload.Args)
-            std::cout << Arg.ToString() << ", ";
-        std::cout << ")\n";
-    }
-
     Volt::Lexer MyLexer(CContext);
     MyLexer.Lex();
 

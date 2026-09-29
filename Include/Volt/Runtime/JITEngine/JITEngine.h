@@ -7,7 +7,7 @@
 
 #include "Volt/Core/CompilationContext/CompilationContext.h"
 #include "Volt/Core/BuiltinFunctions/BuiltinFunctionTable.h"
-#include "Volt/Utils/IRNameBuilder.h"
+#include "Volt/Utils/NameMangler.h"
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
@@ -51,19 +51,13 @@ namespace Volt
 	template<typename RetT, typename ... ArgsT>
 	JITEngine::FuncT<RetT, ArgsT...> JITEngine::GetFunctionAddr(llvm::StringRef Name)
 	{
-		IRNameBuilder NameBuilder(IRNameKind::Function);
-		NameBuilder.AddName(Name);
+		std::string MangledName = NameMangler::Mangle<ArgsT...>(Name, CContext);
 
-		if constexpr (sizeof...(ArgsT) > 0)
-			NameBuilder.AddParams<ArgsT...>(NameBuilder);
-
-		const std::string& IRName = NameBuilder.GetIRName();
-
-		if (auto Iter = CachedFunctions.find(IRName);
+		if (auto Iter = CachedFunctions.find(MangledName);
 			Iter != CachedFunctions.end())
 			return reinterpret_cast<FuncT<RetT, ArgsT...>>(Iter->getValue());
 
-		auto SymOrErr = Jit->get()->lookup(IRName);
+		auto SymOrErr = Jit->get()->lookup(MangledName);
 		if (!SymOrErr)
 		{
 			llvm::logAllUnhandledErrors(SymOrErr.takeError(), llvm::errs(), "Error: ");
@@ -71,7 +65,7 @@ namespace Volt
 		}
 
 		const auto Func = SymOrErr->toPtr<FuncT<RetT, ArgsT...>>();
-		CachedFunctions[IRName] = reinterpret_cast<void*>(Func);
+		CachedFunctions[MangledName] = reinterpret_cast<void*>(Func);
 		return Func;
 	}
 

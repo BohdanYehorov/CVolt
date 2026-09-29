@@ -3,7 +3,7 @@
 //
 
 #include "Volt/Compiler/LLVMCompiler.h"
-#include "Volt/Utils/IRNameBuilder.h"
+#include "Volt/Utils/NameMangler.h"
 
 namespace Volt
 {
@@ -863,7 +863,7 @@ namespace Volt
     void LLVMCompiler::CreateFunction(llvm::StringRef Name, const FunctionNodeBase* FuncNode,
     DataType *ReturnType, ArgsVector<llvm::Type *> &LLVMParams, DataType *ThisType)
     {
-        IRNameBuilder NameBuilder(ThisType == nullptr ? IRNameKind::Function : IRNameKind::Method);
+        //NameMangler NameBuilder(ThisType == nullptr ? IRNameKind::Function : IRNameKind::Method);
 
         bool IsAggregateRetType = ReturnType->IsAggregateType();
         llvm::Type* RetType = CContext.GetLLVMType(ReturnType);
@@ -873,18 +873,11 @@ namespace Volt
             LLVMParams.push_back(llvm::PointerType::get(Context, 0));
 
         if (ThisType)
-        {
             LLVMParams.push_back(CContext.GetLLVMType(ThisType));
-            NameBuilder.AddParam(ThisType);
-        }
-        else
-            LLVMParams.reserve(FuncNode->Params.size());
 
-        NameBuilder.AddName(Name);
         for (const auto Param : FuncNode->Params)
         {
             DataType* ParamType = Param->Type->ResolvedType;
-            NameBuilder.AddParam(ParamType);
             LLVMParams.push_back(CContext.GetLLVMType(ParamType));
         }
 
@@ -892,7 +885,7 @@ namespace Volt
             IsAggregateRetType ? llvm::Type::getVoidTy(Context) : RetType, LLVMParams, false);
 
         llvm::Function* Func = llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage,
-            NameBuilder.GetIRName(), Module.get());
+            NameMangler::Mangle(Name, FuncNode->ResolvedCallee), Module.get());
 
         if (auto FuncCallee = Cast<FunctionCallee>(FuncNode->ResolvedCallee))
             FuncCallee->Function = Func;
