@@ -77,9 +77,9 @@ namespace Volt
 		return Quals + GetType()->ToString();
 	}
 
-	std::string QualType::GetIRName() const
+	std::string QualType::GetMangledName() const
 	{
-		return HasQualifier(CONST) ? "C" + GetType()->GetIRName() : GetType()->GetIRName();
+		return HasQualifier(CONST) ? "C" + GetType()->GetMangedName() : GetType()->GetMangedName();
 	}
 
 	CastKind BoolType::CastTo(DataType *To) const
@@ -119,7 +119,7 @@ namespace Volt
 		return (bIsSigned ? "i" : "u") + std::to_string(BitWidth);
 	}
 
-	std::string IntegerType::GetIRName() const
+	std::string IntegerType::GetMangedName() const
 	{
 		if (bIsSigned)
 		{
@@ -181,7 +181,7 @@ namespace Volt
 		return "f" + std::to_string(BitWidth);
 	}
 
-	std::string FloatingPointType::GetIRName() const
+	std::string FloatingPointType::GetMangedName() const
 	{
 		switch (BitWidth)
 		{
@@ -296,11 +296,11 @@ namespace Volt
 		return Result + ")";
 	}
 
-	std::string FunctionType::GetIRName() const
+	std::string FunctionType::GetMangedName() const
 	{
-		std::string Result = "F" + ReturnType.GetIRName();
+		std::string Result = "F" + ReturnType.GetMangledName();
 		for (QualType Param : Params)
-			Result += Param.GetIRName();
+			Result += Param.GetMangledName();
 		return Result + "E";
 	}
 
@@ -320,14 +320,14 @@ namespace Volt
 		return Result + ")";
 	}
 
-	std::string MethodType::GetIRName() const
+	std::string MethodType::GetMangedName() const
 	{
 		auto* Type = ThisType->GetBaseType().CastAs<ClassType>();
 		VoltAssert(Type != nullptr && "ThisType must be pointer to ClassType");
 
-		std::string Result = "M" + Type->GetIRName() + ReturnType.GetIRName();
+		std::string Result = "M" + Type->GetMangedName() + ReturnType.GetMangledName();
 		for (QualType Param : Params)
-			Result += Param.GetIRName();
+			Result += Param.GetMangledName();
 		return Result + "E";
 	}
 }

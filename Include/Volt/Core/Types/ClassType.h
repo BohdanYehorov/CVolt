@@ -53,7 +53,7 @@ namespace Volt
         std::string ToString() const override { return Name.str(); }
         size_t GetSize() const override;
         size_t GetAlignment() const override;
-        std::string GetIRName() const override { return std::to_string(Name.size()) + Name.str(); }
+        std::string GetMangedName() const override { return std::to_string(Name.size()) + Name.str(); }
 
         void ComputeLayout() const;
 

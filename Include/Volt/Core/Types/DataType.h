@@ -62,7 +62,7 @@ namespace Volt
         virtual std::string ToString() const = 0;
         virtual size_t GetSize() const = 0;
         virtual size_t GetAlignment() const = 0;
-        virtual std::string GetIRName() const = 0;
+        virtual std::string GetMangedName() const = 0;
 
         bool CastTo(DataType* To, bool Explicit) const
         {
@@ -191,7 +191,7 @@ namespace Volt
         [[nodiscard]] QualType GetNotReferenceType() const;
 
         [[nodiscard]] std::string ToString() const;
-        [[nodiscard]] std::string GetIRName() const;
+        [[nodiscard]] std::string GetMangledName() const;
     };
 
     class PrimitiveDataType : public DataType
@@ -217,7 +217,7 @@ namespace Volt
         std::string ToString() const override { return "void"; }
         size_t GetSize() const override { VoltUnreachable("Void type has not size"); }
         size_t GetAlignment() const override { VoltUnreachable("Void type has not alignment"); }
-        std::string GetIRName() const override { return "v"; }
+        std::string GetMangedName() const override { return "v"; }
 
         CastKind CastTo(DataType *To) const override { return CastKind::Invalid; }
     };
@@ -238,7 +238,7 @@ namespace Volt
         std::string ToString() const override { return "bool"; }
         size_t GetSize() const override { return 1; }
         size_t GetAlignment() const override { return 1; }
-        std::string GetIRName() const override { return "b"; }
+        std::string GetMangedName() const override { return "b"; }
 
         CastKind CastTo(DataType *To) const override;
     };
@@ -259,7 +259,7 @@ namespace Volt
         std::string ToString() const override { return "char"; }
         size_t GetSize() const override { return 1; }
         size_t GetAlignment() const override { return 1; }
-        std::string GetIRName() const override { return "c"; }
+        std::string GetMangedName() const override { return "c"; }
 
         CastKind CastTo(DataType *To) const override;
     };
@@ -285,7 +285,7 @@ namespace Volt
         std::string ToString() const override;
         size_t GetSize() const override { return BitWidth/8; }
         size_t GetAlignment() const override { return BitWidth/8; }
-        std::string GetIRName() const override;
+        std::string GetMangedName() const override;
 
         CastKind CastTo(DataType *To) const override;
 
@@ -309,7 +309,7 @@ namespace Volt
         std::string ToString() const override;
         size_t GetSize() const override { return BitWidth/8; }
         size_t GetAlignment() const override { return BitWidth/8; }
-        std::string GetIRName() const override;
+        std::string GetMangedName() const override;
 
         CastKind CastTo(DataType *To) const override;
 
@@ -336,7 +336,7 @@ namespace Volt
         std::string ToString() const override;
         size_t GetSize() const override { return 8; }
         size_t GetAlignment() const override { return 8; }
-        std::string GetIRName() const override { return "P" + BaseType.GetIRName(); }
+        std::string GetMangedName() const override { return "P" + BaseType.GetMangledName(); }
 
         void Profile(llvm::FoldingSetNodeID& ID) const
         {
@@ -368,7 +368,7 @@ namespace Volt
         std::string ToString() const override { return "null_ty"; }
         size_t GetSize() const override { return 8; }
         size_t GetAlignment() const override { return 8; }
-        std::string GetIRName() const override { return "n"; }
+        std::string GetMangedName() const override { return "n"; }
 
         CastKind CastTo(DataType *To) const override
         {
@@ -396,7 +396,7 @@ namespace Volt
         std::string ToString() const override { return BaseType ? BaseType.ToString() + "$" : "?"; }
         size_t GetSize() const override { return BaseType->GetSize(); }
         size_t GetAlignment() const override { return BaseType->GetAlignment(); }
-        std::string GetIRName() const override { return "R" + BaseType.GetIRName(); }
+        std::string GetMangedName() const override { return "R" + BaseType.GetMangledName(); }
 
         bool CanBind(QualType Type) const;
 
@@ -445,10 +445,10 @@ namespace Volt
             return BaseType->GetSize() * Length;
         }
         size_t GetAlignment() const override { return BaseType->GetAlignment(); }
-        std::string GetIRName() const override
+        std::string GetMangedName() const override
         {
             return LengthInit ? "A" + std::to_string(Length) +
-                BaseType->GetIRName() : "A" + BaseType->GetIRName();
+                BaseType->GetMangedName() : "A" + BaseType->GetMangedName();
         }
 
         void Profile(llvm::FoldingSetNodeID& ID) const
@@ -494,7 +494,7 @@ namespace Volt
 
         int GetRank() const override { return -1; }
         std::string ToString() const override;
-        std::string GetIRName() const override;
+        std::string GetMangedName() const override;
 
         size_t GetSize() const override { VoltUnreachable("Cannot get size from FunctionType"); }
         size_t GetAlignment() const override { VoltUnreachable("Cannot get alignment from FunctionType"); }
@@ -540,7 +540,7 @@ namespace Volt
         }
 
         std::string ToString() const override;
-        std::string GetIRName() const override;
+        std::string GetMangedName() const override;
 
         [[nodiscard]] PointerType* GetThisType() const { return ThisType; }
 
