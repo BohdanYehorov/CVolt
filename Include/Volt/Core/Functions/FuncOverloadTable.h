@@ -12,8 +12,6 @@
 
 namespace Volt
 {
-    using FuncOverloadVector = SmallVec8<FunctionOverload>;
-
     enum class OverloadResultKind : UInt8
     {
         Valid,
@@ -35,7 +33,7 @@ namespace Volt
         [[nodiscard]] OverloadResultKind GetKind() const { return Value.GetInt(); }
     };
 
-    template <typename T>
+    template <typename T, size_t N>
     class OverloadTableImpl
     {
         struct OverloadData
@@ -48,7 +46,7 @@ namespace Volt
         };
 
     public:
-        using OverloadVector = SmallVec8<T>;
+        using OverloadVector = llvm::SmallVector<T, N>;
         using Iterator = OverloadVector::iterator;
         using ConstIterator = OverloadVector::const_iterator;
 
@@ -72,8 +70,8 @@ namespace Volt
 
     [[nodiscard]] bool Dominates(llvm::ArrayRef<CastKind> A, llvm::ArrayRef<CastKind> B);
 
-    template<typename T>
-    OverloadResult<T> OverloadTableImpl<T>::FindBestOverload(llvm::ArrayRef<QualType> Args) const
+    template<typename T, size_t N>
+    OverloadResult<T> OverloadTableImpl<T, N>::FindBestOverload(llvm::ArrayRef<QualType> Args) const
     {
         SmallVec4<OverloadData> BestOverloads;
         Arena CastKindsArena;
@@ -102,8 +100,8 @@ namespace Volt
         return OverloadResult<T>{ BestOverloads[0].Overload, OverloadResultKind::Valid };
     }
 
-    using FuncOverloadTable = OverloadTableImpl<FunctionOverload>;
-    using MethodOverloadTable = OverloadTableImpl<MethodOverload>;
+    using FuncOverloadTable = OverloadTableImpl<FunctionOverload, 4>;
+    using MethodOverloadTable = OverloadTableImpl<MethodOverload, 4>;
 
     using FunctionMap = llvm::StringMap<FuncOverloadTable>;
 }

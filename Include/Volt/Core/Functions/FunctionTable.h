@@ -68,19 +68,19 @@ namespace Volt
         }
     }
 
-    template <typename T>
-    using FuncMap = llvm::StringMap<OverloadTableImpl<T>>;
+    template <typename T, size_t N>
+    using FuncMap = llvm::StringMap<OverloadTableImpl<T, N>>;
 
-    template <typename T>
+    template <typename T, size_t N>
     class FunctionTableIterator :
-        public FunctionTableIteratorBase<FuncMap<T>,
-            typename FuncMap<T>::iterator, typename OverloadTableImpl<T>::Iterator>
+        public FunctionTableIteratorBase<FuncMap<T, N>,
+            typename FuncMap<T, N>::iterator, typename OverloadTableImpl<T, N>::Iterator>
     {
     public:
-        FunctionTableIterator(FuncMap<T>& Functions,
-            FuncMap<T>::iterator FuncMapIter, OverloadTableImpl<T>::Iterator OverloadIter)
-            : FunctionTableIteratorBase<FuncMap<T>, typename FuncMap<T>::iterator,
-            typename OverloadTableImpl<T>::Iterator>(Functions, FuncMapIter, OverloadIter) {}
+        FunctionTableIterator(FuncMap<T, N>& Functions,
+            FuncMap<T, N>::iterator FuncMapIter, OverloadTableImpl<T, N>::Iterator OverloadIter)
+            : FunctionTableIteratorBase<FuncMap<T, N>, typename FuncMap<T, N>::iterator,
+            typename OverloadTableImpl<T, N>::Iterator>(Functions, FuncMapIter, OverloadIter) {}
 
         FunctionTableEntry<T> operator*() const
         {
@@ -89,16 +89,16 @@ namespace Volt
         }
     };
 
-    template <typename T>
+    template <typename T, size_t N>
     class ConstFunctionTableIterator :
-        public FunctionTableIteratorBase<const FuncMap<T>,
-            typename FuncMap<T>::const_iterator, typename OverloadTableImpl<T>::ConstIterator>
+        public FunctionTableIteratorBase<const FuncMap<T, N>,
+            typename FuncMap<T, N>::const_iterator, typename OverloadTableImpl<T, N>::ConstIterator>
     {
     public:
-        ConstFunctionTableIterator(const FuncMap<T>& Functions,
-            FuncMap<T>::const_iterator FuncMapIter, OverloadTableImpl<T>::ConstIterator OverloadIter)
-            : FunctionTableIteratorBase<const FuncMap<T>, typename FuncMap<T>::const_iterator,
-            typename OverloadTableImpl<T>::ConstIterator>(Functions, FuncMapIter, OverloadIter) {}
+        ConstFunctionTableIterator(const FuncMap<T, N>& Functions,
+            FuncMap<T, N>::const_iterator FuncMapIter, OverloadTableImpl<T, N>::ConstIterator OverloadIter)
+            : FunctionTableIteratorBase<const FuncMap<T, N>, typename FuncMap<T, N>::const_iterator,
+            typename OverloadTableImpl<T, N>::ConstIterator>(Functions, FuncMapIter, OverloadIter) {}
 
         ConstFunctionTableEntry<T> operator*() const
         {
@@ -107,14 +107,16 @@ namespace Volt
         }
     };
 
-    template <typename T>
+    template <typename T, size_t N>
     class FuncTableImpl
     {
     public:
-        using OverloadTable = OverloadTableImpl<T>;
+        using OverloadTable = OverloadTableImpl<T, N>;
+        using Iterator = FunctionTableIterator<T, N>;
+        using ConstIterator = ConstFunctionTableIterator<T, N>;
 
     private:
-        FuncMap<T> Functions;
+        FuncMap<T, N> Functions;
 
     public:
         template <typename ...ArgsTy>
@@ -125,18 +127,18 @@ namespace Volt
 
         OverloadResult<T> FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const;
 
-        [[nodiscard]] FunctionTableIterator<T> begin();
-        [[nodiscard]] FunctionTableIterator<T> end();
-        [[nodiscard]] ConstFunctionTableIterator<T> begin() const;
-        [[nodiscard]] ConstFunctionTableIterator<T> end() const;
+        [[nodiscard]] Iterator begin();
+        [[nodiscard]] Iterator end();
+        [[nodiscard]] ConstIterator begin() const;
+        [[nodiscard]] ConstIterator end() const;
     };
 
-    using FunctionTable = FuncTableImpl<FunctionOverload>;
-    using MethodTable = FuncTableImpl<MethodOverload>;
-    using BuiltinFuncTable = FuncTableImpl<BuiltinFunctionOverload>;
+    using FunctionTable = FuncTableImpl<FunctionOverload, 8>;
+    using MethodTable = FuncTableImpl<MethodOverload, 8>;
+    using BuiltinFuncTable = FuncTableImpl<BuiltinFunctionOverload, 8>;
 
-    template<typename T>
-    OverloadResult<T> FuncTableImpl<T>::FindBestFunctionOverload(
+    template<typename T, size_t N>
+    OverloadResult<T> FuncTableImpl<T, N>::FindBestFunctionOverload(
         llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const
     {
         auto Iter = Functions.find(Name);
@@ -145,40 +147,40 @@ namespace Volt
         return Iter->second.FindBestOverload(Args);
     }
 
-    template<typename T>
-    FunctionTableIterator<T> FuncTableImpl<T>::begin()
+    template<typename T, size_t N>
+    FuncTableImpl<T, N>::Iterator FuncTableImpl<T, N>::begin()
     {
         if (!Functions.empty())
-            return FunctionTableIterator(Functions, Functions.begin(),
+            return Iterator(Functions, Functions.begin(),
                Functions.begin()->second.begin());
 
-        return FunctionTableIterator(Functions,
-            Functions.begin(), typename OverloadTableImpl<T>::Iterator());
+        return Iterator(Functions,
+            Functions.begin(), typename OverloadTableImpl<T, N>::Iterator());
     }
 
-    template<typename T>
-    FunctionTableIterator<T> FuncTableImpl<T>::end()
+    template<typename T, size_t N>
+    FuncTableImpl<T, N>::Iterator FuncTableImpl<T, N>::end()
     {
-        return FunctionTableIterator(Functions, Functions.end(),
-            typename OverloadTableImpl<T>::Iterator());
+        return Iterator(Functions, Functions.end(),
+            typename OverloadTableImpl<T, N>::Iterator());
     }
 
-    template<typename T>
-    ConstFunctionTableIterator<T> FuncTableImpl<T>::begin() const
+    template<typename T, size_t N>
+    FuncTableImpl<T, N>::ConstIterator FuncTableImpl<T, N>::begin() const
     {
         if (!Functions.empty())
-            return ConstFunctionTableIterator(Functions, Functions.begin(),
+            return ConstIterator(Functions, Functions.begin(),
             Functions.begin()->second.begin());
 
-        return ConstFunctionTableIterator(Functions,
-        Functions.begin(), typename OverloadTableImpl<T>::ConstIterator());
+        return ConstIterator(Functions,
+        Functions.begin(), typename OverloadTableImpl<T, N>::ConstIterator());
     }
 
-    template<typename T>
-    ConstFunctionTableIterator<T> FuncTableImpl<T>::end() const
+    template<typename T, size_t N>
+    FuncTableImpl<T, N>::ConstIterator FuncTableImpl<T, N>::end() const
     {
-        return ConstFunctionTableIterator(Functions, Functions.end(),
-            typename OverloadTableImpl<T>::ConstIterator());
+        return ConstIterator(Functions, Functions.end(),
+            typename OverloadTableImpl<T, N>::ConstIterator());
     }
 }
 
