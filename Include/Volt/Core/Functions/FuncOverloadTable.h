@@ -14,10 +14,30 @@ namespace Volt
 {
     using FuncOverloadVector = SmallVec8<FunctionOverload>;
 
+    enum class OverloadResultKind : UInt8
+    {
+        Valid,
+        Ambiguous,
+        NotAvailable
+    };
+
+    template <typename T>
+    struct OverloadResult
+    {
+    private:
+        PointerIntPair<const T, alignof(UInt32), OverloadResultKind> Value;
+
+    public:
+        OverloadResult(const T* Overload, OverloadResultKind Kind)
+            : Value(Overload, Kind) {}
+
+        [[nodiscard]] const T* GetOverload() const { return Value.GetPointer(); }
+        [[nodiscard]] OverloadResultKind GetKind() const { return Value.GetInt(); }
+    };
+
     template <typename T>
     class OverloadTableImpl
     {
-    public:
         struct OverloadData
         {
             const T* Overload;
@@ -27,26 +47,7 @@ namespace Volt
                 : Overload(Overload), CastKinds(CastKinds) {}
         };
 
-        struct OverloadResult
-        {
-            enum OverloadResultKind : UInt8
-            {
-                Valid,
-                Ambiguous,
-                NotAvailable
-            };
-
-        private:
-            PointerIntPair<const T, alignof(UInt32), OverloadResultKind> Value;
-
-        public:
-            OverloadResult(const T* Overload, OverloadResultKind Kind)
-                : Value(Overload, Kind) {}
-
-            [[nodiscard]] const T* GetOverload() const { return Value.GetPointer(); }
-            [[nodiscard]] OverloadResultKind GetKind() const { return Value.GetInt(); }
-        };
-
+    public:
         using OverloadVector = SmallVec8<T>;
         using Iterator = OverloadVector::iterator;
         using ConstIterator = OverloadVector::const_iterator;
@@ -61,7 +62,7 @@ namespace Volt
             Overloads.emplace_back(std::forward<ArgsTy>(Args)...);
         }
 
-        [[nodiscard]] OverloadResult FindBestOverload(llvm::ArrayRef<QualType> Args) const;
+        [[nodiscard]] OverloadResult<T> FindBestOverload(llvm::ArrayRef<QualType> Args) const;
 
         [[nodiscard]] Iterator begin() { return Overloads.begin(); }
         [[nodiscard]] Iterator end() { return Overloads.end(); }
@@ -72,7 +73,7 @@ namespace Volt
     [[nodiscard]] bool Dominates(llvm::ArrayRef<CastKind> A, llvm::ArrayRef<CastKind> B);
 
     template<typename T>
-    OverloadTableImpl<T>::OverloadResult OverloadTableImpl<T>::FindBestOverload(llvm::ArrayRef<QualType> Args) const
+    OverloadResult<T> OverloadTableImpl<T>::FindBestOverload(llvm::ArrayRef<QualType> Args) const
     {
         SmallVec4<OverloadData> BestOverloads;
         Arena CastKindsArena;
@@ -95,10 +96,10 @@ namespace Volt
         }
 
         if (BestOverloads.empty())
-            return OverloadResult{ nullptr, OverloadResult::NotAvailable };
+            return OverloadResult<T>{ nullptr, OverloadResultKind::NotAvailable };
         if (BestOverloads.size() > 1)
-            return OverloadResult{ BestOverloads[0].Overload, OverloadResult::Ambiguous };
-        return OverloadResult{ BestOverloads[0].Overload, OverloadResult::Valid };
+            return OverloadResult<T>{ BestOverloads[0].Overload, OverloadResultKind::Ambiguous };
+        return OverloadResult<T>{ BestOverloads[0].Overload, OverloadResultKind::Valid };
     }
 
     using FuncOverloadTable = OverloadTableImpl<FunctionOverload>;

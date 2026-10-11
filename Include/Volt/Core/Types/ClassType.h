@@ -67,13 +67,13 @@ namespace Volt
         [[nodiscard]] const MethodTable& GetMethods() const { return Methods; }
 
         [[nodiscard]] llvm::StringRef GetName() { return Name; }
-        [[nodiscard]] MethodTable::OverloadResult FindBestMethodOverload(
+        [[nodiscard]] OverloadResult<MethodOverload> FindBestMethodOverload(
             llvm::StringRef Name, llvm::ArrayRef<QualType> Params) const
         {
             return Methods.FindBestFunctionOverload(Name, Params);
         }
 
-        [[nodiscard]] FunctionTable::OverloadResult FindBestConstructorOverload(
+        [[nodiscard]] OverloadResult<FunctionOverload> FindBestConstructorOverload(
             llvm::ArrayRef<QualType> Params) const
         {
             return Constructors.FindBestOverload(Params);

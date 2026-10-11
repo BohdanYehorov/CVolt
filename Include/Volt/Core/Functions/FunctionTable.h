@@ -112,7 +112,6 @@ namespace Volt
     {
     public:
         using OverloadTable = OverloadTableImpl<T>;
-        using OverloadResult = OverloadTable::OverloadResult;
 
     private:
         FuncMap<T> Functions;
@@ -124,7 +123,7 @@ namespace Volt
             Functions[Name].AddOverload(std::forward<ArgsTy>(Args)...);
         }
 
-        OverloadResult FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const;
+        OverloadResult<T> FindBestFunctionOverload(llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const;
 
         [[nodiscard]] FunctionTableIterator<T> begin();
         [[nodiscard]] FunctionTableIterator<T> end();
@@ -137,12 +136,12 @@ namespace Volt
     using BuiltinFuncTable = FuncTableImpl<BuiltinFunctionOverload>;
 
     template<typename T>
-    FuncTableImpl<T>::OverloadResult FuncTableImpl<T>::FindBestFunctionOverload(
+    OverloadResult<T> FuncTableImpl<T>::FindBestFunctionOverload(
         llvm::StringRef Name, llvm::ArrayRef<QualType> Args) const
     {
         auto Iter = Functions.find(Name);
         if (Iter == Functions.end())
-            return OverloadResult{ nullptr, OverloadResult::NotAvailable };
+            return OverloadResult<T>{ nullptr, OverloadResultKind::NotAvailable };
         return Iter->second.FindBestOverload(Args);
     }
 
